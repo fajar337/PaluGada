@@ -1196,18 +1196,26 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment, onAttac
 }
 
 function ProofUploader({ order, onAttachProof }) {
-  const handleFile = (event) => {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleFile = async (event) => {
     const file = event.target.files?.[0];
     if (!file || !onAttachProof) {
       return;
     }
 
-    onAttachProof({
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-      uploadedAt: new Date().toISOString(),
-    });
+    setUploading(true);
+    setError("");
+
+    try {
+      await onAttachProof(file);
+    } catch (uploadError) {
+      console.error(uploadError);
+      setError("Upload gagal. Pastikan Firebase Storage sudah aktif dan rules mengizinkan upload.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -1217,15 +1225,22 @@ function ProofUploader({ order, onAttachProof }) {
         <div className="text-sm">
           <strong>{order.paymentProof.fileName}</strong>
           <div className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
-            Tersimpan pada {new Date(order.paymentProof.uploadedAt).toLocaleString("id-ID")}. Tetap kirim bukti ke WhatsApp agar admin bisa verifikasi cepat.
+            Diupload pada {new Date(order.paymentProof.uploadedAt).toLocaleString("id-ID")}. Tetap kirim bukti ke WhatsApp agar admin bisa verifikasi cepat.
           </div>
+          {order.paymentProof.downloadUrl && (
+            <a href={order.paymentProof.downloadUrl} target="_blank" rel="noreferrer" className="inline-flex mt-3 text-xs font-semibold underline-link" style={{ color: "var(--accent)" }}>
+              Buka bukti pembayaran
+            </a>
+          )}
         </div>
       ) : (
         <>
           <p className="text-xs leading-relaxed mb-3" style={{ color: "var(--ink-dim)" }}>
-            Pilih screenshot bukti transfer. Untuk versi lokal, file tidak diupload ke server, tapi nama bukti disimpan di invoice order.
+            Pilih screenshot bukti transfer. File akan diupload ke Firebase Storage dan tersimpan di order ini.
           </p>
-          <input type="file" accept="image/*,.pdf" onChange={handleFile} className="w-full text-sm" />
+          <input type="file" accept="image/*,.pdf" onChange={handleFile} disabled={uploading} className="w-full text-sm disabled:opacity-50" />
+          {uploading && <div className="text-xs mt-2" style={{ color: "var(--accent)" }}>Mengupload bukti...</div>}
+          {error && <div className="text-xs mt-2" style={{ color: "#991b1b" }}>{error}</div>}
         </>
       )}
     </div>

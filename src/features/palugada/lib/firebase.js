@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -16,3 +16,22 @@ export const firebaseApp = initializeApp(firebaseConfig);
 export const firebaseAuth = getAuth(firebaseApp);
 export const firestore = getFirestore(firebaseApp);
 export const firebaseStorage = getStorage(firebaseApp);
+
+export async function uploadPaymentProof(orderId, file) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `payment-proofs/${orderId}/${Date.now()}-${safeName}`;
+  const proofRef = ref(firebaseStorage, path);
+  const snapshot = await uploadBytes(proofRef, file, {
+    contentType: file.type || "application/octet-stream",
+  });
+  const downloadUrl = await getDownloadURL(snapshot.ref);
+
+  return {
+    fileName: file.name,
+    fileType: file.type,
+    fileSize: file.size,
+    storagePath: path,
+    downloadUrl,
+    uploadedAt: new Date().toISOString(),
+  };
+}

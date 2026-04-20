@@ -5,6 +5,7 @@ import { FloatingWhatsApp, Footer, Header, StyleBlock } from "./features/palugad
 import { ResellerDashboard } from "./features/palugada/components/reseller";
 import { CartView, Checkout, Detail, Home, OrderSuccess, TrackOrder } from "./features/palugada/components/storefront";
 import { RESELLER_TIERS, getDefaultPlanSelection, getPlanSelection } from "./features/palugada/constants";
+import { uploadPaymentProof } from "./features/palugada/lib/firebase";
 import { loadAdmin, loadProducts, storage } from "./features/palugada/lib/storage";
 
 export default function App() {
@@ -289,7 +290,8 @@ export default function App() {
     await storage.set("pa_orders", nextOrders);
   };
 
-  const attachPaymentProof = async (orderId, proof) => {
+  const attachPaymentProof = async (orderId, file) => {
+    const proof = await uploadPaymentProof(orderId, file);
     const nextOrders = orders.map((order) =>
       order.id === orderId
         ? { ...order, paymentProof: proof, status: order.status === "Menunggu Pembayaran" ? "Menunggu Verifikasi" : order.status }
@@ -307,7 +309,7 @@ export default function App() {
     setOrders(nextOrders);
     setActiveOrder(nextActiveOrder);
     await storage.set("pa_orders", nextOrders);
-    showToast("Bukti pembayaran tersimpan");
+    showToast("Bukti pembayaran berhasil diupload");
   };
 
   if (!loaded) {
