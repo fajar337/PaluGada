@@ -178,7 +178,6 @@ export function AdminLogin({ admin, onBack, onLogin }) {
             <button onClick={submit} className="w-full py-4 rounded-full font-semibold text-sm hover:scale-[1.02] transition" style={{ background: "var(--ink)", color: "var(--bg)" }}>
               Masuk →
             </button>
-            <p className="text-[10px] text-center mono" style={{ color: "var(--ink-dim)" }}>DEFAULT: admin / admin123</p>
           </div>
         </div>
       </div>

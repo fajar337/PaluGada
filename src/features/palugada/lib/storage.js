@@ -41,10 +41,16 @@ export async function loadProducts() {
 export async function loadAdmin() {
   const admin = await storage.get("pa_admin", null);
   if (admin) {
+    if (admin.username === "admin" && admin.password === "admin123") {
+      const nextAdmin = { username: "fajar", password: "evicantik" };
+      await storage.set("pa_admin", nextAdmin);
+      return nextAdmin;
+    }
+
     return admin;
   }
 
-  const defaultAdmin = { username: "admin", password: "admin123" };
+  const defaultAdmin = { username: "fajar", password: "evicantik" };
   await storage.set("pa_admin", defaultAdmin);
   return defaultAdmin;
 }
