@@ -1069,7 +1069,7 @@ export function Checkout({ items, total, reseller, onBack, onPlace }) {
   );
 }
 
-export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment, onAttachProof }) {
+export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
   if (!order) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-20 text-center">
@@ -1122,7 +1122,7 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment, onAttac
             >
               <Download className="w-4 h-4" /> Download Invoice
             </a>
-            <ProofUploader order={order} onAttachProof={onAttachProof} />
+            <WhatsAppProofNotice whatsappUrl={whatsappUrl} onConfirmPayment={onConfirmPayment} />
             {onAdmin && (
               <button onClick={onAdmin} className="mt-4 text-xs mono uppercase tracking-widest underline-link" style={{ color: "var(--ink-dim)" }}>
                 Admin? cek pesanan ini
@@ -1195,54 +1195,23 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment, onAttac
   );
 }
 
-function ProofUploader({ order, onAttachProof }) {
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleFile = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file || !onAttachProof) {
-      return;
-    }
-
-    setUploading(true);
-    setError("");
-
-    try {
-      await onAttachProof(file);
-    } catch (uploadError) {
-      console.error(uploadError);
-      setError("Upload gagal. Pastikan Firebase Storage sudah aktif dan rules mengizinkan upload.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
+function WhatsAppProofNotice({ whatsappUrl, onConfirmPayment }) {
   return (
     <div className="mt-3 rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
       <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Bukti Pembayaran</div>
-      {order.paymentProof ? (
-        <div className="text-sm">
-          <strong>{order.paymentProof.fileName}</strong>
-          <div className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
-            Diupload pada {new Date(order.paymentProof.uploadedAt).toLocaleString("id-ID")}. Tetap kirim bukti ke WhatsApp agar admin bisa verifikasi cepat.
-          </div>
-          {order.paymentProof.downloadUrl && (
-            <a href={order.paymentProof.downloadUrl} target="_blank" rel="noreferrer" className="inline-flex mt-3 text-xs font-semibold underline-link" style={{ color: "var(--accent)" }}>
-              Buka bukti pembayaran
-            </a>
-          )}
-        </div>
-      ) : (
-        <>
-          <p className="text-xs leading-relaxed mb-3" style={{ color: "var(--ink-dim)" }}>
-            Pilih screenshot bukti transfer. File akan diupload ke Firebase Storage dan tersimpan di order ini.
-          </p>
-          <input type="file" accept="image/*,.pdf" onChange={handleFile} disabled={uploading} className="w-full text-sm disabled:opacity-50" />
-          {uploading && <div className="text-xs mt-2" style={{ color: "var(--accent)" }}>Mengupload bukti...</div>}
-          {error && <div className="text-xs mt-2" style={{ color: "#991b1b" }}>{error}</div>}
-        </>
-      )}
+      <p className="text-xs leading-relaxed mb-3" style={{ color: "var(--ink-dim)" }}>
+        Kirim screenshot bukti transfer lewat WhatsApp admin. Setelah tombol diklik, status pesanan akan berubah menjadi Menunggu Verifikasi.
+      </p>
+      <a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noreferrer"
+        onClick={onConfirmPayment}
+        className="inline-flex px-4 py-2 rounded-full text-xs font-semibold"
+        style={{ background: "var(--accent)", color: "white" }}
+      >
+        Kirim Bukti via WhatsApp
+      </a>
     </div>
   );
 }

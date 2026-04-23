@@ -5,7 +5,6 @@ import { FloatingWhatsApp, Footer, Header, StyleBlock } from "./features/palugad
 import { ResellerDashboard } from "./features/palugada/components/reseller";
 import { CartView, Checkout, Detail, Home, OrderSuccess, TrackOrder } from "./features/palugada/components/storefront";
 import { RESELLER_TIERS, getDefaultPlanSelection, getPlanSelection } from "./features/palugada/constants";
-import { uploadPaymentProof } from "./features/palugada/lib/firebase";
 import { loadAdmin, loadProducts, storage } from "./features/palugada/lib/storage";
 
 export default function App() {
@@ -290,28 +289,6 @@ export default function App() {
     await storage.set("pa_orders", nextOrders);
   };
 
-  const attachPaymentProof = async (orderId, file) => {
-    const proof = await uploadPaymentProof(orderId, file);
-    const nextOrders = orders.map((order) =>
-      order.id === orderId
-        ? { ...order, paymentProof: proof, status: order.status === "Menunggu Pembayaran" ? "Menunggu Verifikasi" : order.status }
-        : order
-    );
-    const nextActiveOrder =
-      activeOrder?.id === orderId
-        ? {
-            ...activeOrder,
-            paymentProof: proof,
-            status: activeOrder.status === "Menunggu Pembayaran" ? "Menunggu Verifikasi" : activeOrder.status,
-          }
-        : activeOrder;
-
-    setOrders(nextOrders);
-    setActiveOrder(nextActiveOrder);
-    await storage.set("pa_orders", nextOrders);
-    showToast("Bukti pembayaran berhasil diupload");
-  };
-
   if (!loaded) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
@@ -406,7 +383,6 @@ export default function App() {
             onHome={() => setView("home")}
             onAdmin={() => setView(adminLoggedIn ? "admin" : "admin-login")}
             onConfirmPayment={() => activeOrder && markOrderWaitingVerification(activeOrder.id)}
-            onAttachProof={(proof) => activeOrder && attachPaymentProof(activeOrder.id, proof)}
           />
         )}
         {view === "reseller-login" && (

@@ -256,16 +256,6 @@ function OrdersTab({ orders, onChangeStatus, onDelete }) {
                 <span>Berakhir: {running.endDate.toLocaleDateString("id-ID")}</span>
               </div>
             )}
-            {order.paymentProof && (
-              <div className="mb-4 rounded-2xl border px-4 py-3 text-xs" style={{ borderColor: "var(--line)", background: "var(--bg-3)", color: "var(--ink-dim)" }}>
-                Bukti bayar: <strong style={{ color: "var(--ink)" }}>{order.paymentProof.fileName}</strong> · {new Date(order.paymentProof.uploadedAt).toLocaleString("id-ID")}
-                {order.paymentProof.downloadUrl && (
-                  <a href={order.paymentProof.downloadUrl} target="_blank" rel="noreferrer" className="ml-2 font-semibold underline" style={{ color: "var(--accent)" }}>
-                    Buka file
-                  </a>
-                )}
-              </div>
-            )}
             <div className="border-t pt-3 space-y-1" style={{ borderColor: "var(--line)" }}>
               {order.items.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm">
