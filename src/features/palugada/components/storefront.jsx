@@ -795,20 +795,19 @@ function ReviewsSection({ reviews, onReview }) {
   );
 }
 
-export function TrackOrder({ orders, onBack }) {
+export function TrackOrder({ onFindOrder, onBack }) {
   const [orderId, setOrderId] = useState("");
   const [wa, setWa] = useState("");
   const [searched, setSearched] = useState(false);
-  const normalizedWa = normalizeDigits(wa);
-  const foundOrder = orders.find(
-    (order) =>
-      order.id.toLowerCase() === orderId.trim().toLowerCase() &&
-      normalizeDigits(order.buyer.wa).endsWith(normalizedWa.slice(-8))
-  );
+  const [foundOrder, setFoundOrder] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
+    setLoading(true);
     setSearched(true);
+    setFoundOrder(await onFindOrder(orderId.trim(), wa));
+    setLoading(false);
   };
 
   return (
@@ -828,14 +827,18 @@ export function TrackOrder({ orders, onBack }) {
           <form onSubmit={submit} className="space-y-4">
             <Field label="Order ID" value={orderId} onChange={setOrderId} placeholder="ORD-XXXX" />
             <Field label="Nomor WhatsApp" value={wa} onChange={setWa} placeholder="08xxxxxxxxxx" />
-            <button type="submit" disabled={!orderId.trim() || !wa.trim()} className="w-full py-4 rounded-full font-semibold text-sm disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>
-              Cek Status
+            <button type="submit" disabled={loading || !orderId.trim() || !wa.trim()} className="w-full py-4 rounded-full font-semibold text-sm disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>
+              {loading ? "Mengecek..." : "Cek Status"}
             </button>
           </form>
         </div>
 
         <div className="lg:col-span-7">
-          {!searched ? (
+          {loading ? (
+            <div className="paper-card p-10 text-center serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>
+              mencari pesanan...
+            </div>
+          ) : !searched ? (
             <div className="paper-card p-10 text-center serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>
               Status pesanan akan tampil di sini.
             </div>
@@ -897,10 +900,6 @@ function OrderTrackingCard({ order }) {
       </div>
     </div>
   );
-}
-
-function normalizeDigits(value = "") {
-  return String(value).replace(/\D/g, "");
 }
 
 export function CartView({ items, total, originalTotal, updateQty, remove, onBack, onCheckout }) {

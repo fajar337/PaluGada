@@ -6,7 +6,7 @@ import { ResellerDashboard } from "./features/palugada/components/reseller";
 import { CartView, Checkout, Detail, Home, OrderSuccess, TrackOrder } from "./features/palugada/components/storefront";
 import { CONTACT_EMAIL, RESELLER_TIERS, getDefaultPlanSelection, getPlanSelection } from "./features/palugada/constants";
 import { firebaseAuth } from "./features/palugada/lib/firebase";
-import { loadProducts, storage } from "./features/palugada/lib/storage";
+import { addItem, getItem, loadProducts, storage, updateItem } from "./features/palugada/lib/storage";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 export default function App() {
@@ -35,15 +35,25 @@ export default function App() {
 
     (async () => {
       setProducts(await loadProducts());
-      setOrders(await storage.get("pa_orders", []));
       setReviews(await storage.get("pa_reviews", []));
-      setProductRequests(await storage.get("pa_product_requests", []));
       setResellers(await storage.get("pa_resellers", []));
       setLoaded(true);
     })();
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!adminLoggedIn) {
+      return;
+    }
+
+    (async () => {
+      setOrders(await storage.get("pa_orders", []));
+      setProductRequests(await storage.get("pa_product_requests", []));
+      setResellers(await storage.get("pa_resellers", []));
+    })();
+  }, [adminLoggedIn]);
 
   const showToast = (message) => {
     setToast(message);
@@ -119,7 +129,7 @@ export default function App() {
     };
     const nextReviews = [review, ...reviews];
     setReviews(nextReviews);
-    await storage.set("pa_reviews", nextReviews);
+    await addItem("pa_reviews", review);
     showToast("Ulasan berhasil ditambahkan");
   };
 
@@ -135,7 +145,7 @@ export default function App() {
     };
     const nextRequests = [request, ...productRequests];
     setProductRequests(nextRequests);
-    await storage.set("pa_product_requests", nextRequests);
+    await addItem("pa_product_requests", request);
     showToast("Request produk berhasil dikirim");
   };
 
@@ -163,7 +173,7 @@ export default function App() {
 
     const nextOrders = [order, ...orders];
     setOrders(nextOrders);
-    await storage.set("pa_orders", nextOrders);
+    await addItem("pa_orders", order);
 
     if (reseller) {
       const updatedResellers = resellers.map((item) =>
@@ -196,7 +206,6 @@ export default function App() {
       return soldQty ? { ...product, stock: Math.max(0, product.stock - soldQty) } : product;
     });
     setProducts(nextProducts);
-    await storage.set("pa_products", nextProducts);
     setCart([]);
 
     return order;
@@ -293,7 +302,26 @@ export default function App() {
 
     setOrders(nextOrders);
     setActiveOrder(nextActiveOrder);
-    await storage.set("pa_orders", nextOrders);
+    if (nextActiveOrder) {
+      await updateItem("pa_orders", orderId, nextActiveOrder);
+    } else {
+      const nextOrder = nextOrders.find((order) => order.id === orderId);
+      if (nextOrder) {
+        await updateItem("pa_orders", orderId, nextOrder);
+      }
+    }
+  };
+
+  const findOrder = async (orderId, wa) => {
+    const order = await getItem("pa_orders", orderId, null);
+    const digits = String(wa || "").replace(/\D/g, "");
+    const orderDigits = String(order?.buyer?.wa || "").replace(/\D/g, "");
+
+    if (!order || !digits || !orderDigits.endsWith(digits.slice(-8))) {
+      return null;
+    }
+
+    return order;
   };
 
   if (!loaded) {
@@ -368,7 +396,7 @@ export default function App() {
           />
         )}
         {view === "track-order" && (
-          <TrackOrder orders={orders} onBack={() => setView("home")} />
+          <TrackOrder onFindOrder={findOrder} onBack={() => setView("home")} />
         )}
         {view === "checkout" && (
           <Checkout

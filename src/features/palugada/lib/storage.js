@@ -118,6 +118,61 @@ export const storage = {
   },
 };
 
+export async function addItem(key, item) {
+  const config = getRemoteConfig(key);
+  writeLocal(key, [item, ...readLocal(key, [])]);
+
+  if (!config || config.type !== "array") {
+    return item;
+  }
+
+  try {
+    await setDoc(doc(firestore, config.collection, getItemId(item, 0)), item);
+  } catch (error) {
+    console.warn(`Firebase add failed for ${key}; saved locally only.`, error);
+  }
+
+  return item;
+}
+
+export async function updateItem(key, id, nextItem) {
+  const current = readLocal(key, []);
+  writeLocal(
+    key,
+    current.map((item) => (getItemId(item, 0) === id ? nextItem : item))
+  );
+
+  const config = getRemoteConfig(key);
+  if (!config || config.type !== "array") {
+    return nextItem;
+  }
+
+  try {
+    await setDoc(doc(firestore, config.collection, id), nextItem);
+  } catch (error) {
+    console.warn(`Firebase update failed for ${key}; saved locally only.`, error);
+  }
+
+  return nextItem;
+}
+
+export async function getItem(key, id, fallback = null) {
+  const config = getRemoteConfig(key);
+  const localItem = readLocal(key, []).find((item) => getItemId(item, 0) === id) || fallback;
+
+  if (!config || config.type !== "array") {
+    return localItem;
+  }
+
+  try {
+    const snapshot = await getDoc(doc(firestore, config.collection, id));
+    return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : localItem;
+  } catch (error) {
+    console.warn(`Firebase item read failed for ${key}; using local fallback.`, error);
+    return localItem;
+  }
+}
+
 export async function loadProducts() {
   const products = await storage.get("pa_products", null);
   if (products) {
