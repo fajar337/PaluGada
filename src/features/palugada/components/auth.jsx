@@ -134,17 +134,31 @@ export function AuthLayout({ children, onBack, title, subtitle, badge }) {
   );
 }
 
-export function AdminLogin({ admin, onBack, onLogin }) {
-  const [username, setUsername] = useState("");
+export function AdminLogin({ onBack, onLogin }) {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const submit = () => {
-    if (username === admin.username && password === admin.password) {
-      onLogin();
-    } else {
-      setErr("Username atau password salah");
+  const submit = async () => {
+    if (!email || !password) {
+      setErr("Email dan password wajib diisi");
+      return;
+    }
+
+    setErr("");
+    setLoading(true);
+
+    try {
+      const result = await onLogin(email, password);
+      if (result?.error) {
+        setErr(result.error);
+      }
+    } catch {
+      setErr("Email atau password salah");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -164,7 +178,7 @@ export function AdminLogin({ admin, onBack, onLogin }) {
           <p className="text-sm mb-8" style={{ color: "var(--ink-dim)" }}>Akses panel administrator</p>
 
           <div className="space-y-4">
-            <Field label="Username" value={username} onChange={setUsername} placeholder="admin" />
+            <Field label="Email Admin" value={email} onChange={setEmail} type="email" placeholder="admin@email.com" />
             <div>
               <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>Password</label>
               <div className="relative">
@@ -175,8 +189,8 @@ export function AdminLogin({ admin, onBack, onLogin }) {
               </div>
             </div>
             {err && <div className="text-xs" style={{ color: "var(--accent)" }}>{err}</div>}
-            <button onClick={submit} className="w-full py-4 rounded-full font-semibold text-sm hover:scale-[1.02] transition" style={{ background: "var(--ink)", color: "var(--bg)" }}>
-              Masuk →
+            <button onClick={submit} disabled={loading} className="w-full py-4 rounded-full font-semibold text-sm hover:scale-[1.02] transition disabled:opacity-50" style={{ background: "var(--ink)", color: "var(--bg)" }}>
+              {loading ? "Memeriksa..." : "Masuk →"}
             </button>
           </div>
         </div>

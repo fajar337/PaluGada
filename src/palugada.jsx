@@ -4,8 +4,10 @@ import { AdminLogin, ResellerLogin, ResellerRegister } from "./features/palugada
 import { FloatingWhatsApp, Footer, Header, StyleBlock } from "./features/palugada/components/layout";
 import { ResellerDashboard } from "./features/palugada/components/reseller";
 import { CartView, Checkout, Detail, Home, OrderSuccess, TrackOrder } from "./features/palugada/components/storefront";
-import { RESELLER_TIERS, getDefaultPlanSelection, getPlanSelection } from "./features/palugada/constants";
-import { loadAdmin, loadProducts, storage } from "./features/palugada/lib/storage";
+import { CONTACT_EMAIL, RESELLER_TIERS, getDefaultPlanSelection, getPlanSelection } from "./features/palugada/constants";
+import { firebaseAuth } from "./features/palugada/lib/firebase";
+import { loadProducts, storage } from "./features/palugada/lib/storage";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 export default function App() {
   const [view, setView] = useState("home");
@@ -14,7 +16,6 @@ export default function App() {
   const [reviews, setReviews] = useState([]);
   const [productRequests, setProductRequests] = useState([]);
   const [resellers, setResellers] = useState([]);
-  const [admin, setAdmin] = useState(null);
   const [adminLoggedIn, setAdminLoggedIn] = useState(false);
   const [reseller, setReseller] = useState(null);
   const [cart, setCart] = useState([]);
@@ -27,15 +28,21 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    const adminEmail = import.meta.env.VITE_FIREBASE_ADMIN_EMAIL || CONTACT_EMAIL;
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+      setAdminLoggedIn(Boolean(user && user.email === adminEmail));
+    });
+
     (async () => {
       setProducts(await loadProducts());
       setOrders(await storage.get("pa_orders", []));
       setReviews(await storage.get("pa_reviews", []));
       setProductRequests(await storage.get("pa_product_requests", []));
       setResellers(await storage.get("pa_resellers", []));
-      setAdmin(await loadAdmin());
       setLoaded(true);
     })();
+
+    return unsubscribe;
   }, []);
 
   const showToast = (message) => {
@@ -426,11 +433,17 @@ export default function App() {
         )}
         {view === "admin-login" && (
           <AdminLogin
-            admin={admin}
             onBack={() => setView("home")}
-            onLogin={() => {
-              setAdminLoggedIn(true);
+            onLogin={async (email, password) => {
+              const adminEmail = import.meta.env.VITE_FIREBASE_ADMIN_EMAIL || CONTACT_EMAIL;
+              const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+              if (credential.user.email !== adminEmail) {
+                await signOut(firebaseAuth);
+                return { error: "Email ini tidak terdaftar sebagai admin" };
+              }
+
               setView("admin");
+              return { ok: true };
             }}
           />
         )}
@@ -456,7 +469,8 @@ export default function App() {
               setProductRequests(nextRequests);
               await storage.set("pa_product_requests", nextRequests);
             }}
-            onLogout={() => {
+            onLogout={async () => {
+              await signOut(firebaseAuth);
               setAdminLoggedIn(false);
               setView("home");
             }}
