@@ -5,7 +5,15 @@ import { FloatingWhatsApp, Footer, Header, StyleBlock } from "./features/palugad
 import { ResellerDashboard } from "./features/palugada/components/reseller";
 import { CartView, Checkout, Detail, Home, OrderSuccess, TrackOrder } from "./features/palugada/components/storefront";
 import { CONTACT_EMAIL, RESELLER_TIERS, getDefaultPlanSelection, getPlanSelection } from "./features/palugada/constants";
-import { firebaseAuth } from "./features/palugada/lib/firebase";
+import {
+  firebaseAuth,
+  getResellerOrders,
+  getResellerProfileByUid,
+  loginResellerAuth,
+  loginWithGooglePopup,
+  registerResellerAuth,
+  saveResellerProfile,
+} from "./features/palugada/lib/firebase";
 import { addItem, getItem, loadProducts, storage, updateItem } from "./features/palugada/lib/storage";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
@@ -16,6 +24,7 @@ export default function App() {
   const [reviews, setReviews] = useState([]);
   const [productRequests, setProductRequests] = useState([]);
   const [resellers, setResellers] = useState([]);
+  const [resellerOrders, setResellerOrders] = useState([]);
   const [adminLoggedIn, setAdminLoggedIn] = useState(false);
   const [reseller, setReseller] = useState(null);
   const [cart, setCart] = useState([]);
@@ -29,19 +38,55 @@ export default function App() {
 
   useEffect(() => {
     const adminEmail = import.meta.env.VITE_FIREBASE_ADMIN_EMAIL || CONTACT_EMAIL;
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
       setAdminLoggedIn(Boolean(user && user.email === adminEmail));
+
+      if (!user || user.email === adminEmail) {
+        setReseller(null);
+        setResellerOrders([]);
+        return;
+      }
+
+      const profile = await getResellerProfileByUid(user.uid);
+      if (profile) {
+        setReseller({ ...profile, id: user.uid, email: user.email });
+        return;
+      }
+
+      const created = await saveResellerProfile(user.uid, {
+        id: user.uid,
+        name: user.displayName || user.email?.split("@")[0] || "Reseller",
+        email: user.email || "",
+        wa: "",
+        avatar: user.photoURL || "",
+        tier: "Bronze",
+        totalOrders: 0,
+        totalSpent: 0,
+        joinedAt: new Date().toISOString(),
+      });
+      setReseller(
+        created || {
+          id: user.uid,
+          name: user.displayName || user.email?.split("@")[0] || "Reseller",
+          email: user.email || "",
+          wa: "",
+          avatar: user.photoURL || "",
+          tier: "Bronze",
+          totalOrders: 0,
+          totalSpent: 0,
+          joinedAt: new Date().toISOString(),
+        }
+      );
     });
 
     (async () => {
       setProducts(await loadProducts());
       setReviews(await storage.get("pa_reviews", []));
-      setResellers(await storage.get("pa_resellers", []));
       setLoaded(true);
     })();
 
     return unsubscribe;
-  }, []);
+  }, [adminLoggedIn]);
 
   useEffect(() => {
     if (!adminLoggedIn) {
@@ -54,6 +99,17 @@ export default function App() {
       setResellers(await storage.get("pa_resellers", []));
     })();
   }, [adminLoggedIn]);
+
+  useEffect(() => {
+    if (!reseller?.id || adminLoggedIn) {
+      setResellerOrders([]);
+      return;
+    }
+
+    (async () => {
+      setResellerOrders(await getResellerOrders(reseller.id));
+    })();
+  }, [adminLoggedIn, reseller?.id]);
 
   const showToast = (message) => {
     setToast(message);
@@ -174,31 +230,31 @@ export default function App() {
     const nextOrders = [order, ...orders];
     setOrders(nextOrders);
     await addItem("pa_orders", order);
+    if (reseller) {
+      setResellerOrders((current) => [order, ...current]);
+    }
 
     if (reseller) {
-      const updatedResellers = resellers.map((item) =>
-        item.id === reseller.id
-          ? { ...item, totalOrders: (item.totalOrders || 0) + 1, totalSpent: (item.totalSpent || 0) + cartTotal }
-          : item
-      );
-      setResellers(updatedResellers);
-      await storage.set("pa_resellers", updatedResellers);
+      const nextTotalOrders = (reseller.totalOrders || 0) + 1;
+      const nextTotalSpent = (reseller.totalSpent || 0) + cartTotal;
+      let nextTier = "Bronze";
+      if (nextTotalSpent >= RESELLER_TIERS.Gold.min) nextTier = "Gold";
+      else if (nextTotalSpent >= RESELLER_TIERS.Silver.min) nextTier = "Silver";
 
-      const currentReseller = updatedResellers.find((item) => item.id === reseller.id);
-      let newTier = "Bronze";
-      if (currentReseller.totalSpent >= RESELLER_TIERS.Gold.min) newTier = "Gold";
-      else if (currentReseller.totalSpent >= RESELLER_TIERS.Silver.min) newTier = "Silver";
-
-      if (newTier !== currentReseller.tier) {
-        const tieredResellers = updatedResellers.map((item) =>
-          item.id === reseller.id ? { ...item, tier: newTier } : item
-        );
-        setResellers(tieredResellers);
-        await storage.set("pa_resellers", tieredResellers);
-        setReseller({ ...currentReseller, tier: newTier });
-      } else {
-        setReseller(currentReseller);
-      }
+      const savedReseller = await saveResellerProfile(reseller.id, {
+        ...reseller,
+        totalOrders: nextTotalOrders,
+        totalSpent: nextTotalSpent,
+        tier: nextTier,
+      });
+      const nextReseller = savedReseller || {
+        ...reseller,
+        totalOrders: nextTotalOrders,
+        totalSpent: nextTotalSpent,
+        tier: nextTier,
+      };
+      setReseller(nextReseller);
+      setResellers((current) => [nextReseller, ...current.filter((item) => item.id !== nextReseller.id)]);
     }
 
     const nextProducts = products.map((product) => {
@@ -212,80 +268,123 @@ export default function App() {
   };
 
   const registerReseller = async ({ name, email, wa, password, googleSub = null, avatar = "" }) => {
-    const existing = resellers.find((item) => item.email === email);
+    const user = googleSub ? await loginWithGooglePopup() : await registerResellerAuth({ name, email, password });
+    const existing = await getResellerProfileByUid(user.uid);
     if (existing) {
-      if (googleSub && existing.googleSub && existing.googleSub !== googleSub) {
-        return { error: "Akun Google ini sudah terhubung ke reseller lain" };
-      }
-
-      if (googleSub) {
-        const linked = { ...existing, googleSub, avatar: avatar || existing.avatar || "" };
-        const nextResellers = resellers.map((item) => (item.id === existing.id ? linked : item));
-        setResellers(nextResellers);
-        await storage.set("pa_resellers", nextResellers);
-        setReseller(linked);
-        return { ok: true };
-      }
-
-      return { error: "Email sudah terdaftar" };
+      const linked = await saveResellerProfile(user.uid, {
+        ...existing,
+        id: user.uid,
+        name: existing.name || user.displayName || name || user.email?.split("@")[0] || "Reseller",
+        email: user.email || existing.email || email,
+        wa: existing.wa || wa || "",
+        googleSub: googleSub || existing.googleSub || null,
+        avatar: existing.avatar || user.photoURL || avatar || "",
+      });
+      setReseller(linked || existing);
+      return { ok: true };
     }
 
     const newReseller = {
-      id: "RSL-" + Date.now().toString(36).toUpperCase(),
-      name,
-      email,
-      wa,
-      password,
-      googleSub,
-      avatar,
+      id: user.uid,
+      name: user.displayName || name || user.email?.split("@")[0] || "Reseller",
+      email: user.email || email,
+      wa: wa || "",
+      googleSub: googleSub || null,
+      avatar: avatar || user.photoURL || "",
       tier: "Bronze",
       totalOrders: 0,
       totalSpent: 0,
       joinedAt: new Date().toISOString(),
     };
-    const nextResellers = [...resellers, newReseller];
-    setResellers(nextResellers);
-    await storage.set("pa_resellers", nextResellers);
-    setReseller(newReseller);
+    const saved = await saveResellerProfile(user.uid, newReseller);
+    setReseller(saved || newReseller);
+    if (adminLoggedIn) {
+      setResellers((current) => [(saved || newReseller), ...current.filter((item) => item.id !== user.uid)]);
+    }
     return { ok: true };
   };
 
   const loginReseller = async (email, password, googleProfile = null) => {
     if (googleProfile) {
-      const existing = resellers.find((item) => item.email === googleProfile.email);
+      const user = await loginWithGooglePopup();
+      const existing = await getResellerProfileByUid(user.uid);
       if (!existing) {
-        return registerReseller({
-          name: googleProfile.name,
-          email: googleProfile.email,
+        const created = await saveResellerProfile(user.uid, {
+          id: user.uid,
+          name: user.displayName || user.email?.split("@")[0] || "Reseller",
+          email: user.email || "",
           wa: "",
-          password: null,
           googleSub: googleProfile.sub,
-          avatar: googleProfile.picture || "",
+          avatar: user.photoURL || "",
+          tier: "Bronze",
+          totalOrders: 0,
+          totalSpent: 0,
+          joinedAt: new Date().toISOString(),
         });
+        setReseller(
+          created || {
+            id: user.uid,
+            name: user.displayName || user.email?.split("@")[0] || "Reseller",
+            email: user.email || "",
+            wa: "",
+            googleSub: googleProfile.sub,
+            avatar: user.photoURL || "",
+            tier: "Bronze",
+            totalOrders: 0,
+            totalSpent: 0,
+            joinedAt: new Date().toISOString(),
+          }
+        );
+        return { ok: true };
       }
 
-      if (existing.googleSub && existing.googleSub !== googleProfile.sub) {
-        return { error: "Akun Google ini tidak cocok dengan reseller yang tersimpan" };
-      }
-
-      const linked = {
+      const linked = await saveResellerProfile(user.uid, {
         ...existing,
-        name: existing.name || googleProfile.name,
+        id: user.uid,
+        name: existing.name || user.displayName || user.email?.split("@")[0] || "Reseller",
+        email: user.email || existing.email || "",
         googleSub: googleProfile.sub,
-        avatar: googleProfile.picture || existing.avatar || "",
-      };
-      const nextResellers = resellers.map((item) => (item.id === existing.id ? linked : item));
-      setResellers(nextResellers);
-      await storage.set("pa_resellers", nextResellers);
-      setReseller(linked);
+        avatar: user.photoURL || existing.avatar || "",
+      });
+      setReseller(linked || existing);
       return { ok: true };
     }
 
-    const foundReseller = resellers.find((item) => item.email === email && item.password === password);
+    const user = await loginResellerAuth(email, password);
+    const foundReseller = await getResellerProfileByUid(user.uid);
     if (!foundReseller) {
-      return { error: "Email atau password salah" };
+      const created = await saveResellerProfile(user.uid, {
+        id: user.uid,
+        name: user.displayName || user.email?.split("@")[0] || "Reseller",
+        email: user.email || email,
+        wa: "",
+        avatar: user.photoURL || "",
+        tier: "Bronze",
+        totalOrders: 0,
+        totalSpent: 0,
+        joinedAt: new Date().toISOString(),
+      });
+      setReseller(
+        created || {
+          id: user.uid,
+          name: user.displayName || user.email?.split("@")[0] || "Reseller",
+          email: user.email || email,
+          wa: "",
+          avatar: user.photoURL || "",
+          tier: "Bronze",
+          totalOrders: 0,
+          totalSpent: 0,
+          joinedAt: new Date().toISOString(),
+        }
+      );
+      return { ok: true };
     }
-    setReseller(foundReseller);
+    const linked = await saveResellerProfile(user.uid, {
+      ...foundReseller,
+      id: user.uid,
+      email: user.email || foundReseller.email,
+    });
+    setReseller(linked || foundReseller);
     return { ok: true };
   };
 
@@ -327,7 +426,7 @@ export default function App() {
   if (!loaded) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
-        <div className="mono text-sm tracking-widest" style={{ color: "var(--ink-dim)" }}>LOADING…</div>
+        <div className="mono text-sm tracking-widest" style={{ color: "var(--ink-dim)" }}>LOADING...</div>
       </div>
     );
   }
@@ -451,10 +550,12 @@ export default function App() {
         {view === "reseller-dashboard" && reseller && (
           <ResellerDashboard
             reseller={reseller}
-            orders={orders.filter((order) => order.resellerId === reseller.id)}
+            orders={resellerOrders}
             onBack={() => setView("home")}
-            onLogout={() => {
+            onLogout={async () => {
+              await signOut(firebaseAuth);
               setReseller(null);
+              setResellerOrders([]);
               setView("home");
             }}
           />

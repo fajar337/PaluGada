@@ -7,6 +7,18 @@ service cloud.firestore {
         && request.auth.token.email == "mustofafajar733@gmail.com";
     }
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnReseller(resellerId) {
+      return isSignedIn() && request.auth.uid == resellerId;
+    }
+
+    function isOwnOrder() {
+      return isSignedIn() && resource.data.resellerId == request.auth.uid;
+    }
+
     function validOrderCreate() {
       return request.resource.data.keys().hasAll([
         "id",
@@ -17,7 +29,20 @@ service cloud.firestore {
         "createdAt"
       ])
       && request.resource.data.id == request.resource.id
-      && request.resource.data.status == "Menunggu Pembayaran";
+      && request.resource.data.status == "Menunggu Pembayaran"
+      && (
+        (
+          !isSignedIn()
+          && (
+            !request.resource.data.keys().hasAny(["resellerId"])
+            || request.resource.data.resellerId == null
+          )
+        )
+        || (
+          isSignedIn()
+          && request.resource.data.resellerId == request.auth.uid
+        )
+      );
     }
 
     function validReviewCreate() {
@@ -72,14 +97,19 @@ service cloud.firestore {
 
     match /orders/{orderId} {
       allow get: if true;
-      allow list: if isAdmin();
+      allow read: if isAdmin() || isOwnOrder();
       allow create: if validOrderCreate();
       allow update: if isAdmin() || publicOrderVerificationUpdate();
       allow delete: if isAdmin();
     }
 
     match /resellers/{resellerId} {
-      allow read, write: if isAdmin();
+      allow get: if isAdmin() || isOwnReseller(resellerId);
+      allow list, delete: if isAdmin();
+      allow create, update: if isAdmin() || (
+        isOwnReseller(resellerId)
+        && request.resource.data.authUid == request.auth.uid
+      );
     }
 
     match /appConfig/{docId} {
