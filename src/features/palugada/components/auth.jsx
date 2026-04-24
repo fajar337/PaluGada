@@ -1,7 +1,20 @@
 import { useState } from "react";
 import { ArrowLeft, Crown, Eye, EyeOff, Lock } from "lucide-react";
-import { RESELLER_TIERS } from "../constants";
+import { ADMIN_WHATSAPP_NUMBER, RESELLER_TIERS, fmtIDR } from "../constants";
 import { Field } from "./shared";
+
+const RESELLER_FEE = 50000;
+
+function getResellerJoinUrl() {
+  const message = [
+    "Halo admin Palugada, saya ingin daftar reseller.",
+    "",
+    `Biaya pendaftaran reseller: ${fmtIDR(RESELLER_FEE)}`,
+    "Saya siap bayar dan minta akun reseller diaktifkan.",
+  ].join("\n");
+
+  return `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+}
 
 export function ResellerLogin({ onBack, onLogin, onRegister }) {
   const [email, setEmail] = useState("");
@@ -15,24 +28,25 @@ export function ResellerLogin({ onBack, onLogin, onRegister }) {
         setErr(result.error);
       }
     } catch {
-      setErr("Email atau password salah");
+      setErr("Email atau password salah, atau akun reseller belum diaktifkan admin");
     }
   };
 
   return (
-    <AuthLayout onBack={onBack} title="Masuk" subtitle="Lanjutkan sebagai reseller" badge="Reseller Portal">
+    <AuthLayout
+      onBack={onBack}
+      title="Masuk"
+      subtitle="Masuk dengan akun reseller yang sudah diaktifkan admin"
+      badge="Reseller Portal"
+    >
       <div className="space-y-4">
-        <GoogleAuthButton
-          mode="signin"
-          onSuccess={async () => {
-            setErr("");
-            const result = await onLogin(null, null, { sub: "firebase-google" });
-            if (result?.error) {
-              setErr(result.error);
-            }
-          }}
-          onError={setErr}
-        />
+        <div
+          className="rounded-3xl border p-4 text-sm leading-relaxed"
+          style={{ borderColor: "var(--line)", background: "var(--bg-3)", color: "var(--ink-dim)" }}
+        >
+          Akun reseller tidak bisa dibuat langsung dari website. Bayar pendaftaran dulu ke admin sebesar{" "}
+          <strong style={{ color: "var(--accent)" }}>{fmtIDR(RESELLER_FEE)}</strong>, lalu akun akan diaktifkan manual.
+        </div>
         <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="kamu@email.com" />
         <Field label="Password" value={pass} onChange={setPass} type="password" placeholder="********" />
         {err && (
@@ -47,45 +61,31 @@ export function ResellerLogin({ onBack, onLogin, onRegister }) {
         >
           Masuk {"->"}
         </button>
+        <a
+          href={getResellerJoinUrl()}
+          target="_blank"
+          rel="noreferrer"
+          className="block w-full text-center py-4 rounded-full font-semibold text-sm border"
+          style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+        >
+          Bayar daftar reseller {fmtIDR(RESELLER_FEE)}
+        </a>
         <button onClick={onRegister} className="w-full text-sm underline-link" style={{ color: "var(--ink-dim)" }}>
-          Belum punya akun? Daftar gratis {"->"}
+          Belum punya akun reseller? Hubungi admin {"->"}
         </button>
       </div>
     </AuthLayout>
   );
 }
 
-export function ResellerRegister({ onBack, onRegister, onLogin }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [wa, setWa] = useState("");
-  const [pass, setPass] = useState("");
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const submit = async () => {
-    if (!name || !email || !wa || !pass) {
-      setErr("Semua field wajib diisi");
-      return;
-    }
-
-    setErr("");
-    setLoading(true);
-
-    try {
-      const result = await onRegister({ name, email, wa, password: pass });
-      if (result?.error) {
-        setErr(result.error);
-      }
-    } catch {
-      setErr("Pendaftaran gagal. Coba lagi.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+export function ResellerRegister({ onBack, onLogin }) {
   return (
-    <AuthLayout onBack={onBack} title="Daftar" subtitle="Bergabung sebagai reseller - gratis selamanya" badge="Reseller Program">
+    <AuthLayout
+      onBack={onBack}
+      title="Reseller"
+      subtitle="Pendaftaran reseller dilakukan manual setelah pembayaran diverifikasi admin"
+      badge="Reseller Program"
+    >
       <div className="space-y-4">
         <div className="ink-card rounded-xl p-4 grid grid-cols-3 gap-3 text-center">
           {Object.entries(RESELLER_TIERS).map(([name, tier]) => (
@@ -96,41 +96,39 @@ export function ResellerRegister({ onBack, onRegister, onLogin }) {
             </div>
           ))}
         </div>
-        <GoogleAuthButton
-          mode="signup"
-          onSuccess={async () => {
-            setErr("");
-            const result = await onRegister({
-              name: "",
-              email: "",
-              wa: "",
-              password: null,
-              googleSub: "firebase-google",
-              avatar: "",
-            });
-            if (result?.error) {
-              setErr(result.error);
-            }
-          }}
-          onError={setErr}
-        />
-        <Field label="Nama Lengkap" value={name} onChange={setName} placeholder="John Doe" />
-        <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="kamu@email.com" />
-        <Field label="WhatsApp" value={wa} onChange={setWa} placeholder="08xxxxxxxxxx" />
-        <Field label="Password" value={pass} onChange={setPass} type="password" placeholder="********" />
-        {err && (
-          <div className="text-xs" style={{ color: "var(--accent)" }}>
-            {err}
+        <div className="rounded-3xl border p-5 space-y-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
+          <div>
+            <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
+              Biaya Aktivasi
+            </div>
+            <div className="serif text-4xl leading-none" style={{ fontWeight: 600 }}>
+              {fmtIDR(RESELLER_FEE)}
+            </div>
           </div>
-        )}
-        <button
-          onClick={submit}
-          disabled={loading}
-          className="w-full py-4 rounded-full font-semibold text-sm hover:scale-[1.02] transition disabled:opacity-50"
+          <div className="space-y-2 text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>
+            <div>1. Hubungi admin dan lakukan pembayaran pendaftaran reseller.</div>
+            <div>2. Setelah pembayaran diverifikasi, admin akan membuat atau mengaktifkan akun reseller kamu.</div>
+            <div>3. Setelah akun aktif, baru kamu bisa login dari halaman reseller.</div>
+          </div>
+          <div
+            className="rounded-2xl border p-4 text-xs leading-relaxed"
+            style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.7)", color: "var(--ink-dim)" }}
+          >
+            Login Google dan daftar instan dinonaktifkan supaya akun reseller tidak bisa bypass approval admin.
+          </div>
+        </div>
+        <a
+          href={getResellerJoinUrl()}
+          target="_blank"
+          rel="noreferrer"
+          className="block w-full text-center py-4 rounded-full font-semibold text-sm"
           style={{ background: "var(--accent)", color: "white" }}
         >
-          {loading ? "Mendaftar..." : "Daftar Gratis ->"}
-        </button>
+          Bayar & Hubungi Admin via WhatsApp
+        </a>
+        <div className="text-xs text-center" style={{ color: "var(--ink-dim)" }}>
+          Sudah bayar dan akun sudah dibuat admin?
+        </div>
         <button onClick={onLogin} className="w-full text-sm underline-link" style={{ color: "var(--ink-dim)" }}>
           Sudah punya akun? Masuk {"->"}
         </button>
@@ -245,68 +243,6 @@ export function AdminLogin({ onBack, onLogin }) {
             </button>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function GoogleAuthButton({ mode, onSuccess, onError }) {
-  return (
-    <div className="space-y-3">
-      <div
-        className="rounded-[1.75rem] border p-4 relative overflow-hidden"
-        style={{ borderColor: "var(--line)", background: "linear-gradient(180deg, var(--bg-2), var(--bg-3))" }}
-      >
-        <div
-          className="absolute inset-x-0 top-0 h-1"
-          style={{ background: "linear-gradient(90deg, #4285F4 0%, #34A853 33%, #FBBC05 66%, #EA4335 100%)" }}
-        ></div>
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div>
-            <div className="text-[10px] mono uppercase tracking-widest mb-1" style={{ color: "var(--accent)" }}>
-              Google Access
-            </div>
-            <div className="serif text-2xl leading-none" style={{ fontWeight: 500 }}>
-              {mode === "signup" ? "Daftar lebih cepat." : "Masuk lebih cepat."}
-            </div>
-          </div>
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center border"
-            style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.65)" }}
-            aria-hidden="true"
-          >
-            <span className="mono text-sm" style={{ color: "var(--accent)" }}>
-              G
-            </span>
-          </div>
-        </div>
-        <div className="text-xs mb-4 leading-relaxed" style={{ color: "var(--ink-dim)" }}>
-          {mode === "signup"
-            ? "Pakai akun Google untuk langsung membuat akun reseller."
-            : "Pakai akun Google untuk masuk atau menghubungkan reseller yang sudah ada."}
-        </div>
-        <div className="rounded-full bg-white/80 p-2 border" style={{ borderColor: "var(--line)" }}>
-          <button
-            onClick={async () => {
-              try {
-                await onSuccess();
-              } catch (error) {
-                onError(error.message || "Login Google gagal");
-              }
-            }}
-            className="w-full min-h-[44px] rounded-full font-semibold text-sm"
-            style={{ background: "white", color: "var(--ink)" }}
-          >
-            {mode === "signup" ? "Daftar dengan Google" : "Masuk dengan Google"}
-          </button>
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="h-px flex-1" style={{ background: "var(--line)" }}></span>
-        <span className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>
-          atau
-        </span>
-        <span className="h-px flex-1" style={{ background: "var(--line)" }}></span>
       </div>
     </div>
   );

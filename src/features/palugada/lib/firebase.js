@@ -1,9 +1,10 @@
-import { initializeApp } from "firebase/app";
+import { getApp, getApps, initializeApp } from "firebase/app";
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   getAuth,
   signInWithEmailAndPassword,
+  signOut,
   signInWithPopup,
   updateProfile,
 } from "firebase/auth";
@@ -32,6 +33,11 @@ export const firebaseApp = initializeApp(firebaseConfig);
 export const firebaseAuth = getAuth(firebaseApp);
 export const firestore = getFirestore(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
+
+function getSecondaryFirebaseApp() {
+  const appName = "palugada-secondary-auth";
+  return getApps().some((app) => app.name === appName) ? getApp(appName) : initializeApp(firebaseConfig, appName);
+}
 
 export async function registerResellerAuth({ name, email, password }) {
   const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
@@ -82,4 +88,18 @@ export async function getResellerOrders(uid) {
   return snapshot.docs
     .map((item) => ({ id: item.id, ...item.data() }))
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+}
+
+export async function createResellerAuthByAdmin({ name, email, password }) {
+  const secondaryApp = getSecondaryFirebaseApp();
+  const secondaryAuth = getAuth(secondaryApp);
+  const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+
+  if (name) {
+    await updateProfile(credential.user, { displayName: name });
+  }
+
+  await signOut(secondaryAuth);
+
+  return credential.user;
 }

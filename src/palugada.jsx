@@ -6,12 +6,11 @@ import { ResellerDashboard } from "./features/palugada/components/reseller";
 import { CartView, Checkout, Detail, Home, OrderSuccess, TrackOrder } from "./features/palugada/components/storefront";
 import { CONTACT_EMAIL, RESELLER_TIERS, getDefaultPlanSelection, getPlanSelection } from "./features/palugada/constants";
 import {
+  createResellerAuthByAdmin,
   firebaseAuth,
   getResellerOrders,
   getResellerProfileByUid,
   loginResellerAuth,
-  loginWithGooglePopup,
-  registerResellerAuth,
   saveResellerProfile,
 } from "./features/palugada/lib/firebase";
 import { addItem, getItem, loadProducts, storage, updateItem } from "./features/palugada/lib/storage";
@@ -267,89 +266,7 @@ export default function App() {
     return order;
   };
 
-  const registerReseller = async ({ name, email, wa, password, googleSub = null, avatar = "" }) => {
-    const user = googleSub ? await loginWithGooglePopup() : await registerResellerAuth({ name, email, password });
-    const existing = await getResellerProfileByUid(user.uid);
-    if (existing) {
-      const linked = await saveResellerProfile(user.uid, {
-        ...existing,
-        id: user.uid,
-        name: existing.name || user.displayName || name || user.email?.split("@")[0] || "Reseller",
-        email: user.email || existing.email || email,
-        wa: existing.wa || wa || "",
-        googleSub: googleSub || existing.googleSub || null,
-        avatar: existing.avatar || user.photoURL || avatar || "",
-      });
-      setReseller(linked || existing);
-      return { ok: true };
-    }
-
-    const newReseller = {
-      id: user.uid,
-      name: user.displayName || name || user.email?.split("@")[0] || "Reseller",
-      email: user.email || email,
-      wa: wa || "",
-      googleSub: googleSub || null,
-      avatar: avatar || user.photoURL || "",
-      tier: "Bronze",
-      totalOrders: 0,
-      totalSpent: 0,
-      joinedAt: new Date().toISOString(),
-    };
-    const saved = await saveResellerProfile(user.uid, newReseller);
-    setReseller(saved || newReseller);
-    if (adminLoggedIn) {
-      setResellers((current) => [(saved || newReseller), ...current.filter((item) => item.id !== user.uid)]);
-    }
-    return { ok: true };
-  };
-
-  const loginReseller = async (email, password, googleProfile = null) => {
-    if (googleProfile) {
-      const user = await loginWithGooglePopup();
-      const existing = await getResellerProfileByUid(user.uid);
-      if (!existing) {
-        const created = await saveResellerProfile(user.uid, {
-          id: user.uid,
-          name: user.displayName || user.email?.split("@")[0] || "Reseller",
-          email: user.email || "",
-          wa: "",
-          googleSub: googleProfile.sub,
-          avatar: user.photoURL || "",
-          tier: "Bronze",
-          totalOrders: 0,
-          totalSpent: 0,
-          joinedAt: new Date().toISOString(),
-        });
-        setReseller(
-          created || {
-            id: user.uid,
-            name: user.displayName || user.email?.split("@")[0] || "Reseller",
-            email: user.email || "",
-            wa: "",
-            googleSub: googleProfile.sub,
-            avatar: user.photoURL || "",
-            tier: "Bronze",
-            totalOrders: 0,
-            totalSpent: 0,
-            joinedAt: new Date().toISOString(),
-          }
-        );
-        return { ok: true };
-      }
-
-      const linked = await saveResellerProfile(user.uid, {
-        ...existing,
-        id: user.uid,
-        name: existing.name || user.displayName || user.email?.split("@")[0] || "Reseller",
-        email: user.email || existing.email || "",
-        googleSub: googleProfile.sub,
-        avatar: user.photoURL || existing.avatar || "",
-      });
-      setReseller(linked || existing);
-      return { ok: true };
-    }
-
+  const loginReseller = async (email, password) => {
     const user = await loginResellerAuth(email, password);
     const foundReseller = await getResellerProfileByUid(user.uid);
     if (!foundReseller) {
@@ -386,6 +303,32 @@ export default function App() {
     });
     setReseller(linked || foundReseller);
     return { ok: true };
+  };
+
+  const createResellerByAdmin = async ({ name, email, wa, password, tier = "Bronze" }) => {
+    const user = await createResellerAuthByAdmin({ name, email, password });
+    const resellerProfile = {
+      id: user.uid,
+      authUid: user.uid,
+      name: name.trim(),
+      email: user.email || email.trim(),
+      wa: wa.trim(),
+      avatar: "",
+      tier,
+      totalOrders: 0,
+      totalSpent: 0,
+      joinedAt: new Date().toISOString(),
+    };
+
+    const saved = await saveResellerProfile(user.uid, resellerProfile);
+    const nextReseller = saved || resellerProfile;
+    setResellers((current) => {
+      const nextResellers = [nextReseller, ...current.filter((item) => item.id !== nextReseller.id)];
+      storage.set("pa_resellers", nextResellers);
+      return nextResellers;
+    });
+    showToast(`Akun reseller ${nextReseller.name} berhasil diaktifkan`);
+    return { ok: true, reseller: nextReseller };
   };
 
   const markOrderWaitingVerification = async (orderId) => {
@@ -522,8 +465,8 @@ export default function App() {
         {view === "reseller-login" && (
           <ResellerLogin
             onBack={() => setView("home")}
-            onLogin={async (email, password, googleProfile) => {
-              const result = await loginReseller(email, password, googleProfile);
+            onLogin={async (email, password) => {
+              const result = await loginReseller(email, password);
               if (result.ok) {
                 setView("reseller-dashboard");
                 showToast("Selamat datang kembali!");
@@ -536,14 +479,6 @@ export default function App() {
         {view === "reseller-register" && (
           <ResellerRegister
             onBack={() => setView("home")}
-            onRegister={async (data) => {
-              const result = await registerReseller(data);
-              if (result.ok) {
-                setView("reseller-dashboard");
-                showToast("Pendaftaran berhasil!");
-              }
-              return result;
-            }}
             onLogin={() => setView("reseller-login")}
           />
         )}
@@ -593,6 +528,7 @@ export default function App() {
               setResellers(nextResellers);
               await storage.set("pa_resellers", nextResellers);
             }}
+            onCreateReseller={createResellerByAdmin}
             productRequests={productRequests}
             setProductRequests={async (nextRequests) => {
               setProductRequests(nextRequests);

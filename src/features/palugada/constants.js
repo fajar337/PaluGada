@@ -1,9 +1,9 @@
 ﻿import { Tv, Music, Video, Brain, Palette, Cloud } from "lucide-react";
 
 export const RESELLER_TIERS = {
-  Bronze: { min: 0, discount: 0.15, color: "#cd7f32" },
-  Silver: { min: 500000, discount: 0.18, color: "#a8a8a8" },
-  Gold: { min: 2000000, discount: 0.22, color: "#c89b3c" },
+  Bronze: { min: 0, discount: 0.05, color: "#cd7f32" },
+  Silver: { min: 500000, discount: 0.08, color: "#a8a8a8" },
+  Gold: { min: 2000000, discount: 0.1, color: "#c89b3c" },
 };
 
 export const NETFLIX_PLANS = [

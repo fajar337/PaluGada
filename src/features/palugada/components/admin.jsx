@@ -3,9 +3,21 @@ import { Crown, Edit3, Inbox, LogOut, Package, Plus, Receipt, Sparkles, Trash2, 
 import { ICONS, RESELLER_TIERS, fmtIDR } from "../constants";
 import { Field, ProductIcon } from "./shared";
 
-export function AdminPanel({ products, setProducts, orders, setOrders, resellers, setResellers, productRequests = [], setProductRequests, onLogout }) {
+export function AdminPanel({
+  products,
+  setProducts,
+  orders,
+  setOrders,
+  resellers,
+  setResellers,
+  onCreateReseller,
+  productRequests = [],
+  setProductRequests,
+  onLogout,
+}) {
   const [tab, setTab] = useState("dashboard");
   const [editing, setEditing] = useState(null);
+  const [showResellerCreator, setShowResellerCreator] = useState(false);
   const stats = {
     products: products.length,
     stock: products.reduce((sum, product) => sum + product.stock, 0),
@@ -93,10 +105,28 @@ export function AdminPanel({ products, setProducts, orders, setOrders, resellers
         {tab === "products" && <ProductsTab products={products} onEdit={setEditing} onDelete={deleteProduct} />}
         {tab === "orders" && <OrdersTab orders={orders} onChangeStatus={updateOrderStatus} onDelete={deleteOrder} />}
         {tab === "requests" && <RequestsTab productRequests={productRequests} onChangeStatus={updateRequestStatus} onDelete={deleteRequest} />}
-        {tab === "resellers" && <ResellersTab resellers={resellers} onDelete={deleteReseller} />}
+        {tab === "resellers" && (
+          <ResellersTab
+            resellers={resellers}
+            onDelete={deleteReseller}
+            onCreate={() => setShowResellerCreator(true)}
+          />
+        )}
       </div>
 
       {editing && <ProductEditor product={editing === "new" ? null : editing} onSave={saveProduct} onClose={() => setEditing(null)} />}
+      {showResellerCreator && (
+        <ResellerCreator
+          onClose={() => setShowResellerCreator(false)}
+          onCreate={async (payload) => {
+            const result = await onCreateReseller(payload);
+            if (result?.ok) {
+              setShowResellerCreator(false);
+            }
+            return result;
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -379,12 +409,19 @@ function parseDurationDays(duration = "") {
   return 0;
 }
 
-function ResellersTab({ resellers, onDelete }) {
+function ResellersTab({ resellers, onDelete, onCreate }) {
   return (
     <div>
-      <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Partners</div>
-      <h1 className="serif leading-none mb-2" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Reseller<span className="serif-italic">.</span></h1>
-      <p className="text-sm mb-10" style={{ color: "var(--ink-dim)" }}>{resellers.length} reseller terdaftar</p>
+      <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
+        <div>
+          <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Partners</div>
+          <h1 className="serif leading-none mb-2" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Reseller<span className="serif-italic">.</span></h1>
+          <p className="text-sm" style={{ color: "var(--ink-dim)" }}>{resellers.length} reseller terdaftar</p>
+        </div>
+        <button onClick={onCreate} className="px-5 py-3 rounded-full font-semibold text-sm flex items-center gap-2" style={{ background: "var(--accent)", color: "white" }}>
+          <Plus className="w-4 h-4" /> Aktifkan Reseller
+        </button>
+      </div>
 
       {resellers.length === 0 ? (
         <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada reseller terdaftar</div>
@@ -418,6 +455,97 @@ function ResellersTab({ resellers, onDelete }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ResellerCreator({ onClose, onCreate }) {
+  const [data, setData] = useState({
+    name: "",
+    email: "",
+    wa: "",
+    password: "",
+    tier: "Bronze",
+  });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const set = (key, value) => setData((current) => ({ ...current, [key]: value }));
+
+  const submit = async () => {
+    if (!data.name || !data.email || !data.wa || !data.password) {
+      setError("Nama, email, WhatsApp, dan password wajib diisi");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    try {
+      const result = await onCreate({
+        name: data.name.trim(),
+        email: data.email.trim(),
+        wa: data.wa.trim(),
+        password: data.password,
+        tier: data.tier,
+      });
+      if (result?.error) {
+        setError(result.error);
+      }
+    } catch (createError) {
+      setError(createError.message || "Aktivasi reseller gagal");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.5)" }}>
+      <div className="w-full max-w-xl rounded-3xl border bg-white overflow-hidden" style={{ borderColor: "var(--line)" }}>
+        <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: "var(--line)" }}>
+          <div>
+            <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Reseller</div>
+            <h2 className="serif text-3xl" style={{ fontWeight: 500 }}>Aktifkan Akun</h2>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div className="rounded-2xl border p-4 text-sm leading-relaxed" style={{ borderColor: "var(--line)", background: "var(--bg-3)", color: "var(--ink-dim)" }}>
+            Pakai form ini setelah reseller membayar biaya pendaftaran. Sistem akan membuat akun login Firebase dan profil reseller sekaligus.
+          </div>
+          <Field label="Nama Lengkap" value={data.name} onChange={(value) => set("name", value)} placeholder="Nama reseller" />
+          <Field label="Email Login" value={data.email} onChange={(value) => set("email", value)} type="email" placeholder="reseller@email.com" />
+          <Field label="WhatsApp" value={data.wa} onChange={(value) => set("wa", value)} placeholder="08xxxxxxxxxx" />
+          <Field label="Password Awal" value={data.password} onChange={(value) => set("password", value)} type="password" placeholder="Password reseller" />
+          <div>
+            <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>Tier Awal</label>
+            <select
+              value={data.tier}
+              onChange={(event) => set("tier", event.target.value)}
+              className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none"
+              style={{ borderColor: "var(--line)" }}
+            >
+              {Object.keys(RESELLER_TIERS).map((tier) => (
+                <option key={tier} value={tier}>{tier}</option>
+              ))}
+            </select>
+          </div>
+          {error && <div className="text-xs" style={{ color: "var(--accent)" }}>{error}</div>}
+        </div>
+
+        <div className="flex gap-3 p-6 border-t" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.95)" }}>
+          <button onClick={onClose} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>Batal</button>
+          <button
+            onClick={submit}
+            disabled={loading}
+            className="flex-1 py-3 rounded-full font-semibold text-sm disabled:opacity-50"
+            style={{ background: "var(--accent)", color: "white" }}
+          >
+            {loading ? "Mengaktifkan..." : "Aktifkan Reseller"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
