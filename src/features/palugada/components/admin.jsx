@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Crown, Edit3, Inbox, LogOut, Package, Plus, Receipt, Sparkles, Trash2, TrendingUp, Users, X } from "lucide-react";
+import { Check, ChevronDown, Crown, Edit3, Inbox, LogOut, MessageSquareQuote, Package, Plus, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
 import { ICONS, RESELLER_TIERS, fmtIDR } from "../constants";
 import { Field, ProductIcon } from "./shared";
 
 export function AdminPanel({
   products,
   setProducts,
+  reviews,
+  setReviews,
   orders,
   setOrders,
   resellers,
@@ -18,12 +20,28 @@ export function AdminPanel({
   const [tab, setTab] = useState("dashboard");
   const [editing, setEditing] = useState(null);
   const [showResellerCreator, setShowResellerCreator] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const stats = {
     products: products.length,
     stock: products.reduce((sum, product) => sum + product.stock, 0),
     orders: orders.length,
     requests: productRequests.length,
     revenue: orders.reduce((sum, order) => sum + order.total, 0),
+  };
+
+  const askDelete = (title, description, onConfirm) => {
+    setConfirmState({ title, description, onConfirm });
+  };
+
+  const closeConfirm = () => setConfirmState(null);
+
+  const confirmDelete = async () => {
+    if (!confirmState?.onConfirm) {
+      return;
+    }
+
+    await confirmState.onConfirm();
+    setConfirmState(null);
   };
 
   const saveProduct = (data) => {
@@ -35,35 +53,31 @@ export function AdminPanel({
     setEditing(null);
   };
 
-  const deleteProduct = (id) => {
-    if (confirm("Hapus produk ini?")) {
-      setProducts(products.filter((product) => product.id !== id));
-    }
-  };
+  const deleteProduct = (id) =>
+    askDelete("Hapus produk?", "Produk ini akan dihapus dari katalog admin.", () =>
+      setProducts(products.filter((product) => product.id !== id))
+    );
 
   const updateOrderStatus = (id, status) =>
     setOrders(orders.map((order) => (order.id === id ? { ...order, status } : order)));
 
-  const deleteOrder = (id) => {
-    if (confirm("Hapus pesanan ini?")) {
-      setOrders(orders.filter((order) => order.id !== id));
-    }
-  };
+  const deleteOrder = (id) =>
+    askDelete("Hapus pesanan?", "Pesanan ini akan dihapus permanen dari daftar.", () =>
+      setOrders(orders.filter((order) => order.id !== id))
+    );
 
-  const deleteReseller = (id) => {
-    if (confirm("Hapus reseller ini?")) {
-      setResellers(resellers.filter((reseller) => reseller.id !== id));
-    }
-  };
+  const deleteReseller = (id) =>
+    askDelete("Hapus reseller?", "Akun reseller ini akan dihapus dari daftar reseller.", () =>
+      setResellers(resellers.filter((reseller) => reseller.id !== id))
+    );
 
   const updateRequestStatus = (id, status) =>
     setProductRequests(productRequests.map((request) => (request.id === id ? { ...request, status } : request)));
 
-  const deleteRequest = (id) => {
-    if (confirm("Hapus request ini?")) {
-      setProductRequests(productRequests.filter((request) => request.id !== id));
-    }
-  };
+  const deleteRequest = (id) =>
+    askDelete("Hapus request?", "Request produk ini akan dihapus dari panel admin.", () =>
+      setProductRequests(productRequests.filter((request) => request.id !== id))
+    );
 
   return (
     <div className="min-h-screen flex" style={{ background: "var(--bg)" }}>
@@ -82,6 +96,7 @@ export function AdminPanel({
           <NavBtn active={tab === "dashboard"} onClick={() => setTab("dashboard")} icon={Sparkles}>Dashboard</NavBtn>
           <NavBtn active={tab === "products"} onClick={() => setTab("products")} icon={Package}>Produk</NavBtn>
           <NavBtn active={tab === "orders"} onClick={() => setTab("orders")} icon={Receipt}>Pesanan</NavBtn>
+          <NavBtn active={tab === "reviews"} onClick={() => setTab("reviews")} icon={Star}>Review</NavBtn>
           <NavBtn active={tab === "requests"} onClick={() => setTab("requests")} icon={Inbox}>Request</NavBtn>
           <NavBtn active={tab === "resellers"} onClick={() => setTab("resellers")} icon={Users}>Reseller</NavBtn>
         </nav>
@@ -93,7 +108,7 @@ export function AdminPanel({
 
       <div className="flex-1 safe-x py-6 md:p-12 overflow-x-hidden">
         <div className="flex gap-2 md:hidden mb-6 overflow-x-auto ios-scroll pb-1">
-          {["dashboard", "products", "orders", "requests", "resellers"].map((item) => (
+          {["dashboard", "products", "orders", "reviews", "requests", "resellers"].map((item) => (
             <button key={item} onClick={() => setTab(item)} className="px-4 py-2 rounded-full text-xs capitalize whitespace-nowrap" style={{ background: tab === item ? "var(--ink)" : "var(--bg-2)", color: tab === item ? "var(--bg)" : "var(--ink)", border: "1px solid var(--line)" }}>
               {item}
             </button>
@@ -104,6 +119,7 @@ export function AdminPanel({
         {tab === "dashboard" && <DashboardTab stats={stats} orders={orders} resellers={resellers} productRequests={productRequests} />}
         {tab === "products" && <ProductsTab products={products} onEdit={setEditing} onDelete={deleteProduct} />}
         {tab === "orders" && <OrdersTab orders={orders} onChangeStatus={updateOrderStatus} onDelete={deleteOrder} />}
+        {tab === "reviews" && <ReviewsTab products={products} reviews={reviews} setReviews={setReviews} onDeleteReview={askDelete} />}
         {tab === "requests" && <RequestsTab productRequests={productRequests} onChangeStatus={updateRequestStatus} onDelete={deleteRequest} />}
         {tab === "resellers" && (
           <ResellersTab
@@ -125,6 +141,14 @@ export function AdminPanel({
             }
             return result;
           }}
+        />
+      )}
+      {confirmState && (
+        <ConfirmDialog
+          title={confirmState.title}
+          description={confirmState.description}
+          onClose={closeConfirm}
+          onConfirm={confirmDelete}
         />
       )}
     </div>
@@ -238,6 +262,8 @@ function ProductsTab({ products, onEdit, onDelete }) {
 }
 
 function OrdersTab({ orders, onChangeStatus, onDelete }) {
+  const statusOptions = ["Menunggu Pembayaran", "Menunggu Verifikasi", "Diproses", "Selesai", "Dibatalkan"];
+
   return (
     <div>
       <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Sales</div>
@@ -266,13 +292,7 @@ function OrdersTab({ orders, onChangeStatus, onDelete }) {
               <div className="text-right">
                 <div className="serif text-3xl" style={{ color: "var(--accent)", fontWeight: 600 }}>{fmtIDR(order.total)}</div>
                 <div className="mt-2 flex justify-end gap-2">
-                  <select value={order.status} onChange={(event) => onChangeStatus(order.id, event.target.value)} className="px-3 py-1 rounded-full text-xs border bg-white" style={{ borderColor: "var(--line)" }}>
-                    <option>Menunggu Pembayaran</option>
-                    <option>Menunggu Verifikasi</option>
-                    <option>Diproses</option>
-                    <option>Selesai</option>
-                    <option>Dibatalkan</option>
-                  </select>
+                  <StatusDropdown value={order.status} options={statusOptions} onChange={(value) => onChangeStatus(order.id, value)} />
                   <button onClick={() => onDelete(order.id)} className="px-3 py-1 rounded-full text-xs border bg-white hover:bg-red-50 transition" style={{ borderColor: "var(--line)", color: "#991b1b" }}>
                     Hapus
                   </button>
@@ -304,6 +324,8 @@ function OrdersTab({ orders, onChangeStatus, onDelete }) {
 }
 
 function RequestsTab({ productRequests, onChangeStatus, onDelete }) {
+  const statusOptions = ["Baru", "Dicek", "Tersedia", "Tidak Tersedia", "Selesai"];
+
   return (
     <div>
       <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Product Requests</div>
@@ -339,13 +361,7 @@ function RequestsTab({ productRequests, onChangeStatus, onDelete }) {
               )}
 
               <div className="flex flex-wrap items-center gap-2">
-                <select value={request.status} onChange={(event) => onChangeStatus(request.id, event.target.value)} className="px-3 py-2 rounded-full text-xs border bg-white" style={{ borderColor: "var(--line)" }}>
-                  <option>Baru</option>
-                  <option>Dicek</option>
-                  <option>Tersedia</option>
-                  <option>Tidak Tersedia</option>
-                  <option>Selesai</option>
-                </select>
+                <StatusDropdown value={request.status} options={statusOptions} onChange={(value) => onChangeStatus(request.id, value)} />
                 <a
                   href={`https://wa.me/${normalizeWhatsapp(request.wa)}?text=${encodeURIComponent(`Halo ${request.name}, request ${request.appName} di Palugada mau kami follow up.`)}`}
                   target="_blank"
@@ -360,6 +376,242 @@ function RequestsTab({ productRequests, onChangeStatus, onDelete }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ReviewsTab({ products, reviews, setReviews, onDeleteReview }) {
+  const [activeProductId, setActiveProductId] = useState(products[0]?.id || "");
+  const [replyDrafts, setReplyDrafts] = useState({});
+  const activeProduct = products.find((product) => product.id === activeProductId) || products[0];
+  const productReviews = reviews.filter((review) => review.productId === activeProduct?.id);
+
+  const deleteReview = (reviewId) =>
+    onDeleteReview("Hapus review?", "Review ini akan dihapus dan tidak bisa dikembalikan.", () =>
+      setReviews(reviews.filter((review) => review.id !== reviewId))
+    );
+
+  const saveReply = (review) => {
+    const replyMessage = (replyDrafts[review.id] || "").trim();
+    if (!replyMessage) {
+      return;
+    }
+
+    setReviews(
+      reviews.map((item) =>
+        item.id === review.id
+          ? {
+              ...item,
+              adminReply: {
+                message: replyMessage,
+                createdAt: new Date().toISOString(),
+              },
+            }
+          : item
+      )
+    );
+    setReplyDrafts((current) => ({ ...current, [review.id]: "" }));
+  };
+
+  return (
+    <div>
+      <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Customer Reviews</div>
+      <h1 className="serif leading-none mb-2" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Review<span className="serif-italic">.</span></h1>
+      <p className="text-sm mb-10" style={{ color: "var(--ink-dim)" }}>Pilih produk dulu, lalu kelola review dan balasan admin</p>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-3">
+          {products.map((product) => {
+            const count = reviews.filter((review) => review.productId === product.id).length;
+            const active = product.id === activeProduct?.id;
+            return (
+              <button
+                key={product.id}
+                onClick={() => setActiveProductId(product.id)}
+                className="w-full paper-card p-4 text-left transition"
+                style={{
+                  borderColor: active ? "var(--ink)" : "var(--line)",
+                  background: active ? "var(--bg-3)" : "var(--bg-2)",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <ProductIcon icon={product.icon} color={product.color} size={42} />
+                  <div className="min-w-0">
+                    <div className="serif text-xl leading-none" style={{ fontWeight: 600 }}>{product.name}</div>
+                    <div className="text-[10px] mono uppercase tracking-widest mt-1" style={{ color: "var(--ink-dim)" }}>
+                      {count} review
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="lg:col-span-8">
+          {!activeProduct ? (
+            <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>
+              belum ada produk
+            </div>
+          ) : productReviews.length === 0 ? (
+            <div className="paper-card p-8">
+              <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>{activeProduct.name}</div>
+              <div className="serif text-3xl serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada review untuk produk ini</div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="paper-card p-6">
+                <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>{activeProduct.category}</div>
+                <div className="serif text-3xl" style={{ fontWeight: 600 }}>{activeProduct.name}</div>
+                <div className="text-sm mt-1" style={{ color: "var(--ink-dim)" }}>{productReviews.length} review masuk</div>
+              </div>
+              {productReviews.map((review) => (
+                <article key={review.id} className="paper-card p-6">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                      <div className="serif text-2xl leading-none" style={{ fontWeight: 500 }}>{review.name}</div>
+                      <div className="text-[10px] mono uppercase tracking-widest mt-2" style={{ color: "var(--ink-dim)" }}>
+                        {new Date(review.createdAt).toLocaleString("id-ID", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-1 justify-end mb-2" style={{ color: "var(--accent)" }}>
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <Star key={index} className={`w-4 h-4 ${index < Number(review.rating) ? "fill-current" : ""}`} />
+                        ))}
+                      </div>
+                      <button onClick={() => deleteReview(review.id)} className="text-xs mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed mb-5" style={{ color: "var(--ink-dim)" }}>{review.message}</p>
+
+                  {review.adminReply && (
+                    <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
+                      <div className="flex items-center gap-2 text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
+                        <MessageSquareQuote className="w-4 h-4" /> Balasan Admin
+                      </div>
+                      <p className="text-sm leading-relaxed mb-2" style={{ color: "var(--ink-dim)" }}>{review.adminReply.message}</p>
+                      <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>
+                        {new Date(review.adminReply.createdAt).toLocaleString("id-ID", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] mono uppercase tracking-widest block" style={{ color: "var(--accent)" }}>
+                      {review.adminReply ? "Ubah Balasan Admin" : "Balas Review"}
+                    </label>
+                    <textarea
+                      value={replyDrafts[review.id] ?? review.adminReply?.message ?? ""}
+                      onChange={(event) => setReplyDrafts((current) => ({ ...current, [review.id]: event.target.value }))}
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-2xl border bg-white text-sm focus:outline-none resize-y"
+                      style={{ borderColor: "var(--line)" }}
+                      placeholder="Tulis balasan admin..."
+                    />
+                    <button
+                      onClick={() => saveReply(review)}
+                      className="px-4 py-2 rounded-full text-xs font-semibold"
+                      style={{ background: "var(--ink)", color: "var(--bg)" }}
+                    >
+                      Simpan Balasan
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusDropdown({ value, options, onChange }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((current) => !current)}
+        className="min-w-[220px] px-4 py-2.5 rounded-full text-sm border flex items-center justify-between gap-3 transition"
+        style={{ borderColor: "var(--line)", background: "var(--bg-2)", color: "var(--ink)" }}
+      >
+        <span>{value}</span>
+        <ChevronDown className={`w-4 h-4 transition ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 mt-2 min-w-full overflow-hidden rounded-[1.25rem] border shadow-2xl z-20"
+          style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}
+        >
+          {options.map((option) => {
+            const active = option === value;
+            return (
+              <button
+                key={option}
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                }}
+                className="w-full px-4 py-3 text-left text-sm flex items-center justify-between gap-3 border-b last:border-b-0 transition"
+                style={{
+                  borderColor: "var(--line)",
+                  background: active ? "var(--ink)" : "transparent",
+                  color: active ? "var(--bg)" : "var(--ink)",
+                  fontWeight: active ? 600 : 500,
+                }}
+              >
+                <span>{option}</span>
+                {active && <Check className="w-4 h-4" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConfirmDialog({ title, description, onClose, onConfirm }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.5)" }}>
+      <div className="w-full max-w-md rounded-[2rem] border overflow-hidden" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
+        <div className="flex items-start justify-between gap-4 p-6 border-b" style={{ borderColor: "var(--line)" }}>
+          <div>
+            <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Konfirmasi Aksi</div>
+            <h3 className="serif text-3xl leading-none" style={{ fontWeight: 500 }}>{title}</h3>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6">
+          <p className="text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>{description}</p>
+        </div>
+        <div className="flex gap-3 p-6 border-t" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.95)" }}>
+          <button onClick={onClose} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>
+            Batal
+          </button>
+          <button onClick={onConfirm} className="flex-1 py-3 rounded-full font-semibold text-sm" style={{ background: "var(--accent)", color: "white" }}>
+            Ya, Hapus
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

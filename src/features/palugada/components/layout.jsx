@@ -93,7 +93,7 @@ export function Header({ cartCount, cartPulse, reseller, onCart, onHome, onAdmin
               <span className="ticker-dot">Apa lu mau, gua ada</span>
               <span className="ticker-dot">Garansi penuh selama berlangganan</span>
               <span className="ticker-dot">Diskon hingga 80%</span>
-              <span className="ticker-dot">Reseller program — komisi hingga 22%</span>
+              <span className="ticker-dot">Reseller program — diskon hingga 10%</span>
               <span className="ticker-dot">Pengiriman instan via WhatsApp</span>
               <span className="ticker-dot">Toko serba ada sejak 2024</span>
             </div>

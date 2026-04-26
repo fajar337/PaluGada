@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Award,
   Check,
+  ChevronDown,
   Crown,
   Download,
   Minus,
@@ -48,7 +49,16 @@ export function Home({
   const [quickProduct, setQuickProduct] = useState(null);
   const [sortBy, setSortBy] = useState("featured");
   const [guaranteeOnly, setGuaranteeOnly] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
   const categories = ["Semua", ...Array.from(new Set(products.map((product) => product.category)))];
+  const sortOptions = [
+    { value: "featured", label: "Urutan rekomendasi" },
+    { value: "price-low", label: "Harga termurah" },
+    { value: "price-high", label: "Harga termahal" },
+    { value: "stock", label: "Stok terbanyak" },
+  ];
+  const activeSort = sortOptions.find((item) => item.value === sortBy) || sortOptions[0];
+  const featuredProduct = products.find((product) => product.id === "p_netflix") || products[0];
   const filtered = products
     .filter((product) =>
       (category === "Semua" || product.category === category) &&
@@ -114,24 +124,24 @@ export function Home({
                 </div>
                 <div className="p-6 relative">
                   <div className="absolute top-5 right-5">
-                    <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: products[0]?.color, boxShadow: `0 8px 24px -8px ${products[0]?.color}80` }}>
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: featuredProduct?.color, boxShadow: `0 8px 24px -8px ${featuredProduct?.color}80` }}>
                       {(() => {
-                        const Icon = ICONS[products[0]?.icon] || Sparkles;
+                        const Icon = ICONS[featuredProduct?.icon] || Sparkles;
                         return <Icon className="w-7 h-7" style={{ color: "white" }} strokeWidth={2.2} />;
                       })()}
                     </div>
                   </div>
-                  <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>{products[0]?.category}</div>
-                  <h3 className="serif text-3xl uppercase pr-16 mb-2" style={{ fontWeight: 700 }}>{products[0]?.name}</h3>
-                  <p className="text-xs mb-4" style={{ color: "var(--ink-dim)" }}>{products[0]?.tagline}</p>
+                  <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>{featuredProduct?.category}</div>
+                  <h3 className="serif text-3xl uppercase pr-16 mb-2" style={{ fontWeight: 700 }}>{featuredProduct?.name}</h3>
+                  <p className="text-xs mb-4" style={{ color: "var(--ink-dim)" }}>{featuredProduct?.tagline}</p>
                 </div>
                 <div className="px-5 py-4 flex items-end justify-between" style={{ background: "var(--ink)", color: "var(--bg)" }}>
                   <div>
-                    {products[0]?.oldPrice > getProductStartingPrice(products[0] || {}) && (
-                      <div className="text-[10px] line-through opacity-50">{fmtIDR(products[0]?.oldPrice)}</div>
+                    {featuredProduct?.oldPrice > getProductStartingPrice(featuredProduct || {}) && (
+                      <div className="text-[10px] line-through opacity-50">{fmtIDR(featuredProduct?.oldPrice)}</div>
                     )}
                     <div className="serif" style={{ color: "var(--accent)", fontSize: "1.7rem", fontWeight: 800, lineHeight: 1 }}>
-                      {fmtIDR(getPrice(products[0] || {}, getProductStartingPrice(products[0] || {})))}
+                      {fmtIDR(getPrice(featuredProduct || {}, getProductStartingPrice(featuredProduct || {})))}
                     </div>
                   </div>
                 </div>
@@ -150,7 +160,7 @@ export function Home({
               </div>
               <div>
                 <div className="serif text-2xl sm:text-3xl" style={{ fontWeight: 500 }}>
-                  Jadi <span className="serif-italic" style={{ color: "var(--accent)" }}>reseller</span> & dapatkan diskon hingga 22%
+                  Jadi <span className="serif-italic" style={{ color: "var(--accent)" }}>reseller</span> & dapatkan diskon hingga 10%
                 </div>
                 <div className="text-sm mt-1" style={{ color: "var(--ink-dim)" }}>
                   Tier Bronze • Silver • Gold — semakin sering belanja, semakin besar margin
@@ -212,12 +222,44 @@ export function Home({
           >
             Full Garansi
           </button>
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className="px-4 py-2 rounded-full border bg-white text-sm focus:outline-none" style={{ borderColor: "var(--line)" }}>
-            <option value="featured">Urutan rekomendasi</option>
-            <option value="price-low">Harga termurah</option>
-            <option value="price-high">Harga termahal</option>
-            <option value="stock">Stok terbanyak</option>
-          </select>
+          <div className="relative w-full sm:w-auto">
+            <button
+              onClick={() => setSortOpen((current) => !current)}
+              className="w-full sm:w-auto min-w-[250px] px-4 py-3 rounded-[1.4rem] border text-sm flex items-center justify-between gap-3 transition"
+              style={{ borderColor: "var(--line)", background: "var(--bg-2)", color: "var(--ink)" }}
+            >
+              <span>{activeSort.label}</span>
+              <ChevronDown className={`w-4 h-4 transition ${sortOpen ? "rotate-180" : ""}`} />
+            </button>
+            {sortOpen && (
+              <div
+                className="absolute right-0 mt-2 w-full overflow-hidden rounded-[1.4rem] border shadow-2xl z-20"
+                style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}
+              >
+                {sortOptions.map((option) => {
+                  const active = option.value === sortBy;
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value);
+                        setSortOpen(false);
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm transition border-b last:border-b-0"
+                      style={{
+                        borderColor: "var(--line)",
+                        background: active ? "var(--ink)" : "transparent",
+                        color: active ? "var(--bg)" : "var(--ink)",
+                        fontWeight: active ? 600 : 500,
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-20 filter-fade">
@@ -373,7 +415,7 @@ export function ProductCard({ product, reviews = [], reseller, effectivePrice, o
   const Icon = ICONS[product.icon] || Sparkles;
   const num = String(index + 1).padStart(3, "0");
   const reviewSummary = getReviewSummary(reviews);
-  const badge = getProductBadge(product, index);
+  const badge = getProductBadge(product);
 
   return (
     <article className="group relative cursor-pointer slidein hover-lift overflow-hidden flex flex-col" style={{ animationDelay: `${delay}s`, background: "var(--bg-2)", border: "1.5px solid var(--ink)" }} onClick={onOpen}>
@@ -533,8 +575,8 @@ function productHasGuarantee(product) {
   return text.includes("garansi") || text.includes("fullgar") || text.includes("fullgarr");
 }
 
-function getProductBadge(product, index) {
-  if (index === 0) {
+function getProductBadge(product) {
+  if (product.id === "p_netflix") {
     return "Best Seller";
   }
   if (productHasGuarantee(product)) {
@@ -781,12 +823,35 @@ function ReviewsSection({ reviews, onReview }) {
                 <div>
                   <div className="serif text-2xl leading-none" style={{ fontWeight: 500 }}>{review.name}</div>
                   <div className="text-[10px] mono uppercase tracking-widest mt-1" style={{ color: "var(--ink-dim)" }}>
-                    {new Date(review.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+                    {new Date(review.createdAt).toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
                 </div>
                 <ReviewStars rating={Number(review.rating)} size="sm" />
               </div>
               <p className="text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>{review.message}</p>
+              {review.adminReply && (
+                <div className="mt-4 rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
+                  <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
+                    Balasan Admin
+                  </div>
+                  <p className="text-sm leading-relaxed mb-2" style={{ color: "var(--ink-dim)" }}>{review.adminReply.message}</p>
+                  <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>
+                    {new Date(review.adminReply.createdAt).toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
+              )}
             </article>
           ))
         )}

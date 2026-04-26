@@ -518,6 +518,11 @@ export default function App() {
               setProducts(nextProducts);
               await storage.set("pa_products", nextProducts);
             }}
+            reviews={reviews}
+            setReviews={async (nextReviews) => {
+              setReviews(nextReviews);
+              await storage.set("pa_reviews", nextReviews);
+            }}
             orders={orders}
             setOrders={async (nextOrders) => {
               setOrders(nextOrders);

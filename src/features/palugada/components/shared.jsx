@@ -1,4 +1,5 @@
-import { Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Eye, EyeOff, Sparkles } from "lucide-react";
 import { ICONS } from "../constants";
 
 export function ProductIcon({ icon, color, size = 48 }) {
@@ -20,6 +21,9 @@ export function ProductIcon({ icon, color, size = 48 }) {
 }
 
 export function Field({ label, value, onChange, type = "text", placeholder }) {
+  const isPassword = type === "password";
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <div>
       <label
@@ -28,14 +32,27 @@ export function Field({ label, value, onChange, type = "text", placeholder }) {
       >
         {label}
       </label>
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 transition"
-        style={{ borderColor: "var(--line)" }}
-      />
+      <div className="relative">
+        <input
+          type={isPassword && showPassword ? "text" : type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 transition"
+          style={{ borderColor: "var(--line)", paddingRight: isPassword ? 48 : 16 }}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword((current) => !current)}
+            className="absolute right-3 top-1/2 -translate-y-1/2"
+            style={{ color: "var(--ink-dim)" }}
+            aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
