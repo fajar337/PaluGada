@@ -129,6 +129,27 @@ export function Header({ cartCount, cartPulse, reseller, onCart, onHome, onAdmin
 
           <div className="flex items-center gap-2">
             {reseller ? (
+              <button
+                onClick={onResellerDash}
+                className="sm:hidden flex items-center justify-center w-11 h-11 rounded-full border hover:bg-white transition"
+                style={{ borderColor: "var(--line-2)" }}
+                aria-label="Dashboard reseller"
+                title="Dashboard reseller"
+              >
+                <Crown className="w-4 h-4" style={{ color: RESELLER_TIERS[reseller.tier]?.color }} />
+              </button>
+            ) : (
+              <button
+                onClick={onResellerLogin}
+                className="sm:hidden flex items-center justify-center w-11 h-11 rounded-full border hover:bg-white transition"
+                style={{ borderColor: "var(--line)" }}
+                aria-label="Login reseller"
+                title="Login reseller"
+              >
+                <Users className="w-4 h-4" />
+              </button>
+            )}
+            {reseller ? (
               <div className="hidden sm:flex items-center gap-2">
                 <button
                   onClick={onResellerDash}
@@ -158,8 +179,10 @@ export function Header({ cartCount, cartPulse, reseller, onCart, onHome, onAdmin
             </button>
             <button
               onClick={onAdmin}
-              className="hidden md:flex items-center gap-2 px-3 py-2 rounded-full text-sm hover:bg-white/60 transition"
-              style={{ color: "var(--ink-dim)" }}
+              className="flex items-center justify-center w-11 h-11 md:w-auto md:h-auto md:px-3 md:py-2 rounded-full text-sm hover:bg-white/60 transition border md:border-transparent"
+              style={{ color: "var(--ink-dim)", borderColor: "var(--line)" }}
+              aria-label="Admin"
+              title="Admin"
             >
               <Lock className="w-4 h-4" />
             </button>

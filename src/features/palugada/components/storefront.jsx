@@ -262,10 +262,11 @@ export function Home({
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-20 filter-fade">
+        <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto sm:overflow-visible snap-x snap-mandatory ios-scroll scrollbar -mx-6 px-6 sm:mx-0 sm:px-0 pb-20 filter-fade">
           {filtered.map((product, index) => (
             <ProductCard
               key={product.id}
+              className="min-w-[84vw] max-w-[84vw] snap-center sm:min-w-0 sm:max-w-none"
               product={product}
               reviews={reviews.filter((review) => review.productId === product.id)}
               reseller={reseller}
@@ -278,7 +279,7 @@ export function Home({
             />
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>
+            <div className="min-w-full sm:col-span-full text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>
               Tidak ada hasil yang ditemukan…
             </div>
           )}
@@ -411,14 +412,14 @@ function FAQAccordion() {
   );
 }
 
-export function ProductCard({ product, reviews = [], reseller, effectivePrice, onOpen, onPickPlan, onAdd, delay = 0, index = 0 }) {
+export function ProductCard({ product, reviews = [], reseller, effectivePrice, onOpen, onPickPlan, onAdd, delay = 0, index = 0, className = "" }) {
   const Icon = ICONS[product.icon] || Sparkles;
   const num = String(index + 1).padStart(3, "0");
   const reviewSummary = getReviewSummary(reviews);
   const badge = getProductBadge(product);
 
   return (
-    <article className="group relative cursor-pointer slidein hover-lift overflow-hidden flex flex-col" style={{ animationDelay: `${delay}s`, background: "var(--bg-2)", border: "1.5px solid var(--ink)" }} onClick={onOpen}>
+    <article className={`group relative cursor-pointer slidein hover-lift overflow-hidden flex flex-col ${className}`.trim()} style={{ animationDelay: `${delay}s`, background: "var(--bg-2)", border: "1.5px solid var(--ink)" }} onClick={onOpen}>
       <div className="flex items-center justify-between px-5 py-2.5 border-b mono text-[10px] uppercase tracking-[0.15em]" style={{ borderColor: "var(--ink)", background: "var(--bg-3)" }}>
         <span style={{ color: "var(--ink)", fontWeight: 600 }}>SKU/{num}</span>
         <span className="flex items-center gap-1.5">
