@@ -16,8 +16,23 @@ import {
 import { addItem, getItem, loadProducts, storage, updateItem } from "./features/palugada/lib/storage";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
+const UI_STATE_KEY = "pa_ui_state";
+
+function loadUiState() {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  try {
+    return JSON.parse(window.localStorage.getItem(UI_STATE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
 export default function App() {
-  const [view, setView] = useState("home");
+  const initialUiState = loadUiState();
+  const [view, setView] = useState(initialUiState.view || "home");
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -25,30 +40,34 @@ export default function App() {
   const [resellers, setResellers] = useState([]);
   const [resellerOrders, setResellerOrders] = useState([]);
   const [adminLoggedIn, setAdminLoggedIn] = useState(false);
+  const [authResolved, setAuthResolved] = useState(false);
   const [reseller, setReseller] = useState(null);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(initialUiState.cart || []);
   const [cartPulse, setCartPulse] = useState(false);
   const [activeProduct, setActiveProduct] = useState(null);
   const [activeOrder, setActiveOrder] = useState(null);
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("Semua");
+  const [search, setSearch] = useState(initialUiState.search || "");
+  const [category, setCategory] = useState(initialUiState.category || "Semua");
   const [toast, setToast] = useState(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const adminEmail = import.meta.env.VITE_FIREBASE_ADMIN_EMAIL || CONTACT_EMAIL;
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
-      setAdminLoggedIn(Boolean(user && user.email === adminEmail));
+      const isAdmin = Boolean(user && user.email === adminEmail);
+      setAdminLoggedIn(isAdmin);
 
       if (!user || user.email === adminEmail) {
         setReseller(null);
         setResellerOrders([]);
+        setAuthResolved(true);
         return;
       }
 
       const profile = await getResellerProfileByUid(user.uid);
       if (profile) {
         setReseller({ ...profile, id: user.uid, email: user.email });
+        setAuthResolved(true);
         return;
       }
 
@@ -76,6 +95,7 @@ export default function App() {
           joinedAt: new Date().toISOString(),
         }
       );
+      setAuthResolved(true);
     });
 
     (async () => {
@@ -86,6 +106,71 @@ export default function App() {
 
     return unsubscribe;
   }, [adminLoggedIn]);
+
+  useEffect(() => {
+    if (!loaded || !authResolved) {
+      return;
+    }
+
+    if (view === "admin" && !adminLoggedIn) {
+      setView("admin-login");
+    }
+
+    if (view === "reseller-dashboard" && !reseller) {
+      setView("reseller-login");
+    }
+  }, [adminLoggedIn, authResolved, loaded, reseller, view]);
+
+  useEffect(() => {
+    if (!products.length || !initialUiState.activeProductId) {
+      return;
+    }
+
+    const restoredProduct = products.find((product) => product.id === initialUiState.activeProductId);
+    if (restoredProduct) {
+      setActiveProduct(restoredProduct);
+    }
+  }, [initialUiState.activeProductId, products]);
+
+  useEffect(() => {
+    if (!initialUiState.activeOrderId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const restoredOrder =
+        orders.find((order) => order.id === initialUiState.activeOrderId) ||
+        (await getItem("pa_orders", initialUiState.activeOrderId, null));
+
+      if (!cancelled && restoredOrder) {
+        setActiveOrder(restoredOrder);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialUiState.activeOrderId, orders]);
+
+  useEffect(() => {
+    if (!loaded || typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(
+      UI_STATE_KEY,
+      JSON.stringify({
+        view,
+        activeProductId: activeProduct?.id || null,
+        activeOrderId: activeOrder?.id || null,
+        search,
+        category,
+        cart,
+      })
+    );
+  }, [activeOrder?.id, activeProduct?.id, cart, category, loaded, search, view]);
 
   useEffect(() => {
     if (!adminLoggedIn) {

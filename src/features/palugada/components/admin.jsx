@@ -3,6 +3,8 @@ import { Check, ChevronDown, Crown, Edit3, Inbox, LogOut, MessageSquareQuote, Pa
 import { ICONS, RESELLER_TIERS, fmtIDR } from "../constants";
 import { Field, ProductIcon } from "./shared";
 
+const ADMIN_TAB_KEY = "pa_admin_tab";
+
 export function AdminPanel({
   products,
   setProducts,
@@ -17,7 +19,13 @@ export function AdminPanel({
   setProductRequests,
   onLogout,
 }) {
-  const [tab, setTab] = useState("dashboard");
+  const [tab, setTab] = useState(() => {
+    if (typeof window === "undefined") {
+      return "dashboard";
+    }
+
+    return window.localStorage.getItem(ADMIN_TAB_KEY) || "dashboard";
+  });
   const [editing, setEditing] = useState(null);
   const [showResellerCreator, setShowResellerCreator] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
@@ -79,6 +87,13 @@ export function AdminPanel({
       setProductRequests(productRequests.filter((request) => request.id !== id))
     );
 
+  const setPersistedTab = (nextTab) => {
+    setTab(nextTab);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(ADMIN_TAB_KEY, nextTab);
+    }
+  };
+
   return (
     <div className="min-h-screen flex" style={{ background: "var(--bg)" }}>
       <aside className="w-64 border-r p-6 hidden md:flex flex-col" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
@@ -93,12 +108,12 @@ export function AdminPanel({
         </div>
 
         <nav className="space-y-1 flex-1">
-          <NavBtn active={tab === "dashboard"} onClick={() => setTab("dashboard")} icon={Sparkles}>Dashboard</NavBtn>
-          <NavBtn active={tab === "products"} onClick={() => setTab("products")} icon={Package}>Produk</NavBtn>
-          <NavBtn active={tab === "orders"} onClick={() => setTab("orders")} icon={Receipt}>Pesanan</NavBtn>
-          <NavBtn active={tab === "reviews"} onClick={() => setTab("reviews")} icon={Star}>Review</NavBtn>
-          <NavBtn active={tab === "requests"} onClick={() => setTab("requests")} icon={Inbox}>Request</NavBtn>
-          <NavBtn active={tab === "resellers"} onClick={() => setTab("resellers")} icon={Users}>Reseller</NavBtn>
+          <NavBtn active={tab === "dashboard"} onClick={() => setPersistedTab("dashboard")} icon={Sparkles}>Dashboard</NavBtn>
+          <NavBtn active={tab === "products"} onClick={() => setPersistedTab("products")} icon={Package}>Produk</NavBtn>
+          <NavBtn active={tab === "orders"} onClick={() => setPersistedTab("orders")} icon={Receipt}>Pesanan</NavBtn>
+          <NavBtn active={tab === "reviews"} onClick={() => setPersistedTab("reviews")} icon={Star}>Review</NavBtn>
+          <NavBtn active={tab === "requests"} onClick={() => setPersistedTab("requests")} icon={Inbox}>Request</NavBtn>
+          <NavBtn active={tab === "resellers"} onClick={() => setPersistedTab("resellers")} icon={Users}>Reseller</NavBtn>
         </nav>
 
         <button onClick={onLogout} className="flex items-center gap-2 text-sm hover:text-red-500 transition mt-6" style={{ color: "var(--ink-dim)" }}>
@@ -109,7 +124,7 @@ export function AdminPanel({
       <div className="flex-1 safe-x py-6 md:p-12 overflow-x-hidden">
         <div className="flex gap-2 md:hidden mb-6 overflow-x-auto ios-scroll pb-1">
           {["dashboard", "products", "orders", "reviews", "requests", "resellers"].map((item) => (
-            <button key={item} onClick={() => setTab(item)} className="px-4 py-2 rounded-full text-xs capitalize whitespace-nowrap" style={{ background: tab === item ? "var(--ink)" : "var(--bg-2)", color: tab === item ? "var(--bg)" : "var(--ink)", border: "1px solid var(--line)" }}>
+            <button key={item} onClick={() => setPersistedTab(item)} className="px-4 py-2 rounded-full text-xs capitalize whitespace-nowrap" style={{ background: tab === item ? "var(--ink)" : "var(--bg-2)", color: tab === item ? "var(--bg)" : "var(--ink)", border: "1px solid var(--line)" }}>
               {item}
             </button>
           ))}

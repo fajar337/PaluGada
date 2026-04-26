@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { AtSign, Crown, Lock, Mail, MessageCircle, PackageSearch, ShoppingCart, Users } from "lucide-react";
 import { ADMIN_WHATSAPP_NUMBER, CONTACT_EMAIL, INSTAGRAM_URL, RESELLER_TIERS } from "../constants";
 
@@ -81,6 +82,35 @@ export function StyleBlock() {
 }
 
 export function Header({ cartCount, cartPulse, reseller, onCart, onHome, onAdmin, onTrackOrder, onResellerLogin, onResellerDash }) {
+  const brandTapTimeoutRef = useRef(null);
+  const lastBrandTapRef = useRef(0);
+
+  const handleBrandTextTap = () => {
+    const now = Date.now();
+    const isMobile = window.matchMedia("(max-width: 767px)").matches;
+
+    if (!isMobile) {
+      onHome();
+      return;
+    }
+
+    if (now - lastBrandTapRef.current < 320) {
+      if (brandTapTimeoutRef.current) {
+        clearTimeout(brandTapTimeoutRef.current);
+      }
+      brandTapTimeoutRef.current = null;
+      lastBrandTapRef.current = 0;
+      onAdmin();
+      return;
+    }
+
+    lastBrandTapRef.current = now;
+    brandTapTimeoutRef.current = setTimeout(() => {
+      onHome();
+      brandTapTimeoutRef.current = null;
+    }, 320);
+  };
+
   return (
     <>
       <div
@@ -106,26 +136,27 @@ export function Header({ cartCount, cartPulse, reseller, onCart, onHome, onAdmin
         style={{ background: "rgba(245,241,234,0.85)", borderColor: "var(--line)" }}
       >
         <div className="max-w-7xl mx-auto safe-x py-4 sm:py-5 flex items-center justify-between gap-3">
-          <button onClick={onHome} className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="relative">
-              <div
+              <button
+                onClick={onHome}
                 className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center border-2"
                 style={{ background: "var(--bg)", borderColor: "var(--ink)" }}
               >
                 <span className="serif text-xl leading-none" style={{ color: "var(--ink)", fontWeight: 800 }}>
                   PG
                 </span>
-              </div>
+              </button>
             </div>
-            <div className="leading-none text-left">
+            <button onClick={handleBrandTextTap} className="leading-none text-left min-w-0">
               <div className="serif text-xl sm:text-2xl tracking-tight uppercase" style={{ fontWeight: 800 }}>
                 Palu<span style={{ color: "var(--accent)" }}>gada</span>
               </div>
               <div className="hidden min-[420px]:block text-[9px] mono uppercase tracking-[0.18em] mt-1.5" style={{ color: "var(--ink-dim)" }}>
                 apa lu mau, gua ada
               </div>
-            </div>
-          </button>
+            </button>
+          </div>
 
           <div className="flex items-center gap-2">
             {reseller ? (
@@ -179,7 +210,7 @@ export function Header({ cartCount, cartPulse, reseller, onCart, onHome, onAdmin
             </button>
             <button
               onClick={onAdmin}
-              className="flex items-center justify-center w-11 h-11 md:w-auto md:h-auto md:px-3 md:py-2 rounded-full text-sm hover:bg-white/60 transition border md:border-transparent"
+              className="hidden md:flex items-center justify-center w-11 h-11 md:w-auto md:h-auto md:px-3 md:py-2 rounded-full text-sm hover:bg-white/60 transition border md:border-transparent"
               style={{ color: "var(--ink-dim)", borderColor: "var(--line)" }}
               aria-label="Admin"
               title="Admin"
