@@ -68,7 +68,7 @@ export function StyleBlock() {
       .ticker-dot::before { content: "●"; color: var(--accent); margin-right: 0.5rem; }
       .safe-x { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
       .safe-y { padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
-      .ios-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+      .ios-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior: auto; }
 
       @supports (height: 100dvh) {
         .min-h-screen { min-height: 100dvh; }
@@ -81,9 +81,19 @@ export function StyleBlock() {
   );
 }
 
-export function Header({ cartCount, cartPulse, reseller, onCart, onHome, onAdmin, onTrackOrder, onResellerLogin, onResellerDash }) {
+export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, onHome, onAdmin, onTrackOrder, onResellerLogin, onResellerDash }) {
   const brandTapTimeoutRef = useRef(null);
   const lastBrandTapRef = useRef(0);
+  const activePromos = promos.filter((promo) => promo.active).map((promo) => promo.title?.trim()).filter(Boolean);
+  const tickerItems = [
+    ...activePromos,
+    "Apa lu mau, gua ada",
+    "Garansi penuh selama berlangganan",
+    "Diskon hingga 80%",
+    "Reseller program - diskon hingga 10%",
+    "Pengiriman instan via WhatsApp",
+    "Toko serba ada sejak 2024",
+  ];
 
   const handleBrandTextTap = () => {
     const now = Date.now();
@@ -120,12 +130,9 @@ export function Header({ cartCount, cartPulse, reseller, onCart, onHome, onAdmin
         <div className="marquee whitespace-nowrap">
           {[...Array(2)].map((_, index) => (
             <div key={index} className="flex gap-12">
-              <span className="ticker-dot">Apa lu mau, gua ada</span>
-              <span className="ticker-dot">Garansi penuh selama berlangganan</span>
-              <span className="ticker-dot">Diskon hingga 80%</span>
-              <span className="ticker-dot">Reseller program — diskon hingga 10%</span>
-              <span className="ticker-dot">Pengiriman instan via WhatsApp</span>
-              <span className="ticker-dot">Toko serba ada sejak 2024</span>
+              {tickerItems.map((item) => (
+                <span key={`${index}-${item}`} className="ticker-dot">{item}</span>
+              ))}
             </div>
           ))}
         </div>
@@ -330,3 +337,4 @@ export function FloatingWhatsApp() {
     </a>
   );
 }
+

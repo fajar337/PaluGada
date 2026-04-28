@@ -20,8 +20,9 @@ export function ProductIcon({ icon, color, size = 48 }) {
   );
 }
 
-export function Field({ label, value, onChange, type = "text", placeholder }) {
+export function Field({ label, value, onChange, type = "text", placeholder, min }) {
   const isPassword = type === "password";
+  const isNumber = type === "number";
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -36,7 +37,28 @@ export function Field({ label, value, onChange, type = "text", placeholder }) {
         <input
           type={isPassword && showPassword ? "text" : type}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          min={isNumber ? (min ?? 0) : undefined}
+          inputMode={isNumber ? "numeric" : undefined}
+          onKeyDown={(event) => {
+            if (isNumber && event.key === "-") {
+              event.preventDefault();
+            }
+          }}
+          onChange={(event) => {
+            if (!isNumber) {
+              onChange(event.target.value);
+              return;
+            }
+
+            const rawValue = event.target.value;
+            if (rawValue === "") {
+              onChange("");
+              return;
+            }
+
+            const nextValue = Number(rawValue);
+            onChange(Number.isNaN(nextValue) ? 0 : Math.max(min ?? 0, nextValue));
+          }}
           placeholder={placeholder}
           className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 transition"
           style={{ borderColor: "var(--line)", paddingRight: isPassword ? 48 : 16 }}

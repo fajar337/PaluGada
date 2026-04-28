@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AdminPanel } from "./features/palugada/components/admin";
 import { AdminLogin, ResellerLogin, ResellerRegister } from "./features/palugada/components/auth";
 import { FloatingWhatsApp, Footer, Header, StyleBlock } from "./features/palugada/components/layout";
 import { ResellerDashboard } from "./features/palugada/components/reseller";
 import { CartView, Checkout, Detail, Home, OrderSuccess, TrackOrder } from "./features/palugada/components/storefront";
-import { CONTACT_EMAIL, RESELLER_TIERS, getDefaultPlanSelection, getPlanSelection } from "./features/palugada/constants";
+import { CONTACT_EMAIL, RESELLER_TIERS, getDefaultPlanSelection, getPlanSelection, getPricingForSelection } from "./features/palugada/constants";
 import {
   createResellerAuthByAdmin,
   firebaseAuth,
@@ -34,6 +34,8 @@ export default function App() {
   const initialUiState = loadUiState();
   const [view, setView] = useState(initialUiState.view || "home");
   const [products, setProducts] = useState([]);
+  const [resellerTiers, setResellerTiers] = useState(RESELLER_TIERS);
+  const [promos, setPromos] = useState([]);
   const [orders, setOrders] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [productRequests, setProductRequests] = useState([]);
@@ -50,6 +52,9 @@ export default function App() {
   const [category, setCategory] = useState(initialUiState.category || "Semua");
   const [toast, setToast] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const historyReadyRef = useRef(false);
+  const historyKeyRef = useRef("");
+  const restoringHistoryRef = useRef(false);
 
   useEffect(() => {
     const adminEmail = import.meta.env.VITE_FIREBASE_ADMIN_EMAIL || CONTACT_EMAIL;
@@ -100,6 +105,10 @@ export default function App() {
 
     (async () => {
       setProducts(await loadProducts());
+      const savedTiers = await storage.get("pa_reseller_tiers", RESELLER_TIERS);
+      Object.assign(RESELLER_TIERS, savedTiers);
+      setResellerTiers(savedTiers);
+      setPromos(await storage.get("pa_promos", []));
       setReviews(await storage.get("pa_reviews", []));
       setLoaded(true);
     })();
@@ -173,6 +182,82 @@ export default function App() {
   }, [activeOrder?.id, activeProduct?.id, cart, category, loaded, search, view]);
 
   useEffect(() => {
+    if (!loaded || typeof window === "undefined") {
+      return;
+    }
+
+    const nextState = {
+      palugada: true,
+      view,
+      activeProductId: activeProduct?.id || null,
+      activeOrderId: activeOrder?.id || null,
+    };
+    const nextKey = JSON.stringify(nextState);
+
+    if (restoringHistoryRef.current) {
+      window.history.replaceState(nextState, "");
+      historyKeyRef.current = nextKey;
+      restoringHistoryRef.current = false;
+      historyReadyRef.current = true;
+      return;
+    }
+
+    if (!historyReadyRef.current) {
+      window.history.replaceState(nextState, "");
+      historyKeyRef.current = nextKey;
+      historyReadyRef.current = true;
+      return;
+    }
+
+    if (historyKeyRef.current !== nextKey) {
+      window.history.pushState(nextState, "");
+      historyKeyRef.current = nextKey;
+    }
+  }, [activeOrder?.id, activeProduct?.id, loaded, view]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const restoreHistoryState = async (state) => {
+      const nextView = state?.view || "home";
+      restoringHistoryRef.current = true;
+      setView(nextView);
+
+      if (state?.activeProductId) {
+        const restoredProduct =
+          products.find((product) => product.id === state.activeProductId) ||
+          (await getItem("pa_products", state.activeProductId, null));
+        setActiveProduct(restoredProduct || null);
+      } else {
+        setActiveProduct(null);
+      }
+
+      if (state?.activeOrderId) {
+        const restoredOrder =
+          orders.find((order) => order.id === state.activeOrderId) ||
+          (await getItem("pa_orders", state.activeOrderId, null));
+        setActiveOrder(restoredOrder || null);
+      } else {
+        setActiveOrder(null);
+      }
+    };
+
+    const onPopState = (event) => {
+      const state = event.state;
+      if (!state?.palugada) {
+        return;
+      }
+
+      void restoreHistoryState(state);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [orders, products]);
+
+  useEffect(() => {
     if (!adminLoggedIn) {
       return;
     }
@@ -204,7 +289,7 @@ export default function App() {
     if (!reseller) {
       return basePrice;
     }
-    const tier = RESELLER_TIERS[reseller.tier] || RESELLER_TIERS.Bronze;
+    const tier = resellerTiers[reseller.tier] || resellerTiers.Bronze || RESELLER_TIERS.Bronze;
     return Math.round(basePrice * (1 - tier.discount));
   };
 
@@ -215,13 +300,14 @@ export default function App() {
         return null;
       }
       const selectedPlan = getPlanSelection(product, cartItem.planId, cartItem.optionId);
-      const basePrice = selectedPlan?.option.price || product.price;
+      const pricing = getPricingForSelection(product, promos, selectedPlan || { planId: cartItem.planId, optionId: cartItem.optionId });
       return {
         ...product,
         cartKey: cartItem.key || cartItem.id,
         qty: cartItem.qty,
-        price: basePrice,
-        effectivePrice: getPrice(product, basePrice),
+        price: pricing.displayPrice,
+        compareAtPrice: pricing.compareAt,
+        effectivePrice: getPrice(product, pricing.displayPrice),
         selectedPlanName: selectedPlan?.plan.name || "",
         selectedDuration: selectedPlan?.option.duration || product.duration,
         selectedPlanId: selectedPlan?.plan.id || null,
@@ -322,8 +408,8 @@ export default function App() {
       const nextTotalOrders = (reseller.totalOrders || 0) + 1;
       const nextTotalSpent = (reseller.totalSpent || 0) + cartTotal;
       let nextTier = "Bronze";
-      if (nextTotalSpent >= RESELLER_TIERS.Gold.min) nextTier = "Gold";
-      else if (nextTotalSpent >= RESELLER_TIERS.Silver.min) nextTier = "Silver";
+      if (nextTotalSpent >= (resellerTiers.Gold?.min ?? RESELLER_TIERS.Gold.min)) nextTier = "Gold";
+      else if (nextTotalSpent >= (resellerTiers.Silver?.min ?? RESELLER_TIERS.Silver.min)) nextTier = "Silver";
 
       const savedReseller = await saveResellerProfile(reseller.id, {
         ...reseller,
@@ -464,6 +550,7 @@ export default function App() {
       <StyleBlock />
       {!view.startsWith("admin") && (
         <Header
+          promos={promos}
           cartCount={cartCount}
           cartPulse={cartPulse}
           reseller={reseller}
@@ -480,6 +567,8 @@ export default function App() {
         {view === "home" && (
           <Home
             products={products}
+            resellerTiers={resellerTiers}
+            promos={promos}
             reviews={reviews}
             reseller={reseller}
             getPrice={getPrice}
@@ -499,6 +588,8 @@ export default function App() {
         {view === "detail" && activeProduct && (
           <Detail
             product={products.find((product) => product.id === activeProduct.id) || activeProduct}
+            resellerTiers={resellerTiers}
+            promos={promos}
             reviews={reviews.filter((review) => review.productId === activeProduct.id)}
             reseller={reseller}
             getPrice={getPrice}
@@ -570,6 +661,7 @@ export default function App() {
         {view === "reseller-dashboard" && reseller && (
           <ResellerDashboard
             reseller={reseller}
+            resellerTiers={resellerTiers}
             orders={resellerOrders}
             onBack={() => setView("home")}
             onLogout={async () => {
@@ -602,6 +694,16 @@ export default function App() {
             setProducts={async (nextProducts) => {
               setProducts(nextProducts);
               await storage.set("pa_products", nextProducts);
+            }}
+            resellerTiers={resellerTiers}
+            setResellerTiers={async (nextTiers) => {
+              setResellerTiers(nextTiers);
+              await storage.set("pa_reseller_tiers", nextTiers);
+            }}
+            promos={promos}
+            setPromos={async (nextPromos) => {
+              setPromos(nextPromos);
+              await storage.set("pa_promos", nextPromos);
             }}
             reviews={reviews}
             setReviews={async (nextReviews) => {

@@ -1,9 +1,10 @@
 import { Award, ArrowLeft, Crown, LogOut, Receipt, TrendingUp, Wallet } from "lucide-react";
 import { RESELLER_TIERS, fmtIDR } from "../constants";
 
-export function ResellerDashboard({ reseller, orders, onBack, onLogout }) {
-  const tier = RESELLER_TIERS[reseller.tier];
-  const nextTier = reseller.tier === "Bronze" ? RESELLER_TIERS.Silver : reseller.tier === "Silver" ? RESELLER_TIERS.Gold : null;
+export function ResellerDashboard({ reseller, resellerTiers = RESELLER_TIERS, orders, onBack, onLogout }) {
+  const tierMap = resellerTiers || RESELLER_TIERS;
+  const tier = tierMap[reseller.tier] || tierMap.Bronze || RESELLER_TIERS.Bronze;
+  const nextTier = reseller.tier === "Bronze" ? tierMap.Silver : reseller.tier === "Silver" ? tierMap.Gold : null;
   const nextName = reseller.tier === "Bronze" ? "Silver" : reseller.tier === "Silver" ? "Gold" : null;
   const progress = nextTier ? Math.min(100, (reseller.totalSpent / nextTier.min) * 100) : 100;
   const totalProfit = orders.reduce((sum, order) => sum + (order.profit || 0), 0);

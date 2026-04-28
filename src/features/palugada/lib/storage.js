@@ -4,11 +4,13 @@ import { collection, doc, getDoc, getDocs, setDoc, writeBatch } from "firebase/f
 
 const REMOTE_COLLECTIONS = {
   pa_products: { collection: "products", type: "array" },
+  pa_promos: { collection: "promos", type: "array" },
   pa_orders: { collection: "orders", type: "array" },
   pa_resellers: { collection: "resellers", type: "array" },
   pa_reviews: { collection: "reviews", type: "array" },
   pa_product_requests: { collection: "productRequests", type: "array" },
   pa_admin: { collection: "appConfig", type: "single", docId: "admin" },
+  pa_reseller_tiers: { collection: "appConfig", type: "single", docId: "resellerTiers" },
 };
 
 function readLocal(key, fallback) {
@@ -34,6 +36,30 @@ function getRemoteConfig(key) {
 
 function getItemId(item, index) {
   return item?.id || item?.productId || `item-${index}`;
+}
+
+function normalizeLegacyProduct(product, seedProduct) {
+  if (!product || !seedProduct) {
+    return product;
+  }
+
+  if (
+    product.id === "p_netflix" &&
+    (String(product.tagline || "").toLowerCase().includes("grand opening") ||
+      String(product.description || "").toLowerCase().includes("grand opening"))
+  ) {
+    return {
+      ...product,
+      price: seedProduct.price,
+      oldPrice: seedProduct.oldPrice,
+      tagline: seedProduct.tagline,
+      description: seedProduct.description,
+      features: seedProduct.features,
+      pricingPlans: seedProduct.pricingPlans,
+    };
+  }
+
+  return product;
 }
 
 async function getRemote(key, fallback) {
@@ -182,7 +208,12 @@ export async function loadProducts() {
       }
 
       const seedProduct = SEED_PRODUCTS.find((item) => item.id === product.id);
-      return { ...product, ...seedProduct, stock: product.stock ?? seedProduct.stock };
+      const normalizedProduct = normalizeLegacyProduct(product, seedProduct);
+      return {
+        ...seedProduct,
+        ...normalizedProduct,
+        stock: normalizedProduct.stock ?? seedProduct.stock,
+      };
     });
 
     await storage.set("pa_products", nextProducts);

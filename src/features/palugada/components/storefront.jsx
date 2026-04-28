@@ -25,15 +25,18 @@ import {
   RESELLER_TIERS,
   fmtIDR,
   getDefaultPlanSelection,
+  getPricingForSelection,
   getPaymentDetail,
   getPlanSelection,
   getProductStartingPrice,
+  getProductStartingCompareAt,
   getWhatsAppConfirmationUrl,
 } from "../constants";
 import { Field, ProductIcon } from "./shared";
 
 export function Home({
   products,
+  promos = [],
   reviews = [],
   reseller,
   getPrice,
@@ -67,10 +70,10 @@ export function Home({
     )
     .sort((first, second) => {
       if (sortBy === "price-low") {
-        return getPrice(first, getProductStartingPrice(first)) - getPrice(second, getProductStartingPrice(second));
+        return getPrice(first, getProductStartingPrice(first, promos)) - getPrice(second, getProductStartingPrice(second, promos));
       }
       if (sortBy === "price-high") {
-        return getPrice(second, getProductStartingPrice(second)) - getPrice(first, getProductStartingPrice(first));
+        return getPrice(second, getProductStartingPrice(second, promos)) - getPrice(first, getProductStartingPrice(first, promos));
       }
       if (sortBy === "stock") {
         return second.stock - first.stock;
@@ -132,16 +135,21 @@ export function Home({
                     </div>
                   </div>
                   <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>{featuredProduct?.category}</div>
+                  {featuredProduct?.id === "__promo_disabled__" && (
+                    <div className="inline-flex mb-3 px-2.5 py-1 rounded-full text-[9px] mono uppercase tracking-widest font-bold" style={{ background: "var(--accent)", color: "white" }}>
+                      Grand Opening • 1 Hari
+                    </div>
+                  )}
                   <h3 className="serif text-3xl uppercase pr-16 mb-2" style={{ fontWeight: 700 }}>{featuredProduct?.name}</h3>
                   <p className="text-xs mb-4" style={{ color: "var(--ink-dim)" }}>{featuredProduct?.tagline}</p>
                 </div>
                 <div className="px-5 py-4 flex items-end justify-between" style={{ background: "var(--ink)", color: "var(--bg)" }}>
                   <div>
-                    {featuredProduct?.oldPrice > getProductStartingPrice(featuredProduct || {}) && (
-                      <div className="text-[10px] line-through opacity-50">{fmtIDR(featuredProduct?.oldPrice)}</div>
+                    {getProductStartingCompareAt(featuredProduct || {}, promos) > getProductStartingPrice(featuredProduct || {}, promos) && (
+                      <div className="text-[10px] line-through opacity-50">{fmtIDR(getProductStartingCompareAt(featuredProduct || {}, promos))}</div>
                     )}
                     <div className="serif" style={{ color: "var(--accent)", fontSize: "1.7rem", fontWeight: 800, lineHeight: 1 }}>
-                      {fmtIDR(getPrice(featuredProduct || {}, getProductStartingPrice(featuredProduct || {})))}
+                      {fmtIDR(getPrice(featuredProduct || {}, getProductStartingPrice(featuredProduct || {}, promos)))}
                     </div>
                   </div>
                 </div>
@@ -187,12 +195,14 @@ export function Home({
         </section>
       )}
 
+      <WebAppPromoSection />
+
       <section id="katalog" className="max-w-7xl mx-auto px-6 pt-20">
         <div className="grid lg:grid-cols-12 gap-8 mb-12 items-end">
           <div className="lg:col-span-6">
             <div className="text-xs mono uppercase tracking-widest mb-3 flex items-center gap-3" style={{ color: "var(--accent)" }}>
               <span className="w-8 h-px" style={{ background: "var(--accent)" }}></span>
-              Section II — The Catalog
+              Katalog Pilihan
             </div>
             <h2 className="serif leading-none tracking-tight" style={{ fontSize: "clamp(3rem, 6vw, 5rem)", fontWeight: 500 }}>
               Daftar <span className="serif-italic">isi.</span>
@@ -206,7 +216,10 @@ export function Home({
           </div>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-4 scrollbar mb-4 ios-scroll">
+        <div
+          className="flex gap-2 overflow-x-auto pb-4 scrollbar mb-4 ios-scroll"
+          style={{ touchAction: "pan-x pan-y pinch-zoom", overscrollBehaviorX: "contain", overscrollBehaviorY: "auto" }}
+        >
           {categories.map((item) => (
             <button key={item} onClick={() => setCategory(item)} className="px-4 py-2 rounded-full text-sm whitespace-nowrap border transition" style={{ borderColor: category === item ? "var(--ink)" : "var(--line)", background: category === item ? "var(--ink)" : "transparent", color: category === item ? "var(--bg)" : "var(--ink)", fontWeight: category === item ? 600 : 500 }}>
               {item}
@@ -262,15 +275,20 @@ export function Home({
           </div>
         </div>
 
-        <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto sm:overflow-visible snap-x snap-mandatory ios-scroll scrollbar -mx-6 px-6 sm:mx-0 sm:px-0 pb-20 filter-fade">
+        <div
+          className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto sm:overflow-visible snap-x snap-proximity ios-scroll scrollbar -mx-6 px-6 sm:mx-0 sm:px-0 pb-20 filter-fade"
+          style={{ touchAction: "pan-x pan-y pinch-zoom", overscrollBehaviorX: "contain", overscrollBehaviorY: "auto" }}
+        >
           {filtered.map((product, index) => (
             <ProductCard
               key={product.id}
               className="min-w-[84vw] max-w-[84vw] snap-center sm:min-w-0 sm:max-w-none"
               product={product}
+              promos={promos}
               reviews={reviews.filter((review) => review.productId === product.id)}
               reseller={reseller}
-              effectivePrice={getPrice(product, getProductStartingPrice(product))}
+              effectivePrice={getPrice(product, getProductStartingPrice(product, promos))}
+              compareAtPrice={getProductStartingCompareAt(product, promos)}
               onOpen={() => onOpen(product)}
               onPickPlan={() => setQuickProduct(product)}
               onAdd={() => onAdd(product)}
@@ -290,6 +308,7 @@ export function Home({
         <QuickPlanModal
           key={quickProduct.id}
           product={quickProduct}
+          promos={promos}
           getPrice={getPrice}
           onClose={() => setQuickProduct(null)}
           onAdd={(selection) => {
@@ -304,6 +323,7 @@ export function Home({
       </section>
 
       <ProductRequestSection onRequestProduct={onRequestProduct} />
+      <CombinedReviewsSection reviews={reviews} products={products} />
     </div>
   );
 }
@@ -365,6 +385,137 @@ function ProductRequestSection({ onRequestProduct }) {
   );
 }
 
+function CombinedReviewsSection({ reviews, products }) {
+  const allReviews = [...reviews]
+    .sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
+    .map((review) => ({
+      ...review,
+      productName: products.find((product) => product.id === review.productId)?.name || "Produk",
+    }));
+
+  return (
+    <section className="max-w-7xl mx-auto px-6 pb-20">
+      <div className="flex items-end justify-between gap-4 mb-8">
+        <div>
+          <div className="text-xs mono uppercase tracking-widest mb-3 flex items-center gap-3" style={{ color: "var(--accent)" }}>
+            <span className="w-8 h-px" style={{ background: "var(--accent)" }}></span>
+            Semua Review
+          </div>
+          <h2 className="serif leading-none" style={{ fontSize: "clamp(2.7rem, 5vw, 4.5rem)", fontWeight: 500 }}>
+            Suara <span className="serif-italic">pembeli.</span>
+          </h2>
+        </div>
+        <div className="text-sm" style={{ color: "var(--ink-dim)" }}>
+          {allReviews.length} ulasan gabungan
+        </div>
+      </div>
+
+      {allReviews.length === 0 ? (
+        <div className="paper-card p-10 text-center">
+          <div className="serif text-3xl serif-italic mb-3" style={{ color: "var(--ink-dim)" }}>belum ada ulasanâ€¦</div>
+          <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+            Nanti review dari semua produk akan muncul di sini dalam satu tempat.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {allReviews.map((review) => (
+            <article key={review.id} className="paper-card p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+                <div>
+                  <div className="inline-flex items-center rounded-full border px-3 py-1 text-[10px] mono uppercase tracking-widest mb-3" style={{ borderColor: "var(--line)", color: "var(--accent)", background: "var(--bg-3)" }}>
+                    {review.productName}
+                  </div>
+                  <h3 className="serif text-2xl leading-none mb-2" style={{ fontWeight: 500 }}>{review.name}</h3>
+                  <div className="text-xs mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>
+                    {new Date(review.createdAt).toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0" style={{ color: "var(--accent)" }}>
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <Star key={index} className="w-4 h-4" fill={index < review.rating ? "currentColor" : "none"} />
+                  ))}
+                </div>
+              </div>
+
+              <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--ink-dim)" }}>
+                {review.message}
+              </p>
+
+              {review.adminReply && (
+                <div className="rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
+                  <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Balasan Admin</div>
+                  <p className="text-sm leading-relaxed mb-2" style={{ color: "var(--ink-dim)" }}>{review.adminReply.message}</p>
+                  <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>
+                    {new Date(review.adminReply.createdAt).toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function WebAppPromoSection() {
+  return (
+    <section className="max-w-7xl mx-auto px-6 pt-12 pb-6">
+      <div className="paper-card p-8 sm:p-10 lg:p-14">
+        <div className="grid lg:grid-cols-12 gap-10 items-start">
+          <div className="lg:col-span-7">
+            <p className="text-sm sm:text-base leading-relaxed max-w-3xl mb-6" style={{ color: "var(--ink-dim)" }}>
+              Akses PaluGada lebih cepat langsung dari HP kamu. Buka katalog aplikasi premium, cek stok, pilih plan, buat pesanan, dan lacak order dalam satu web app yang ringan. Simpan ke home screen biar terasa seperti aplikasi sendiri dan lebih praktis buat belanja kapan saja.
+            </p>
+            <h3 className="serif text-3xl sm:text-4xl leading-none uppercase mb-6" style={{ fontWeight: 700 }}>
+              Buka PaluGada lebih cepat!
+            </h3>
+            <a
+              href="#katalog"
+              className="inline-flex items-center justify-center rounded-full border px-6 py-3 text-base font-semibold transition hover-lift"
+              style={{ borderColor: "var(--ink)", color: "var(--ink)", background: "transparent" }}
+            >
+              Buka App
+            </a>
+          </div>
+
+          <div className="lg:col-span-5 lg:text-center">
+            <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--ink-dim)" }}>
+              Our App
+            </div>
+            <h2 className="serif uppercase leading-none" style={{ fontSize: "clamp(2.7rem, 5vw, 4.8rem)", fontWeight: 800, color: "var(--accent)" }}>
+              Web App
+            </h2>
+            <div className="mt-6 rounded-[2rem] border p-5 sm:p-6 text-left" style={{ borderColor: "var(--line)", background: "var(--bg)" }}>
+              <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>
+                Tips Mobile
+              </div>
+              <ul className="space-y-3 text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>
+                <li>Simpan website ke home screen biar aksesnya satu tap.</li>
+                <li>Checkout, lacak order, dan lihat review tetap nyaman di mobile.</li>
+                <li>Semua update produk premium selalu tersedia langsung dari browser.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function FAQAccordion() {
   const [open, setOpen] = useState("faq");
   const items = [
@@ -412,11 +563,11 @@ function FAQAccordion() {
   );
 }
 
-export function ProductCard({ product, reviews = [], reseller, effectivePrice, onOpen, onPickPlan, onAdd, delay = 0, index = 0, className = "" }) {
+export function ProductCard({ product, promos = [], reviews = [], reseller, effectivePrice, compareAtPrice = 0, onOpen, onPickPlan, onAdd, delay = 0, index = 0, className = "" }) {
   const Icon = ICONS[product.icon] || Sparkles;
   const num = String(index + 1).padStart(3, "0");
   const reviewSummary = getReviewSummary(reviews);
-  const badge = getProductBadge(product);
+  const badge = getProductBadge(product, promos);
 
   return (
     <article className={`group relative cursor-pointer slidein hover-lift overflow-hidden flex flex-col ${className}`.trim()} style={{ animationDelay: `${delay}s`, background: "var(--bg-2)", border: "1.5px solid var(--ink)" }} onClick={onOpen}>
@@ -466,6 +617,7 @@ export function ProductCard({ product, reviews = [], reseller, effectivePrice, o
             {product.pricingPlans?.length && <span className="text-[10px] opacity-60">Mulai dari</span>}
             {reseller && <span className="text-[9px] mono px-1.5 py-0.5 font-bold" style={{ background: "var(--gold)", color: "white" }}>RSL</span>}
           </div>
+          {compareAtPrice > effectivePrice && <div className="text-[10px] line-through opacity-50 mb-1">{fmtIDR(compareAtPrice)}</div>}
           <div className="serif leading-none truncate" style={{ color: "var(--accent)", fontSize: "1.7rem", fontWeight: 800 }}>
             {fmtIDR(effectivePrice)}
           </div>
@@ -478,11 +630,13 @@ export function ProductCard({ product, reviews = [], reseller, effectivePrice, o
   );
 }
 
-function QuickPlanModal({ product, getPrice, onClose, onAdd }) {
+function QuickPlanModal({ product, promos = [], getPrice, onClose, onAdd }) {
   const [selection, setSelection] = useState(getDefaultPlanSelection(product));
   const selectedPlan = getPlanSelection(product, selection?.planId, selection?.optionId);
-  const effectivePrice = getPrice(product, selectedPlan?.option.price || product.price);
-  const discount = product.oldPrice > effectivePrice ? Math.round((1 - effectivePrice / product.oldPrice) * 100) : 0;
+  const pricing = getPricingForSelection(product, promos, selectedPlan || selection);
+  const effectivePrice = getPrice(product, pricing.displayPrice);
+  const compareAtPrice = pricing.compareAt;
+  const discount = compareAtPrice > effectivePrice ? Math.round((1 - effectivePrice / compareAtPrice) * 100) : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y" role="dialog" aria-modal="true">
@@ -514,17 +668,20 @@ function QuickPlanModal({ product, getPrice, onClose, onAdd }) {
                       key={option.id}
                       onClick={() => setSelection({ planId: plan.id, optionId: option.id })}
                       className="text-left rounded-2xl border px-4 py-3 transition hover:-translate-y-0.5"
-                      style={{
+	                      style={{
                         borderColor: active ? "var(--ink)" : "var(--line)",
                         background: active ? "var(--ink)" : "var(--bg-2)",
                         color: active ? "var(--bg)" : "var(--ink)",
                       }}
                     >
-                      <div className="text-sm font-semibold">{option.duration}</div>
-                      <div className="serif text-2xl leading-none mt-1" style={{ color: active ? "var(--accent)" : "var(--accent)" }}>
-                        {fmtIDR(getPrice(product, option.price))}
-                      </div>
-                    </button>
+	                      <div className="text-sm font-semibold">{option.duration}</div>
+                      {getPricingForSelection(product, promos, { plan, option }).compareAt > getPrice(product, getPricingForSelection(product, promos, { plan, option }).displayPrice) && (
+                        <div className="text-[10px] line-through opacity-50 mt-1">{fmtIDR(getPricingForSelection(product, promos, { plan, option }).compareAt)}</div>
+                      )}
+	                      <div className="serif text-2xl leading-none mt-1" style={{ color: active ? "var(--accent)" : "var(--accent)" }}>
+	                        {fmtIDR(getPrice(product, getPricingForSelection(product, promos, { plan, option }).displayPrice))}
+	                      </div>
+	                    </button>
                   );
                 })}
               </div>
@@ -537,7 +694,7 @@ function QuickPlanModal({ product, getPrice, onClose, onAdd }) {
             <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-2">Pilihan kamu</div>
             <div className="font-semibold">{selectedPlan?.plan.name} - {selectedPlan?.option.duration}</div>
             <div className="flex items-center gap-2 mt-2">
-              {product.oldPrice > effectivePrice && <span className="text-xs line-through opacity-50">{fmtIDR(product.oldPrice)}</span>}
+              {compareAtPrice > effectivePrice && <span className="text-xs line-through opacity-50">{fmtIDR(compareAtPrice)}</span>}
               {discount > 0 && <span className="text-[9px] mono px-1.5 py-0.5 font-bold" style={{ background: "var(--accent)", color: "white" }}>-{discount}%</span>}
             </div>
             <div className="serif mt-1" style={{ color: "var(--accent)", fontSize: "2.25rem", fontWeight: 800, lineHeight: 1 }}>{fmtIDR(effectivePrice)}</div>
@@ -576,14 +733,14 @@ function productHasGuarantee(product) {
   return text.includes("garansi") || text.includes("fullgar") || text.includes("fullgarr");
 }
 
-function getProductBadge(product) {
+function getProductBadge(product, promos = []) {
   if (product.id === "p_netflix") {
     return "Best Seller";
   }
   if (productHasGuarantee(product)) {
     return "Full Garansi";
   }
-  if (getProductStartingPrice(product) <= 10000) {
+  if (getProductStartingPrice(product, promos) <= 10000) {
     return "Termurah";
   }
   return "";
@@ -617,13 +774,13 @@ function ReviewStars({ rating, onChange, size = "md" }) {
   );
 }
 
-export function Detail({ product, reviews = [], reseller, getPrice, onBack, onAdd, onReview, onBuy }) {
+export function Detail({ product, promos = [], reviews = [], reseller, getPrice, onBack, onAdd, onReview, onBuy }) {
   const [qty, setQty] = useState(1);
   const [selection, setSelection] = useState(getDefaultPlanSelection(product));
   const selectedPlan = getPlanSelection(product, selection?.planId, selection?.optionId);
-  const basePrice = selectedPlan?.option.price || product.price;
-  const effectivePrice = getPrice(product, basePrice);
-  const discount = product.oldPrice > effectivePrice ? Math.round((1 - effectivePrice / product.oldPrice) * 100) : 0;
+  const pricing = getPricingForSelection(product, promos, selectedPlan || selection);
+  const effectivePrice = getPrice(product, pricing.displayPrice);
+  const discount = pricing.compareAt > effectivePrice ? Math.round((1 - effectivePrice / pricing.compareAt) * 100) : 0;
   const selectedCartOption = selectedPlan
     ? {
         planId: selectedPlan.plan.id,
@@ -640,7 +797,7 @@ export function Detail({ product, reviews = [], reseller, getPrice, onBack, onAd
 
       <div className="text-xs mono uppercase tracking-widest mb-4 flex items-center gap-3" style={{ color: "var(--accent)" }}>
         <span className="w-8 h-px" style={{ background: "var(--accent)" }}></span>
-        {product.category} — Edisi April
+        {product.category}
       </div>
 
       <div className="grid lg:grid-cols-12 gap-12 items-start">
@@ -682,7 +839,10 @@ export function Detail({ product, reviews = [], reseller, getPrice, onBack, onAd
                             }}
                           >
                             <div className="text-sm font-semibold">{option.duration}</div>
-                            <div className="serif text-2xl leading-none mt-1" style={{ color: active ? "var(--gold)" : "var(--accent)", fontWeight: 600 }}>{fmtIDR(option.price)}</div>
+                            {getPricingForSelection(product, promos, { plan, option }).compareAt > getPrice(product, getPricingForSelection(product, promos, { plan, option }).displayPrice) && (
+                              <div className="text-[10px] line-through opacity-50 mt-1">{fmtIDR(getPricingForSelection(product, promos, { plan, option }).compareAt)}</div>
+                            )}
+                            <div className="serif text-2xl leading-none mt-1" style={{ color: active ? "var(--gold)" : "var(--accent)", fontWeight: 600 }}>{fmtIDR(getPrice(product, getPricingForSelection(product, promos, { plan, option }).displayPrice))}</div>
                           </button>
                         );
                       })}
@@ -700,9 +860,9 @@ export function Detail({ product, reviews = [], reseller, getPrice, onBack, onAd
           </div>
           <div className="flex items-baseline gap-4 mb-8 pb-8 border-b" style={{ borderColor: "var(--line)" }}>
             <div className="serif leading-none" style={{ color: "var(--accent)", fontSize: "clamp(3rem, 5vw, 4.5rem)", fontWeight: 600 }}>{fmtIDR(effectivePrice)}</div>
-            {product.oldPrice > effectivePrice && (
+            {pricing.compareAt > effectivePrice && (
               <div>
-                <div className="text-xl line-through" style={{ color: "var(--ink-dim)" }}>{fmtIDR(product.oldPrice)}</div>
+                <div className="text-xl line-through" style={{ color: "var(--ink-dim)" }}>{fmtIDR(pricing.compareAt)}</div>
                 <div className="text-xs mono mt-1" style={{ color: "var(--accent)" }}>HEMAT {discount}%</div>
               </div>
             )}
@@ -975,7 +1135,7 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
       <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
         <ArrowLeft className="w-4 h-4" /> Lanjut belanja
       </button>
-      <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Section III — Cart</div>
+      <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Keranjang Belanja</div>
       <h1 className="serif leading-none mb-3" style={{ fontSize: "clamp(3rem, 6vw, 5.5rem)", fontWeight: 500 }}>
         Keranjang<span className="serif-italic">.</span>
       </h1>
@@ -1000,7 +1160,9 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
                   </div>
                   <div className="mt-2 flex items-baseline gap-2">
                     <span className="font-bold" style={{ color: "var(--accent)" }}>{fmtIDR(item.effectivePrice)}</span>
-                    {item.effectivePrice !== item.price && <span className="text-xs line-through" style={{ color: "var(--ink-dim)" }}>{fmtIDR(item.price)}</span>}
+                    {Math.max(item.compareAtPrice || item.price, item.price) > item.effectivePrice && (
+                      <span className="text-xs line-through" style={{ color: "var(--ink-dim)" }}>{fmtIDR(Math.max(item.compareAtPrice || item.price, item.price))}</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center border rounded-full" style={{ borderColor: "var(--line-2)" }}>
@@ -1066,7 +1228,7 @@ export function Checkout({ items, total, reseller, onBack, onPlace }) {
       <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
         <ArrowLeft className="w-4 h-4" /> Kembali ke keranjang
       </button>
-      <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Section IV — Checkout</div>
+      <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Selesaikan Pesanan</div>
       <h1 className="serif leading-none mb-12" style={{ fontSize: "clamp(3rem, 6vw, 5.5rem)", fontWeight: 500 }}>
         Selesaikan<span className="serif-italic"> pesanan.</span>
       </h1>
@@ -1330,3 +1492,4 @@ function createInvoiceText(order, payment) {
     "Simpan invoice ini sebagai bukti booking pesanan.",
   ].join("\n");
 }
+

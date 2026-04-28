@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Check, ChevronDown, Crown, Edit3, Inbox, LogOut, MessageSquareQuote, Package, Plus, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { BadgePercent, Check, ChevronDown, Crown, Edit3, Inbox, LogOut, MessageSquareQuote, Package, Plus, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
 import { ICONS, RESELLER_TIERS, fmtIDR } from "../constants";
 import { Field, ProductIcon } from "./shared";
 
@@ -8,6 +8,10 @@ const ADMIN_TAB_KEY = "pa_admin_tab";
 export function AdminPanel({
   products,
   setProducts,
+  resellerTiers = RESELLER_TIERS,
+  setResellerTiers,
+  promos = [],
+  setPromos,
   reviews,
   setReviews,
   orders,
@@ -27,10 +31,12 @@ export function AdminPanel({
     return window.localStorage.getItem(ADMIN_TAB_KEY) || "dashboard";
   });
   const [editing, setEditing] = useState(null);
+  const [editingPromo, setEditingPromo] = useState(null);
   const [showResellerCreator, setShowResellerCreator] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const stats = {
     products: products.length,
+    promos: promos.filter((promo) => promo.active).length,
     stock: products.reduce((sum, product) => sum + product.stock, 0),
     orders: orders.length,
     requests: productRequests.length,
@@ -53,10 +59,16 @@ export function AdminPanel({
   };
 
   const saveProduct = (data) => {
+    const payload = {
+      ...data,
+      price: Math.max(0, Number(data.price) || 0),
+      oldPrice: Math.max(0, Number(data.oldPrice) || 0),
+      stock: Math.max(0, Number(data.stock) || 0),
+    };
     if (data.id && products.find((product) => product.id === data.id)) {
-      setProducts(products.map((product) => (product.id === data.id ? data : product)));
+      setProducts(products.map((product) => (product.id === data.id ? payload : product)));
     } else {
-      setProducts([...products, { ...data, id: "p_" + Date.now().toString(36) }]);
+      setProducts([...products, { ...payload, id: "p_" + Date.now().toString(36) }]);
     }
     setEditing(null);
   };
@@ -81,6 +93,34 @@ export function AdminPanel({
 
   const updateRequestStatus = (id, status) =>
     setProductRequests(productRequests.map((request) => (request.id === id ? { ...request, status } : request)));
+
+  const savePromo = (data) => {
+    const payload = {
+      ...data,
+      title: data.title.trim(),
+      description: data.description.trim(),
+      productId: data.productId || "",
+      planId: data.planId || "",
+      optionId: data.optionId || "",
+      promoPrice: Math.max(0, Number(data.promoPrice) || 0),
+      compareAtPrice: Math.max(0, Number(data.compareAtPrice) || 0),
+    };
+
+    if (payload.id && promos.find((promo) => promo.id === payload.id)) {
+      setPromos(promos.map((promo) => (promo.id === payload.id ? payload : promo)));
+    } else {
+      setPromos([{ ...payload, id: "promo_" + Date.now().toString(36) }, ...promos]);
+    }
+    setEditingPromo(null);
+  };
+
+  const togglePromo = (id) =>
+    setPromos(promos.map((promo) => (promo.id === id ? { ...promo, active: !promo.active } : promo)));
+
+  const deletePromo = (id) =>
+    askDelete("Hapus promo?", "Promo ini akan dihapus dari panel admin dan ticker depan.", () =>
+      setPromos(promos.filter((promo) => promo.id !== id))
+    );
 
   const deleteRequest = (id) =>
     askDelete("Hapus request?", "Request produk ini akan dihapus dari panel admin.", () =>
@@ -110,6 +150,7 @@ export function AdminPanel({
         <nav className="space-y-1 flex-1">
           <NavBtn active={tab === "dashboard"} onClick={() => setPersistedTab("dashboard")} icon={Sparkles}>Dashboard</NavBtn>
           <NavBtn active={tab === "products"} onClick={() => setPersistedTab("products")} icon={Package}>Produk</NavBtn>
+          <NavBtn active={tab === "promos"} onClick={() => setPersistedTab("promos")} icon={BadgePercent}>Promo</NavBtn>
           <NavBtn active={tab === "orders"} onClick={() => setPersistedTab("orders")} icon={Receipt}>Pesanan</NavBtn>
           <NavBtn active={tab === "reviews"} onClick={() => setPersistedTab("reviews")} icon={Star}>Review</NavBtn>
           <NavBtn active={tab === "requests"} onClick={() => setPersistedTab("requests")} icon={Inbox}>Request</NavBtn>
@@ -123,9 +164,9 @@ export function AdminPanel({
 
       <div className="flex-1 safe-x py-6 md:p-12 overflow-x-hidden">
         <div className="flex gap-2 md:hidden mb-6 overflow-x-auto ios-scroll pb-1">
-          {["dashboard", "products", "orders", "reviews", "requests", "resellers"].map((item) => (
+          {["dashboard", "products", "promos", "orders", "reviews", "requests", "resellers"].map((item) => (
             <button key={item} onClick={() => setPersistedTab(item)} className="px-4 py-2 rounded-full text-xs capitalize whitespace-nowrap" style={{ background: tab === item ? "var(--ink)" : "var(--bg-2)", color: tab === item ? "var(--bg)" : "var(--ink)", border: "1px solid var(--line)" }}>
-              {item}
+              {item === "promos" ? "promo" : item}
             </button>
           ))}
           <button onClick={onLogout} className="ml-auto px-4 py-2 rounded-full text-xs border" style={{ borderColor: "var(--line)" }}>Logout</button>
@@ -133,12 +174,15 @@ export function AdminPanel({
 
         {tab === "dashboard" && <DashboardTab stats={stats} orders={orders} resellers={resellers} productRequests={productRequests} />}
         {tab === "products" && <ProductsTab products={products} onEdit={setEditing} onDelete={deleteProduct} />}
+        {tab === "promos" && <PromosTab promos={promos} products={products} onEdit={setEditingPromo} onDelete={deletePromo} onToggle={togglePromo} />}
         {tab === "orders" && <OrdersTab orders={orders} onChangeStatus={updateOrderStatus} onDelete={deleteOrder} />}
         {tab === "reviews" && <ReviewsTab products={products} reviews={reviews} setReviews={setReviews} onDeleteReview={askDelete} />}
         {tab === "requests" && <RequestsTab productRequests={productRequests} onChangeStatus={updateRequestStatus} onDelete={deleteRequest} />}
         {tab === "resellers" && (
           <ResellersTab
             resellers={resellers}
+            resellerTiers={resellerTiers}
+            onSaveTiers={setResellerTiers}
             onDelete={deleteReseller}
             onCreate={() => setShowResellerCreator(true)}
           />
@@ -146,8 +190,10 @@ export function AdminPanel({
       </div>
 
       {editing && <ProductEditor product={editing === "new" ? null : editing} onSave={saveProduct} onClose={() => setEditing(null)} />}
+      {editingPromo && <PromoEditor promo={editingPromo === "new" ? null : editingPromo} products={products} onSave={savePromo} onClose={() => setEditingPromo(null)} />}
       {showResellerCreator && (
         <ResellerCreator
+          resellerTiers={resellerTiers}
           onClose={() => setShowResellerCreator(false)}
           onCreate={async (payload) => {
             const result = await onCreateReseller(payload);
@@ -178,6 +224,7 @@ function DashboardTab({ stats, orders, resellers, productRequests }) {
       <p className="text-sm mb-10" style={{ color: "var(--ink-dim)" }}>Ringkasan performa toko</p>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         <StatCard label="Produk" value={stats.products} icon={Package} />
+        <StatCard label="Promo Aktif" value={stats.promos} icon={BadgePercent} />
         <StatCard label="Stok" value={stats.stock} icon={Sparkles} />
         <StatCard label="Pesanan" value={stats.orders} icon={Receipt} />
         <StatCard label="Request" value={stats.requests} icon={Inbox} />
@@ -272,6 +319,78 @@ function ProductsTab({ products, onEdit, onDelete }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function PromosTab({ promos, products, onEdit, onDelete, onToggle }) {
+  const activeCount = promos.filter((promo) => promo.active).length;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+        <div>
+          <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Promo</div>
+          <h1 className="serif leading-none" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Promo<span className="serif-italic">.</span></h1>
+          <p className="text-sm mt-2" style={{ color: "var(--ink-dim)" }}>{activeCount} promo aktif dari {promos.length} total promo</p>
+        </div>
+        <button onClick={() => onEdit("new")} className="px-5 py-3 rounded-full font-semibold text-sm flex items-center gap-2" style={{ background: "var(--accent)", color: "white" }}>
+          <Plus className="w-4 h-4" /> Tambah Promo
+        </button>
+      </div>
+
+      {promos.length === 0 ? (
+        <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada promo dibuat</div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          {promos.map((promo) => (
+            <article key={promo.id} className="paper-card p-6">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[10px] mono uppercase tracking-widest px-2 py-1 rounded-full" style={{ background: promo.active ? "var(--ink)" : "var(--bg-3)", color: promo.active ? "var(--bg)" : "var(--ink-dim)" }}>
+                      {promo.active ? "Aktif" : "Nonaktif"}
+                    </span>
+                    {promo.highlight && (
+                      <span className="text-[10px] mono uppercase tracking-widest px-2 py-1 rounded-full" style={{ background: "var(--bg-3)", color: "var(--accent)" }}>
+                        Highlight
+                      </span>
+                    )}
+                  </div>
+	                  <h3 className="serif text-2xl leading-none mb-2" style={{ fontWeight: 600 }}>{promo.title}</h3>
+                    <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>
+                      {getPromoTargetLabel(promo, products)}
+                    </div>
+                    {promo.promoPrice > 0 && (
+                      <div className="text-sm font-semibold mb-2" style={{ color: "var(--accent)" }}>
+                        {fmtIDR(promo.promoPrice)}
+                        {promo.compareAtPrice > promo.promoPrice && (
+                          <span className="text-xs line-through ml-2" style={{ color: "var(--ink-dim)" }}>{fmtIDR(promo.compareAtPrice)}</span>
+                        )}
+                      </div>
+                    )}
+	                  {promo.description && <p className="text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>{promo.description}</p>}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => onEdit(promo)} className="p-2 rounded-lg hover:bg-stone-100"><Edit3 className="w-4 h-4" /></button>
+                  <button onClick={() => onDelete(promo.id)} className="p-2 rounded-lg hover:bg-stone-100" style={{ color: "var(--accent)" }}><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 text-xs mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>
+                <button
+                  onClick={() => onToggle(promo.id)}
+                  className="px-3 py-2 rounded-full border bg-white hover:bg-stone-50 transition"
+                  style={{ borderColor: promo.active ? "var(--ink)" : "var(--line)" }}
+                >
+                  {promo.active ? "Nonaktifkan" : "Aktifkan"}
+                </button>
+                <span>ID: {promo.id}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -602,6 +721,82 @@ function StatusDropdown({ value, options, onChange }) {
   );
 }
 
+function AdminSelect({ label, value, onChange, options, disabled = false, placeholder = "Pilih opsi" }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const selected = options.find((option) => option.value === value);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!rootRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, []);
+
+  return (
+    <div ref={rootRef}>
+      {label && (
+        <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>
+          {label}
+        </label>
+      )}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => !disabled && setOpen((current) => !current)}
+          disabled={disabled}
+          className="w-full px-4 py-3 rounded-xl border bg-white text-left flex items-center justify-between gap-3 transition disabled:opacity-50"
+          style={{ borderColor: "var(--line)" }}
+        >
+          <span className="truncate" style={{ color: selected ? "var(--ink)" : "var(--ink-dim)" }}>
+            {selected?.label || placeholder}
+          </span>
+          <ChevronDown className={`w-4 h-4 shrink-0 transition ${open ? "rotate-180" : ""}`} />
+        </button>
+        {open && !disabled && (
+          <div
+            className="absolute left-0 right-0 mt-2 overflow-hidden rounded-[1.25rem] border shadow-2xl z-30"
+            style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}
+          >
+            {options.map((option) => {
+              const active = option.value === value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  className="w-full px-4 py-3 text-left text-sm flex items-center justify-between gap-3 border-b last:border-b-0 transition"
+                  style={{
+                    borderColor: "var(--line)",
+                    background: active ? "var(--ink)" : "transparent",
+                    color: active ? "var(--bg)" : "var(--ink)",
+                    fontWeight: active ? 600 : 500,
+                  }}
+                >
+                  <span>{option.label}</span>
+                  {active && <Check className="w-4 h-4" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ConfirmDialog({ title, description, onClose, onConfirm }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.5)" }}>
@@ -676,7 +871,56 @@ function parseDurationDays(duration = "") {
   return 0;
 }
 
-function ResellersTab({ resellers, onDelete, onCreate }) {
+function getPromoTargetLabel(promo, products) {
+  const product = products.find((item) => item.id === promo.productId);
+  if (!product) {
+    return "Target belum dipilih";
+  }
+
+  const plan = product.pricingPlans?.find((item) => item.id === promo.planId);
+  const option = plan?.options?.find((item) => item.id === promo.optionId);
+
+  if (plan && option) {
+    return `${product.name} - ${plan.name} - ${option.duration}`;
+  }
+
+  if (plan) {
+    return `${product.name} - ${plan.name}`;
+  }
+
+  return product.name;
+}
+
+function ResellersTab({ resellers, resellerTiers = RESELLER_TIERS, onSaveTiers, onDelete, onCreate }) {
+  const [tierDrafts, setTierDrafts] = useState(() =>
+    Object.fromEntries(
+      Object.entries(resellerTiers).map(([name, config]) => [
+        name,
+        {
+          discount: Math.round((config.discount || 0) * 100),
+          min: config.min || 0,
+          color: config.color || RESELLER_TIERS[name]?.color || "#8b5e34",
+        },
+      ])
+    )
+  );
+
+  const saveTierSettings = () => {
+    const nextTiers = Object.fromEntries(
+      Object.entries(tierDrafts).map(([name, config]) => [
+        name,
+        {
+          ...resellerTiers[name],
+          min: Number(config.min) || 0,
+          discount: Math.max(0, Number(config.discount) || 0) / 100,
+          color: config.color || resellerTiers[name]?.color || RESELLER_TIERS[name]?.color,
+        },
+      ])
+    );
+    Object.assign(RESELLER_TIERS, nextTiers);
+    onSaveTiers?.(nextTiers);
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
@@ -690,6 +934,54 @@ function ResellersTab({ resellers, onDelete, onCreate }) {
         </button>
       </div>
 
+      <div className="paper-card p-6 mb-6">
+        <div className="flex items-center justify-between gap-4 mb-5 flex-wrap">
+          <div>
+            <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Diskon Tier</div>
+            <div className="serif text-3xl leading-none" style={{ fontWeight: 500 }}>Atur diskon reseller</div>
+            <div className="text-sm mt-2" style={{ color: "var(--ink-dim)" }}>Ubah persen diskon dan minimum total belanja untuk naik tier.</div>
+          </div>
+          <button onClick={saveTierSettings} className="px-5 py-3 rounded-full font-semibold text-sm" style={{ background: "var(--ink)", color: "var(--bg)" }}>
+            Simpan Diskon
+          </button>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4">
+          {Object.entries(tierDrafts).map(([name, config]) => (
+            <div key={name} className="rounded-[1.75rem] border p-5" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
+              <div className="flex items-center gap-2 mb-4">
+                <Crown className="w-4 h-4" style={{ color: config.color }} />
+                <div className="text-sm font-semibold">{name}</div>
+              </div>
+              <div className="space-y-3">
+                <Field
+                  label="Diskon (%)"
+                  value={config.discount}
+                  onChange={(value) =>
+                    setTierDrafts((current) => ({
+                      ...current,
+                      [name]: { ...current[name], discount: Math.max(0, Number(value) || 0) },
+                    }))
+                  }
+                  type="number"
+                />
+                <Field
+                  label="Naik Tier Min"
+                  value={config.min}
+                  onChange={(value) =>
+                    setTierDrafts((current) => ({
+                      ...current,
+                      [name]: { ...current[name], min: Math.max(0, Number(value) || 0) },
+                    }))
+                  }
+                  type="number"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {resellers.length === 0 ? (
         <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada reseller terdaftar</div>
       ) : (
@@ -699,8 +991,8 @@ function ResellersTab({ resellers, onDelete, onCreate }) {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <Crown className="w-4 h-4" style={{ color: RESELLER_TIERS[reseller.tier]?.color }} />
-                    <span className="text-[10px] mono uppercase tracking-widest" style={{ color: RESELLER_TIERS[reseller.tier]?.color }}>{reseller.tier}</span>
+                    <Crown className="w-4 h-4" style={{ color: resellerTiers[reseller.tier]?.color || RESELLER_TIERS[reseller.tier]?.color }} />
+                    <span className="text-[10px] mono uppercase tracking-widest" style={{ color: resellerTiers[reseller.tier]?.color || RESELLER_TIERS[reseller.tier]?.color }}>{reseller.tier}</span>
                   </div>
                   <div className="serif text-2xl" style={{ fontWeight: 500 }}>{reseller.name}</div>
                   <div className="text-xs" style={{ color: "var(--ink-dim)" }}>{reseller.email}</div>
@@ -726,7 +1018,7 @@ function ResellersTab({ resellers, onDelete, onCreate }) {
   );
 }
 
-function ResellerCreator({ onClose, onCreate }) {
+function ResellerCreator({ resellerTiers = RESELLER_TIERS, onClose, onCreate }) {
   const [data, setData] = useState({
     name: "",
     email: "",
@@ -785,19 +1077,12 @@ function ResellerCreator({ onClose, onCreate }) {
           <Field label="Email Login" value={data.email} onChange={(value) => set("email", value)} type="email" placeholder="reseller@email.com" />
           <Field label="WhatsApp" value={data.wa} onChange={(value) => set("wa", value)} placeholder="08xxxxxxxxxx" />
           <Field label="Password Awal" value={data.password} onChange={(value) => set("password", value)} type="password" placeholder="Password reseller" />
-          <div>
-            <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>Tier Awal</label>
-            <select
-              value={data.tier}
-              onChange={(event) => set("tier", event.target.value)}
-              className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none"
-              style={{ borderColor: "var(--line)" }}
-            >
-              {Object.keys(RESELLER_TIERS).map((tier) => (
-                <option key={tier} value={tier}>{tier}</option>
-              ))}
-            </select>
-          </div>
+          <AdminSelect
+            label="Tier Awal"
+            value={data.tier}
+            onChange={(value) => set("tier", value)}
+            options={Object.keys(resellerTiers).map((tier) => ({ value: tier, label: tier }))}
+          />
           {error && <div className="text-xs" style={{ color: "var(--accent)" }}>{error}</div>}
         </div>
 
@@ -810,6 +1095,158 @@ function ResellerCreator({ onClose, onCreate }) {
             style={{ background: "var(--accent)", color: "white" }}
           >
             {loading ? "Mengaktifkan..." : "Aktifkan Reseller"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PromoEditor({ promo, products, onSave, onClose }) {
+  const defaultProduct = products[0];
+  const defaultPlan = defaultProduct?.pricingPlans?.[0];
+  const defaultOption = defaultPlan?.options?.[0];
+  const blank = {
+    id: null,
+    title: "",
+    description: "",
+    active: true,
+    highlight: false,
+    productId: defaultProduct?.id || "",
+    planId: defaultPlan?.id || "",
+    optionId: defaultOption?.id || "",
+    promoPrice: defaultOption?.price || defaultProduct?.price || 0,
+    compareAtPrice: defaultProduct?.oldPrice || defaultOption?.price || defaultProduct?.price || 0,
+  };
+  const [data, setData] = useState(promo || blank);
+
+  const set = (key, value) => setData((current) => ({ ...current, [key]: value }));
+  const selectedProduct = products.find((product) => product.id === data.productId) || defaultProduct;
+  const selectedPlan = selectedProduct?.pricingPlans?.find((plan) => plan.id === data.planId) || selectedProduct?.pricingPlans?.[0] || null;
+
+  const updateProduct = (productId) => {
+    const nextProduct = products.find((product) => product.id === productId);
+    const nextPlan = nextProduct?.pricingPlans?.[0] || null;
+    const nextOption = nextPlan?.options?.[0] || null;
+    setData((current) => ({
+      ...current,
+      productId,
+      planId: nextPlan?.id || "",
+      optionId: nextOption?.id || "",
+      compareAtPrice: nextProduct?.oldPrice || nextOption?.price || nextProduct?.price || 0,
+      promoPrice: nextOption?.price || nextProduct?.price || 0,
+    }));
+  };
+
+  const updatePlan = (planId) => {
+    const nextPlan = selectedProduct?.pricingPlans?.find((plan) => plan.id === planId) || null;
+    const nextOption = nextPlan?.options?.[0] || null;
+    setData((current) => ({
+      ...current,
+      planId,
+      optionId: nextOption?.id || "",
+      promoPrice: nextOption?.price || selectedProduct?.price || 0,
+      compareAtPrice: selectedProduct?.oldPrice || nextOption?.price || selectedProduct?.price || 0,
+    }));
+  };
+
+  const updateOption = (optionId) => {
+    const nextOption = selectedPlan?.options?.find((option) => option.id === optionId) || null;
+    setData((current) => ({
+      ...current,
+      optionId,
+      promoPrice: nextOption?.price || selectedProduct?.price || 0,
+      compareAtPrice: selectedProduct?.oldPrice || nextOption?.price || selectedProduct?.price || 0,
+    }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center safe-x safe-y overflow-y-auto backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.5)" }}>
+      <div className="flex w-full max-w-xl my-4 sm:my-0 max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[2rem] sm:rounded-3xl border bg-white" style={{ borderColor: "var(--line)" }}>
+        <div className="relative flex items-center justify-between p-6 border-b backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.95)" }}>
+          <div>
+            <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Promo</div>
+            <h2 className="serif text-3xl" style={{ fontWeight: 500 }}>{promo ? "Edit" : "Tambah"} Promo</h2>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4 scrollbar ios-scroll">
+          <div className="rounded-2xl border p-4 text-sm leading-relaxed" style={{ borderColor: "var(--line)", background: "var(--bg-3)", color: "var(--ink-dim)" }}>
+            Teks promo aktif otomatis akan ikut tampil di ticker depan toko. Pakai judul singkat supaya enak dibaca saat berjalan.
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <AdminSelect
+              label="Produk"
+              value={data.productId}
+              onChange={updateProduct}
+              options={products.map((product) => ({ value: product.id, label: product.name }))}
+            />
+            <AdminSelect
+              label="Plan"
+              value={data.planId}
+              onChange={updatePlan}
+              options={
+                selectedProduct?.pricingPlans?.length
+                  ? selectedProduct.pricingPlans.map((plan) => ({ value: plan.id, label: plan.name }))
+                  : [{ value: "", label: "Harga utama produk" }]
+              }
+              disabled={!selectedProduct?.pricingPlans?.length}
+              placeholder="Harga utama produk"
+            />
+          </div>
+          {selectedPlan?.options?.length > 0 && (
+            <AdminSelect
+              label="Durasi / Opsi"
+              value={data.optionId}
+              onChange={updateOption}
+              options={selectedPlan.options.map((option) => ({ value: option.id, label: option.duration }))}
+            />
+          )}
+          <Field label="Judul Promo" value={data.title} onChange={(value) => set("title", value)} placeholder="Netflix 1P1U 1 bulan jadi 20K hari ini" />
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Harga Promo" value={data.promoPrice} onChange={(value) => set("promoPrice", Number(value) || 0)} type="number" />
+            <Field label="Harga Coret" value={data.compareAtPrice} onChange={(value) => set("compareAtPrice", Number(value) || 0)} type="number" />
+          </div>
+          <div>
+            <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>Deskripsi Promo</label>
+            <textarea
+              value={data.description}
+              onChange={(event) => set("description", event.target.value)}
+              rows={4}
+              placeholder="Tulis detail promo, syarat, atau durasi promonya..."
+              className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 resize-y"
+              style={{ borderColor: "var(--line)" }}
+            />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <label className="flex items-center gap-3 rounded-2xl border p-4 cursor-pointer" style={{ borderColor: "var(--line)" }}>
+              <input type="checkbox" checked={data.active} onChange={(event) => set("active", event.target.checked)} />
+              <div>
+                <div className="text-sm font-semibold">Aktifkan promo</div>
+                <div className="text-xs" style={{ color: "var(--ink-dim)" }}>Promo aktif akan muncul di ticker depan</div>
+              </div>
+            </label>
+            <label className="flex items-center gap-3 rounded-2xl border p-4 cursor-pointer" style={{ borderColor: "var(--line)" }}>
+              <input type="checkbox" checked={data.highlight} onChange={(event) => set("highlight", event.target.checked)} />
+              <div>
+                <div className="text-sm font-semibold">Tandai highlight</div>
+                <div className="text-xs" style={{ color: "var(--ink-dim)" }}>Buat mudah dikenali di panel admin</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div className="relative flex gap-3 p-6 border-t backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.95)" }}>
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>Batal</button>
+          <button
+            type="button"
+            onClick={() => onSave(data)}
+            disabled={!data.title.trim()}
+            className="flex-1 py-3 rounded-full font-semibold text-sm disabled:opacity-40"
+            style={{ background: "var(--accent)", color: "white" }}
+          >
+            Simpan Promo
           </button>
         </div>
       </div>
@@ -843,22 +1280,42 @@ function ProductEditor({ product, onSave, onClose }) {
   const blank = { id: null, name: "", category: "Streaming", icon: "tv", color: "#8b5e34", price: 0, oldPrice: 0, stock: 0, duration: "1 Bulan", tagline: "", description: "", features: [] };
   const [data, setData] = useState(product || blank);
   const [featInput, setFeatInput] = useState("");
-  const set = (key, value) => setData({ ...data, [key]: value });
+  const set = (key, value) => setData((current) => ({ ...current, [key]: value }));
+
+  const addFeature = () => {
+    const nextFeature = featInput.trim();
+    if (!nextFeature) {
+      return;
+    }
+
+    setData((current) => ({
+      ...current,
+      features: [...current.features, nextFeature],
+    }));
+    setFeatInput("");
+  };
+
+  const removeFeature = (indexToRemove) => {
+    setData((current) => ({
+      ...current,
+      features: current.features.filter((_, itemIndex) => itemIndex !== indexToRemove),
+    }));
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.5)" }}>
-      <div className="w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border scrollbar ios-scroll" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
-        <div className="sticky top-0 flex items-center justify-between p-6 border-b backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.95)" }}>
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center safe-x safe-y backdrop-blur-sm overflow-y-auto" style={{ background: "rgba(20,21,31,0.5)" }}>
+      <div className="w-full max-w-2xl mt-4 sm:mt-0 max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-[2rem] sm:rounded-3xl border scrollbar ios-scroll" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
+        <div className="relative flex items-center justify-between gap-4 p-4 sm:p-6 border-b backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.95)" }}>
           <div>
             <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Editor</div>
-            <h2 className="serif text-3xl" style={{ fontWeight: 500 }}>{product ? "Edit" : "Tambah"} Produk</h2>
+            <h2 className="serif text-[2rem] sm:text-3xl leading-none" style={{ fontWeight: 500 }}>{product ? "Edit" : "Tambah"} Produk</h2>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100"><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100 shrink-0"><X className="w-5 h-5" /></button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           <Field label="Nama Produk" value={data.name} onChange={(value) => set("name", value)} placeholder="Netflix Premium" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid sm:grid-cols-2 gap-3">
             <Field label="Kategori" value={data.category} onChange={(value) => set("category", value)} placeholder="Streaming" />
             <Field label="Durasi" value={data.duration} onChange={(value) => set("duration", value)} placeholder="1 Bulan" />
           </div>
@@ -869,19 +1326,19 @@ function ProductEditor({ product, onSave, onClose }) {
             <textarea value={data.description} onChange={(event) => set("description", event.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800" style={{ borderColor: "var(--line)" }} />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid sm:grid-cols-3 gap-3">
             <Field label="Harga" value={data.price} onChange={(value) => set("price", Number(value) || 0)} type="number" />
             <Field label="Harga Lama" value={data.oldPrice} onChange={(value) => set("oldPrice", Number(value) || 0)} type="number" />
             <Field label="Stok" value={data.stock} onChange={(value) => set("stock", Number(value) || 0)} type="number" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>Ikon</label>
-              <select value={data.icon} onChange={(event) => set("icon", event.target.value)} className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none" style={{ borderColor: "var(--line)" }}>
-                {Object.keys(ICONS).map((key) => <option key={key} value={key}>{key}</option>)}
-              </select>
-            </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <AdminSelect
+              label="Ikon"
+              value={data.icon}
+              onChange={(value) => set("icon", value)}
+              options={Object.keys(ICONS).map((key) => ({ value: key, label: key }))}
+            />
             <div>
               <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>Warna</label>
               <div className="flex gap-2">
@@ -894,23 +1351,35 @@ function ProductEditor({ product, onSave, onClose }) {
           <div>
             <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>Fitur</label>
             <div className="flex gap-2 mb-2">
-              <input value={featInput} onChange={(event) => setFeatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && featInput) { set("features", [...data.features, featInput]); setFeatInput(""); } }} placeholder="Tekan Enter untuk menambah" className="flex-1 px-4 py-2 rounded-xl border bg-white text-sm focus:outline-none" style={{ borderColor: "var(--line)" }} />
-              <button onClick={() => { if (featInput) { set("features", [...data.features, featInput]); setFeatInput(""); } }} className="px-4 rounded-xl text-sm font-semibold" style={{ background: "var(--ink)", color: "var(--bg)" }}>+</button>
+              <input
+                value={featInput}
+                onChange={(event) => setFeatInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addFeature();
+                  }
+                }}
+                placeholder="Tekan Enter untuk menambah"
+                className="flex-1 px-4 py-2 rounded-xl border bg-white text-sm focus:outline-none"
+                style={{ borderColor: "var(--line)" }}
+              />
+              <button type="button" onClick={addFeature} className="px-4 rounded-xl text-sm font-semibold shrink-0" style={{ background: "var(--ink)", color: "var(--bg)" }}>+</button>
             </div>
             <div className="flex flex-wrap gap-2">
               {data.features.map((feature, index) => (
                 <span key={index} className="px-3 py-1 rounded-full text-xs flex items-center gap-2 border" style={{ borderColor: "var(--line)" }}>
                   {feature}
-                  <button onClick={() => set("features", data.features.filter((_, itemIndex) => itemIndex !== index))}><X className="w-3 h-3" /></button>
+                  <button type="button" onClick={() => removeFeature(index)}><X className="w-3 h-3" /></button>
                 </span>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="sticky bottom-0 flex gap-3 p-6 border-t backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.95)" }}>
-          <button onClick={onClose} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>Batal</button>
-          <button onClick={() => onSave(data)} disabled={!data.name} className="flex-1 py-3 rounded-full font-semibold text-sm disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>Simpan Produk</button>
+        <div className="relative flex gap-3 p-4 sm:p-6 border-t backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.95)" }}>
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>Batal</button>
+          <button type="button" onClick={() => onSave(data)} disabled={!data.name} className="flex-1 py-3 rounded-full font-semibold text-sm disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>Simpan Produk</button>
         </div>
       </div>
     </div>

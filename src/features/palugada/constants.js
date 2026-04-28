@@ -355,14 +355,6 @@ export const ICONS = {
 
 export const fmtIDR = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
-export function getProductStartingPrice(product) {
-  if (!product?.pricingPlans?.length) {
-    return product?.price || 0;
-  }
-
-  return Math.min(...product.pricingPlans.flatMap((plan) => plan.options.map((option) => option.price)));
-}
-
 export function getDefaultPlanSelection(product) {
   const plan = product?.pricingPlans?.[0];
   const option = plan?.options?.[0];
@@ -383,6 +375,96 @@ export function getPlanSelection(product, planId, optionId) {
   }
 
   return { plan, option };
+}
+
+export function getMatchingPromo(promos = [], product, planId = null, optionId = null) {
+  if (!product?.id) {
+    return null;
+  }
+
+  const candidates = promos.filter((promo) => {
+    if (!promo?.active || promo.productId !== product.id) {
+      return false;
+    }
+
+    if (promo.optionId) {
+      return promo.planId === planId && promo.optionId === optionId;
+    }
+
+    if (promo.planId) {
+      return promo.planId === planId;
+    }
+
+    return true;
+  });
+
+  if (!candidates.length) {
+    return null;
+  }
+
+  const getScore = (promo) => {
+    if (promo.optionId) return 3;
+    if (promo.planId) return 2;
+    return 1;
+  };
+
+  return candidates.sort((first, second) => getScore(second) - getScore(first))[0] || null;
+}
+
+export function getPricingForSelection(product, promos = [], selection = null) {
+  const resolvedSelection =
+    selection?.plan && selection?.option
+      ? selection
+      : getPlanSelection(product, selection?.planId, selection?.optionId);
+
+  const planId = resolvedSelection?.plan?.id || selection?.planId || null;
+  const optionId = resolvedSelection?.option?.id || selection?.optionId || null;
+  const basePrice = Number(resolvedSelection?.option?.price ?? product?.price ?? 0);
+  const defaultCompareAt = Number(product?.oldPrice ?? basePrice);
+  const promo = getMatchingPromo(promos, product, planId, optionId);
+  const promoPrice = Number(promo?.promoPrice ?? 0);
+  const promoCompareAt = Number(promo?.compareAtPrice ?? 0);
+  const displayPrice = promoPrice > 0 ? promoPrice : basePrice;
+  const compareAt =
+    promoCompareAt > 0
+      ? promoCompareAt
+      : promoPrice > 0
+        ? Math.max(basePrice, defaultCompareAt, displayPrice)
+        : defaultCompareAt;
+
+  return {
+    promo,
+    selection: resolvedSelection,
+    planId,
+    optionId,
+    basePrice,
+    displayPrice,
+    compareAt,
+  };
+}
+
+export function getProductStartingPrice(product, promos = []) {
+  if (!product?.pricingPlans?.length) {
+    return getPricingForSelection(product, promos).displayPrice;
+  }
+
+  return Math.min(
+    ...product.pricingPlans.flatMap((plan) =>
+      plan.options.map((option) => getPricingForSelection(product, promos, { plan, option }).displayPrice)
+    )
+  );
+}
+
+export function getProductStartingCompareAt(product, promos = []) {
+  if (!product?.pricingPlans?.length) {
+    return getPricingForSelection(product, promos).compareAt;
+  }
+
+  const allPrices = product.pricingPlans.flatMap((plan) =>
+    plan.options.map((option) => getPricingForSelection(product, promos, { plan, option }))
+  );
+  const best = allPrices.sort((first, second) => first.displayPrice - second.displayPrice)[0];
+  return best?.compareAt || best?.displayPrice || 0;
 }
 
 export const ADMIN_WHATSAPP_NUMBER = "6289513947458";
