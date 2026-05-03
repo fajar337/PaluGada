@@ -764,7 +764,7 @@ function AdminSelect({ label, value, onChange, options, disabled = false, placeh
         </button>
         {open && !disabled && (
           <div
-            className="absolute left-0 right-0 mt-2 overflow-hidden rounded-[1.25rem] border shadow-2xl z-30"
+            className="relative mt-2 overflow-hidden rounded-[1.25rem] border shadow-2xl z-30 sm:absolute sm:left-0 sm:right-0"
             style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}
           >
             {options.map((option) => {

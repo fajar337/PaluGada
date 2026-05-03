@@ -418,9 +418,12 @@ function CombinedReviewsSection({ reviews, products }) {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div
+          className="flex gap-4 overflow-x-auto pb-3 ios-scroll snap-x snap-proximity lg:grid lg:grid-cols-2 lg:overflow-visible lg:pb-0"
+          style={{ touchAction: "pan-x pan-y pinch-zoom", overscrollBehaviorX: "contain", overscrollBehaviorY: "auto" }}
+        >
           {allReviews.map((review) => (
-            <article key={review.id} className="paper-card p-6">
+            <article key={review.id} className="paper-card p-6 min-w-[84vw] max-w-[84vw] snap-start sm:min-w-[32rem] sm:max-w-[32rem] lg:min-w-0 lg:max-w-none">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                 <div>
                   <div className="inline-flex items-center rounded-full border px-3 py-1 text-[10px] mono uppercase tracking-widest mb-3" style={{ borderColor: "var(--line)", color: "var(--accent)", background: "var(--bg-3)" }}>
