@@ -487,11 +487,13 @@ function WebAppPromoSection() {
               Buka PaluGada lebih cepat!
             </h3>
             <a
-              href="#katalog"
+              href="https://www.mediafire.com/file/6ynt534e576t17w/PaluGada_Premium_1_1.0.apk/file"
+              target="_blank"
+              rel="noreferrer"
               className="inline-flex items-center justify-center rounded-full border px-6 py-3 text-base font-semibold transition hover-lift"
               style={{ borderColor: "var(--ink)", color: "var(--ink)", background: "transparent" }}
             >
-              Buka App
+              Install App
             </a>
           </div>
 
