@@ -30,6 +30,16 @@ function loadUiState() {
   }
 }
 
+function scrollToPageTop() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+
 export default function App() {
   const initialUiState = loadUiState();
   const [view, setView] = useState(initialUiState.view || "home");
@@ -256,6 +266,14 @@ export default function App() {
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [orders, products]);
+
+  useEffect(() => {
+    if (view !== "detail" || !activeProduct) {
+      return;
+    }
+
+    requestAnimationFrame(scrollToPageTop);
+  }, [activeProduct, view]);
 
   useEffect(() => {
     if (!adminLoggedIn) {

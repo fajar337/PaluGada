@@ -1136,7 +1136,7 @@ function OrderTrackingCard({ order }) {
 export function CartView({ items, total, originalTotal, updateQty, remove, onBack, onCheckout }) {
   const savings = originalTotal - total;
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
       <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
         <ArrowLeft className="w-4 h-4" /> Lanjut belanja
       </button>
@@ -1153,36 +1153,40 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
           <button onClick={onBack} className="px-6 py-3 rounded-full font-semibold text-sm" style={{ background: "var(--ink)", color: "var(--bg)" }}>Mulai Belanja</button>
         </div>
       ) : (
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-3">
+        <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="min-w-0 lg:col-span-2 space-y-3">
             {items.map((item) => (
-              <div key={item.cartKey} className="paper-card flex items-center gap-4 p-5">
-                <ProductIcon icon={item.icon} color={item.color} size={56} />
-                <div className="flex-1">
+              <div key={item.cartKey} className="paper-card grid grid-cols-[auto_minmax(0,1fr)] gap-4 p-4 sm:flex sm:items-center sm:p-5">
+                <div className="shrink-0">
+                  <ProductIcon icon={item.icon} color={item.color} size={56} />
+                </div>
+                <div className="min-w-0 sm:flex-1">
                   <div className="serif text-xl" style={{ fontWeight: 500 }}>{item.name}</div>
                   <div className="text-xs serif-italic" style={{ color: "var(--ink-dim)" }}>
                     {item.selectedPlanName ? `${item.selectedPlanName} - ${item.selectedDuration}` : `${item.duration} · ${item.tagline}`}
                   </div>
-                  <div className="mt-2 flex items-baseline gap-2">
+                  <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                     <span className="font-bold" style={{ color: "var(--accent)" }}>{fmtIDR(item.effectivePrice)}</span>
                     {Math.max(item.compareAtPrice || item.price, item.price) > item.effectivePrice && (
                       <span className="text-xs line-through" style={{ color: "var(--ink-dim)" }}>{fmtIDR(Math.max(item.compareAtPrice || item.price, item.price))}</span>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center border rounded-full" style={{ borderColor: "var(--line-2)" }}>
-                  <button onClick={() => updateQty(item.cartKey, -1)} className="p-2"><Minus className="w-3 h-3" /></button>
-                  <span className="px-3 mono text-sm">{item.qty}</span>
-                  <button onClick={() => updateQty(item.cartKey, 1)} className="p-2"><Plus className="w-3 h-3" /></button>
+                <div className="col-span-2 flex items-center justify-between gap-3 sm:col-span-1 sm:justify-end">
+                  <div className="flex shrink-0 items-center border rounded-full" style={{ borderColor: "var(--line-2)" }}>
+                    <button onClick={() => updateQty(item.cartKey, -1)} className="p-2"><Minus className="w-3 h-3" /></button>
+                    <span className="px-3 mono text-sm">{item.qty}</span>
+                    <button onClick={() => updateQty(item.cartKey, 1)} className="p-2"><Plus className="w-3 h-3" /></button>
+                  </div>
+                  <button onClick={() => remove(item.cartKey)} className="p-2 hover:text-red-500" style={{ color: "var(--ink-dim)" }}>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <button onClick={() => remove(item.cartKey)} className="p-2 hover:text-red-500" style={{ color: "var(--ink-dim)" }}>
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
             ))}
           </div>
 
-          <div className="paper-card p-7 h-fit sticky top-32">
+          <div className="paper-card min-w-0 p-5 sm:p-7 h-fit lg:sticky lg:top-32">
             <div className="text-xs mono uppercase tracking-widest mb-5" style={{ color: "var(--accent)" }}>Ringkasan</div>
             <div className="space-y-3 text-sm mb-5">
               <div className="flex justify-between"><span style={{ color: "var(--ink-dim)" }}>Subtotal</span><span>{fmtIDR(originalTotal)}</span></div>
@@ -1191,7 +1195,7 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
             </div>
             <div className="border-t pt-5 mb-6" style={{ borderColor: "var(--line)" }}>
               <div className="text-xs mono uppercase mb-1" style={{ color: "var(--ink-dim)" }}>Total</div>
-              <div className="serif" style={{ color: "var(--accent)", fontSize: "2.5rem", fontWeight: 600, lineHeight: 1 }}>{fmtIDR(total)}</div>
+              <div className="serif" style={{ color: "var(--accent)", fontSize: "clamp(2.25rem, 13vw, 2.5rem)", fontWeight: 600, lineHeight: 1 }}>{fmtIDR(total)}</div>
             </div>
             <button onClick={onCheckout} className="w-full py-4 rounded-full font-semibold text-sm transition hover:scale-[1.02] flex items-center justify-center gap-2" style={{ background: "var(--accent)", color: "white" }}>
               Lanjut ke Checkout <ArrowRight className="w-4 h-4" />
@@ -1497,4 +1501,3 @@ function createInvoiceText(order, payment) {
     "Simpan invoice ini sebagai bukti booking pesanan.",
   ].join("\n");
 }
-

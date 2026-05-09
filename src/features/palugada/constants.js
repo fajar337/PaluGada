@@ -506,8 +506,8 @@ export const PAYMENT_DETAILS = {
   },
   QRIS: {
     label: "QRIS",
-    accountName: "JAR STORE",
-    accountNumber: "NMID: ID1026487245338",
+    accountName: "PALUGADA - SOFTWARE",
+    accountNumber: "NMID: ID1026515873481",
     instruction: "Scan QRIS berikut dari aplikasi pembayaran kamu.",
     image: "/payments/qris-palugada.jpeg",
   },
