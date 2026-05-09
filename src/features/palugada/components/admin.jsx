@@ -59,11 +59,25 @@ export function AdminPanel({
   };
 
   const saveProduct = (data) => {
+    const pricingPlans = (data.pricingPlans || [])
+      .map((plan, planIndex) => ({
+        id: plan.id || createStableId(plan.name, `plan-${planIndex + 1}`),
+        name: String(plan.name || "").trim(),
+        options: (plan.options || [])
+          .map((option, optionIndex) => ({
+            id: option.id || createStableId(option.duration, `option-${optionIndex + 1}`),
+            duration: String(option.duration || "").trim(),
+            price: Math.max(0, Number(option.price) || 0),
+          }))
+          .filter((option) => option.duration),
+      }))
+      .filter((plan) => plan.name && plan.options.length);
     const payload = {
       ...data,
       price: Math.max(0, Number(data.price) || 0),
       oldPrice: Math.max(0, Number(data.oldPrice) || 0),
       stock: Math.max(0, Number(data.stock) || 0),
+      pricingPlans,
     };
     if (data.id && products.find((product) => product.id === data.id)) {
       setProducts(products.map((product) => (product.id === data.id ? payload : product)));
@@ -1276,11 +1290,38 @@ function StatCard({ label, value, icon, accent }) {
   );
 }
 
+function createStableId(value, fallback = "item") {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return normalized || fallback;
+}
+
+function createBlankPlan(index = 0) {
+  return {
+    id: `plan-${Date.now().toString(36)}-${index}`,
+    name: "",
+    options: [createBlankOption(0)],
+  };
+}
+
+function createBlankOption(index = 0) {
+  return {
+    id: `option-${Date.now().toString(36)}-${index}`,
+    duration: "",
+    price: 0,
+  };
+}
+
 function ProductEditor({ product, onSave, onClose }) {
-  const blank = { id: null, name: "", category: "Streaming", icon: "tv", color: "#8b5e34", price: 0, oldPrice: 0, stock: 0, duration: "1 Bulan", tagline: "", description: "", features: [] };
+  const blank = { id: null, name: "", category: "Streaming", icon: "tv", color: "#8b5e34", price: 0, oldPrice: 0, stock: 0, duration: "1 Bulan", tagline: "", description: "", features: [], pricingPlans: [] };
   const [data, setData] = useState(product || blank);
   const [featInput, setFeatInput] = useState("");
   const set = (key, value) => setData((current) => ({ ...current, [key]: value }));
+  const pricingPlans = data.pricingPlans || [];
 
   const addFeature = () => {
     const nextFeature = featInput.trim();
@@ -1302,9 +1343,70 @@ function ProductEditor({ product, onSave, onClose }) {
     }));
   };
 
+  const addPlan = () => {
+    setData((current) => ({
+      ...current,
+      pricingPlans: [...(current.pricingPlans || []), createBlankPlan((current.pricingPlans || []).length)],
+    }));
+  };
+
+  const updatePlan = (planIndex, key, value) => {
+    setData((current) => ({
+      ...current,
+      pricingPlans: (current.pricingPlans || []).map((plan, itemIndex) =>
+        itemIndex === planIndex ? { ...plan, [key]: value } : plan
+      ),
+    }));
+  };
+
+  const removePlan = (planIndex) => {
+    setData((current) => ({
+      ...current,
+      pricingPlans: (current.pricingPlans || []).filter((_, itemIndex) => itemIndex !== planIndex),
+    }));
+  };
+
+  const addOption = (planIndex) => {
+    setData((current) => ({
+      ...current,
+      pricingPlans: (current.pricingPlans || []).map((plan, itemIndex) =>
+        itemIndex === planIndex
+          ? { ...plan, options: [...(plan.options || []), createBlankOption((plan.options || []).length)] }
+          : plan
+      ),
+    }));
+  };
+
+  const updateOption = (planIndex, optionIndex, key, value) => {
+    setData((current) => ({
+      ...current,
+      pricingPlans: (current.pricingPlans || []).map((plan, itemIndex) =>
+        itemIndex === planIndex
+          ? {
+              ...plan,
+              options: (plan.options || []).map((option, childIndex) =>
+                childIndex === optionIndex ? { ...option, [key]: value } : option
+              ),
+            }
+          : plan
+      ),
+    }));
+  };
+
+  const removeOption = (planIndex, optionIndex) => {
+    setData((current) => ({
+      ...current,
+      pricingPlans: (current.pricingPlans || []).map((plan, itemIndex) =>
+        itemIndex === planIndex
+          ? { ...plan, options: (plan.options || []).filter((_, childIndex) => childIndex !== optionIndex) }
+          : plan
+      ),
+    }));
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center safe-x safe-y backdrop-blur-sm overflow-y-auto" style={{ background: "rgba(20,21,31,0.5)" }}>
-      <div className="w-full max-w-2xl mt-4 sm:mt-0 max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-[2rem] sm:rounded-3xl border scrollbar ios-scroll" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
+      <div className="w-full max-w-4xl mt-4 sm:mt-0 max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-[2rem] sm:rounded-3xl border scrollbar ios-scroll" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
         <div className="relative flex items-center justify-between gap-4 p-4 sm:p-6 border-b backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.95)" }}>
           <div>
             <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Editor</div>
@@ -1330,6 +1432,57 @@ function ProductEditor({ product, onSave, onClose }) {
             <Field label="Harga" value={data.price} onChange={(value) => set("price", Number(value) || 0)} type="number" />
             <Field label="Harga Lama" value={data.oldPrice} onChange={(value) => set("oldPrice", Number(value) || 0)} type="number" />
             <Field label="Stok" value={data.stock} onChange={(value) => set("stock", Number(value) || 0)} type="number" />
+          </div>
+
+          <div className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
+              <div>
+                <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--accent)" }}>Plan & Durasi</label>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--ink-dim)" }}>
+                  Harga di sini yang tampil sebagai pilihan di toko. Harga utama di atas tetap dipakai sebagai fallback atau harga mulai dari.
+                </p>
+              </div>
+              <button type="button" onClick={addPlan} className="px-4 py-2 rounded-full text-xs font-semibold flex items-center justify-center gap-2 shrink-0" style={{ background: "var(--ink)", color: "var(--bg)" }}>
+                <Plus className="w-3.5 h-3.5" /> Tambah Plan
+              </button>
+            </div>
+
+            {pricingPlans.length === 0 ? (
+              <div className="rounded-xl border border-dashed p-4 text-sm" style={{ borderColor: "var(--line)", color: "var(--ink-dim)" }}>
+                Belum ada plan. Produk akan memakai Harga dan Durasi utama.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {pricingPlans.map((plan, planIndex) => (
+                  <div key={plan.id || planIndex} className="rounded-2xl border bg-white p-4" style={{ borderColor: "var(--line)" }}>
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="flex-1">
+                        <Field label={`Nama Plan ${planIndex + 1}`} value={plan.name} onChange={(value) => updatePlan(planIndex, "name", value)} placeholder="MEMBER" />
+                      </div>
+                      <button type="button" onClick={() => removePlan(planIndex)} className="mt-6 p-3 rounded-xl border hover:bg-red-50" style={{ borderColor: "var(--line)", color: "#991b1b" }} aria-label="Hapus plan">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {(plan.options || []).map((option, optionIndex) => (
+                        <div key={option.id || optionIndex} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:items-end">
+                          <Field label={optionIndex === 0 ? "Durasi / Opsi" : " "} value={option.duration} onChange={(value) => updateOption(planIndex, optionIndex, "duration", value)} placeholder="1 Bulan" />
+                          <Field label={optionIndex === 0 ? "Harga Opsi" : " "} value={option.price} onChange={(value) => updateOption(planIndex, optionIndex, "price", Number(value) || 0)} type="number" />
+                          <button type="button" onClick={() => removeOption(planIndex, optionIndex)} className="h-12 px-4 rounded-xl border hover:bg-red-50" style={{ borderColor: "var(--line)", color: "#991b1b" }} aria-label="Hapus opsi">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button type="button" onClick={() => addOption(planIndex)} className="mt-3 px-4 py-2 rounded-full border text-xs font-semibold flex items-center gap-2" style={{ borderColor: "var(--line-2)" }}>
+                      <Plus className="w-3.5 h-3.5" /> Tambah Durasi
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
