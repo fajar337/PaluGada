@@ -10,6 +10,7 @@ const REMOTE_COLLECTIONS = {
   pa_reviews: { collection: "reviews", type: "array" },
   pa_product_requests: { collection: "productRequests", type: "array" },
   pa_admin: { collection: "appConfig", type: "single", docId: "admin" },
+  pa_store_status: { collection: "appConfig", type: "single", docId: "storeStatus" },
   pa_reseller_tiers: { collection: "appConfig", type: "single", docId: "resellerTiers" },
 };
 

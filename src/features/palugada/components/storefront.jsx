@@ -38,6 +38,7 @@ export function Home({
   products,
   promos = [],
   reviews = [],
+  storeStatus = { isOpen: true, closedReason: "" },
   reseller,
   getPrice,
   search,
@@ -61,6 +62,7 @@ export function Home({
     { value: "stock", label: "Stok terbanyak" },
   ];
   const activeSort = sortOptions.find((item) => item.value === sortBy) || sortOptions[0];
+  const isStoreOpen = storeStatus?.isOpen !== false;
   const featuredProduct = products.find((product) => product.id === "p_netflix") || products[0];
   const filtered = products
     .filter((product) =>
@@ -158,6 +160,8 @@ export function Home({
           </div>
         </div>
       </section>
+
+      {!isStoreOpen && <ClosedStoreNotice reason={storeStatus?.closedReason} />}
 
       {!reseller && (
         <section className="border-b" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
@@ -292,6 +296,7 @@ export function Home({
               onOpen={() => onOpen(product)}
               onPickPlan={() => setQuickProduct(product)}
               onAdd={() => onAdd(product)}
+              storeClosed={!isStoreOpen}
               delay={index * 0.05}
               index={index}
             />
@@ -310,6 +315,7 @@ export function Home({
           product={quickProduct}
           promos={promos}
           getPrice={getPrice}
+          storeClosed={!isStoreOpen}
           onClose={() => setQuickProduct(null)}
           onAdd={(selection) => {
             onAdd(quickProduct, selection);
@@ -325,6 +331,26 @@ export function Home({
       <ProductRequestSection onRequestProduct={onRequestProduct} />
       <CombinedReviewsSection reviews={reviews} products={products} />
     </div>
+  );
+}
+
+function ClosedStoreNotice({ reason }) {
+  const message = reason?.trim() || "Toko sedang tutup sementara. Silakan cek lagi nanti.";
+
+  return (
+    <section className="border-b" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
+      <div className="max-w-7xl mx-auto px-6 py-5">
+        <div className="rounded-[1.5rem] border p-5" style={{ borderColor: "var(--accent)", background: "var(--bg-2)" }}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Website Tutup</div>
+              <div className="serif text-2xl leading-none" style={{ fontWeight: 600 }}>Order sedang dinonaktifkan.</div>
+            </div>
+            <div className="serif text-2xl sm:text-3xl leading-tight max-w-2xl" style={{ color: "var(--ink)" }}>{message}</div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -487,7 +513,7 @@ function WebAppPromoSection() {
               Buka PaluGada lebih cepat!
             </h3>
             <a
-              href="https://www.mediafire.com/file/6ynt534e576t17w/PaluGada_Premium_1_1.0.apk/file"
+              href="https://www.mediafire.com/file/rmlsttad7a27m6g/PaluGada_Premium_v1.0.0.APK/file"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center rounded-full border px-6 py-3 text-base font-semibold transition hover-lift"
@@ -568,7 +594,7 @@ function FAQAccordion() {
   );
 }
 
-export function ProductCard({ product, promos = [], reviews = [], reseller, effectivePrice, compareAtPrice = 0, onOpen, onPickPlan, onAdd, delay = 0, index = 0, className = "" }) {
+export function ProductCard({ product, promos = [], reviews = [], reseller, effectivePrice, compareAtPrice = 0, onOpen, onPickPlan, onAdd, storeClosed = false, delay = 0, index = 0, className = "" }) {
   const Icon = ICONS[product.icon] || Sparkles;
   const num = String(index + 1).padStart(3, "0");
   const reviewSummary = getReviewSummary(reviews);
@@ -627,7 +653,7 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
             {fmtIDR(effectivePrice)}
           </div>
         </div>
-        <button onClick={(event) => { event.stopPropagation(); product.pricingPlans?.length ? onPickPlan() : onAdd(); }} disabled={product.stock === 0} className="w-12 h-12 rounded-full flex items-center justify-center transition disabled:opacity-30 hover:scale-110 active:scale-95 shrink-0" style={{ background: "var(--accent)", color: "white" }}>
+        <button onClick={(event) => { event.stopPropagation(); product.pricingPlans?.length ? onPickPlan() : onAdd(); }} disabled={storeClosed || product.stock === 0} className="w-12 h-12 rounded-full flex items-center justify-center transition disabled:opacity-30 hover:scale-110 active:scale-95 shrink-0" style={{ background: "var(--accent)", color: "white" }} aria-label={storeClosed ? "Website sedang tutup" : "Tambah ke keranjang"}>
           <Plus className="w-5 h-5" strokeWidth={3.5} />
         </button>
       </div>
@@ -635,7 +661,7 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
   );
 }
 
-function QuickPlanModal({ product, promos = [], getPrice, onClose, onAdd }) {
+function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, onClose, onAdd }) {
   const [selection, setSelection] = useState(getDefaultPlanSelection(product));
   const selectedPlan = getPlanSelection(product, selection?.planId, selection?.optionId);
   const pricing = getPricingForSelection(product, promos, selectedPlan || selection);
@@ -704,8 +730,8 @@ function QuickPlanModal({ product, promos = [], getPrice, onClose, onAdd }) {
             </div>
             <div className="serif mt-1" style={{ color: "var(--accent)", fontSize: "2.25rem", fontWeight: 800, lineHeight: 1 }}>{fmtIDR(effectivePrice)}</div>
           </div>
-          <button onClick={() => onAdd(selection)} className="px-6 py-4 rounded-full font-semibold text-sm whitespace-nowrap transition hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>
-            Tambah ke Keranjang
+          <button onClick={() => onAdd(selection)} disabled={storeClosed} className="px-6 py-4 rounded-full font-semibold text-sm whitespace-nowrap transition hover:scale-[1.02] disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>
+            {storeClosed ? "Website Tutup" : "Tambah ke Keranjang"}
           </button>
         </div>
       </div>
@@ -779,7 +805,7 @@ function ReviewStars({ rating, onChange, size = "md" }) {
   );
 }
 
-export function Detail({ product, promos = [], reviews = [], reseller, getPrice, onBack, onAdd, onReview, onBuy }) {
+export function Detail({ product, promos = [], reviews = [], storeStatus = { isOpen: true, closedReason: "" }, reseller, getPrice, onBack, onAdd, onReview, onBuy }) {
   const [qty, setQty] = useState(1);
   const [selection, setSelection] = useState(getDefaultPlanSelection(product));
   const selectedPlan = getPlanSelection(product, selection?.planId, selection?.optionId);
@@ -793,12 +819,19 @@ export function Detail({ product, promos = [], reviews = [], reseller, getPrice,
       }
     : null;
   const reviewSummary = getReviewSummary(reviews);
+  const isStoreOpen = storeStatus?.isOpen !== false;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
       <button onClick={onBack} className="flex items-center gap-2 text-sm mb-10 hover:opacity-60 transition" style={{ color: "var(--ink-dim)" }}>
         <ArrowLeft className="w-4 h-4" /> Kembali
       </button>
+
+      {!isStoreOpen && (
+        <div className="mb-8">
+          <ClosedStoreNotice reason={storeStatus?.closedReason} />
+        </div>
+      )}
 
       <div className="text-xs mono uppercase tracking-widest mb-4 flex items-center gap-3" style={{ color: "var(--accent)" }}>
         <span className="w-8 h-px" style={{ background: "var(--accent)" }}></span>
@@ -904,8 +937,8 @@ export function Detail({ product, promos = [], reviews = [], reseller, getPrice,
             <div className="text-sm mono" style={{ color: "var(--ink-dim)" }}>STOK {product.stock}</div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <button onClick={() => onAdd(qty, selectedCartOption)} disabled={product.stock === 0} className="flex-1 py-4 rounded-full border font-semibold text-sm hover:bg-white transition disabled:opacity-40" style={{ borderColor: "var(--line-2)" }}>+ Keranjang</button>
-            <button onClick={() => onBuy(qty, selectedCartOption)} disabled={product.stock === 0} className="flex-1 py-4 rounded-full font-semibold text-sm transition disabled:opacity-90 hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>Beli Sekarang →</button>
+            <button onClick={() => onAdd(qty, selectedCartOption)} disabled={!isStoreOpen || product.stock === 0} className="flex-1 py-4 rounded-full border font-semibold text-sm hover:bg-white transition disabled:opacity-40" style={{ borderColor: "var(--line-2)" }}>+ Keranjang</button>
+            <button onClick={() => onBuy(qty, selectedCartOption)} disabled={!isStoreOpen || product.stock === 0} className="flex-1 py-4 rounded-full font-semibold text-sm transition disabled:opacity-90 hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>{isStoreOpen ? "Beli Sekarang →" : "Website Tutup"}</button>
           </div>
         </div>
       </div>
@@ -1133,8 +1166,9 @@ function OrderTrackingCard({ order }) {
   );
 }
 
-export function CartView({ items, total, originalTotal, updateQty, remove, onBack, onCheckout }) {
+export function CartView({ items, total, originalTotal, updateQty, remove, onBack, onCheckout, storeStatus = { isOpen: true, closedReason: "" } }) {
   const savings = originalTotal - total;
+  const isStoreOpen = storeStatus?.isOpen !== false;
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
       <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
@@ -1145,6 +1179,11 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
         Keranjang<span className="serif-italic">.</span>
       </h1>
       <div className="text-sm mb-12" style={{ color: "var(--ink-dim)" }}>{items.length} produk</div>
+      {!isStoreOpen && (
+        <div className="mb-8">
+          <ClosedStoreNotice reason={storeStatus?.closedReason} />
+        </div>
+      )}
 
       {items.length === 0 ? (
         <div className="paper-card text-center py-24">
@@ -1197,8 +1236,8 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
               <div className="text-xs mono uppercase mb-1" style={{ color: "var(--ink-dim)" }}>Total</div>
               <div className="serif" style={{ color: "var(--accent)", fontSize: "clamp(2.25rem, 13vw, 2.5rem)", fontWeight: 600, lineHeight: 1 }}>{fmtIDR(total)}</div>
             </div>
-            <button onClick={onCheckout} className="w-full py-4 rounded-full font-semibold text-sm transition hover:scale-[1.02] flex items-center justify-center gap-2" style={{ background: "var(--accent)", color: "white" }}>
-              Lanjut ke Checkout <ArrowRight className="w-4 h-4" />
+            <button onClick={onCheckout} disabled={!isStoreOpen} className="w-full py-4 rounded-full font-semibold text-sm transition hover:scale-[1.02] flex items-center justify-center gap-2 disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>
+              {isStoreOpen ? "Lanjut ke Checkout" : "Website Tutup"} <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -1207,15 +1246,16 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
   );
 }
 
-export function Checkout({ items, total, reseller, onBack, onPlace }) {
+export function Checkout({ items, total, reseller, storeStatus = { isOpen: true, closedReason: "" }, onBack, onPlace }) {
   const [name, setName] = useState(reseller?.name || "");
   const [email, setEmail] = useState(reseller?.email || "");
   const [wa, setWa] = useState(reseller?.wa || "");
   const [method, setMethod] = useState("DANA");
   const [submitting, setSubmitting] = useState(false);
+  const isStoreOpen = storeStatus?.isOpen !== false;
 
   const submit = async () => {
-    if (!name || !email || !wa) {
+    if (!isStoreOpen || !name || !email || !wa) {
       return;
     }
     setSubmitting(true);
@@ -1241,6 +1281,11 @@ export function Checkout({ items, total, reseller, onBack, onPlace }) {
       <h1 className="serif leading-none mb-12" style={{ fontSize: "clamp(3rem, 6vw, 5.5rem)", fontWeight: 500 }}>
         Selesaikan<span className="serif-italic"> pesanan.</span>
       </h1>
+      {!isStoreOpen && (
+        <div className="mb-8">
+          <ClosedStoreNotice reason={storeStatus?.closedReason} />
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-5">
@@ -1295,8 +1340,8 @@ export function Checkout({ items, total, reseller, onBack, onPlace }) {
             <div className="text-xs mono uppercase mb-1" style={{ color: "var(--ink-dim)" }}>Total</div>
             <div className="serif" style={{ color: "var(--accent)", fontSize: "2.5rem", fontWeight: 600, lineHeight: 1 }}>{fmtIDR(total)}</div>
           </div>
-          <button onClick={submit} disabled={submitting || !name || !email || !wa} className="w-full py-4 rounded-full font-semibold text-sm disabled:opacity-40 transition hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>
-            {submitting ? "Membuat booking..." : "Buat Booking Pesanan"}
+          <button onClick={submit} disabled={!isStoreOpen || submitting || !name || !email || !wa} className="w-full py-4 rounded-full font-semibold text-sm disabled:opacity-40 transition hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>
+            {!isStoreOpen ? "Website Tutup" : submitting ? "Membuat booking..." : "Buat Booking Pesanan"}
           </button>
           <p className="text-[10px] mono uppercase mt-4 text-center" style={{ color: "var(--ink-dim)" }}>Pengiriman akun via WhatsApp setelah valid</p>
         </div>

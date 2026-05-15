@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BadgePercent, Check, ChevronDown, Crown, Edit3, Inbox, LogOut, MessageSquareQuote, Package, Plus, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
+import { BadgePercent, Check, ChevronDown, Crown, Edit3, Inbox, LogOut, MessageSquareQuote, Package, Plus, Power, PowerOff, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
 import { ICONS, RESELLER_TIERS, fmtIDR } from "../constants";
 import { Field, ProductIcon } from "./shared";
 
@@ -11,6 +11,8 @@ export function AdminPanel({
   resellerTiers = RESELLER_TIERS,
   setResellerTiers,
   promos = [],
+  storeStatus = { isOpen: true, closedReason: "" },
+  setStoreStatus,
   setPromos,
   reviews,
   setReviews,
@@ -33,6 +35,7 @@ export function AdminPanel({
   const [editing, setEditing] = useState(null);
   const [editingPromo, setEditingPromo] = useState(null);
   const [showResellerCreator, setShowResellerCreator] = useState(false);
+  const [showStoreStatusEditor, setShowStoreStatusEditor] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const stats = {
     products: products.length,
@@ -186,7 +189,23 @@ export function AdminPanel({
           <button onClick={onLogout} className="ml-auto px-4 py-2 rounded-full text-xs border" style={{ borderColor: "var(--line)" }}>Logout</button>
         </div>
 
-        {tab === "dashboard" && <DashboardTab stats={stats} orders={orders} resellers={resellers} productRequests={productRequests} />}
+        {tab === "dashboard" && (
+          <DashboardTab
+            stats={stats}
+            orders={orders}
+            resellers={resellers}
+            productRequests={productRequests}
+            storeStatus={storeStatus}
+            onOpenStore={() =>
+              setStoreStatus?.({
+                isOpen: true,
+                closedReason: "",
+                updatedAt: new Date().toISOString(),
+              })
+            }
+            onCloseStore={() => setShowStoreStatusEditor(true)}
+          />
+        )}
         {tab === "products" && <ProductsTab products={products} onEdit={setEditing} onDelete={deleteProduct} />}
         {tab === "promos" && <PromosTab promos={promos} products={products} onEdit={setEditingPromo} onDelete={deletePromo} onToggle={togglePromo} />}
         {tab === "orders" && <OrdersTab orders={orders} onChangeStatus={updateOrderStatus} onDelete={deleteOrder} />}
@@ -218,6 +237,20 @@ export function AdminPanel({
           }}
         />
       )}
+      {showStoreStatusEditor && (
+        <StoreStatusEditor
+          storeStatus={storeStatus}
+          onClose={() => setShowStoreStatusEditor(false)}
+          onSave={(reason) => {
+            setStoreStatus?.({
+              isOpen: false,
+              closedReason: reason.trim(),
+              updatedAt: new Date().toISOString(),
+            });
+            setShowStoreStatusEditor(false);
+          }}
+        />
+      )}
       {confirmState && (
         <ConfirmDialog
           title={confirmState.title}
@@ -230,12 +263,43 @@ export function AdminPanel({
   );
 }
 
-function DashboardTab({ stats, orders, resellers, productRequests }) {
+function DashboardTab({ stats, orders, resellers, productRequests, storeStatus, onOpenStore, onCloseStore }) {
+  const isOpen = storeStatus?.isOpen !== false;
+
   return (
     <div>
       <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Overview</div>
-      <h1 className="serif leading-none mb-2" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Dashboard<span className="serif-italic">.</span></h1>
-      <p className="text-sm mb-10" style={{ color: "var(--ink-dim)" }}>Ringkasan performa toko</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-10">
+        <div>
+          <h1 className="serif leading-none mb-2" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Dashboard<span className="serif-italic">.</span></h1>
+          <p className="text-sm" style={{ color: "var(--ink-dim)" }}>Ringkasan performa toko</p>
+        </div>
+        <div className="flex flex-col items-stretch sm:items-end gap-2">
+          <div className="flex rounded-full border p-1" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
+            <button
+              type="button"
+              onClick={onOpenStore}
+              disabled={isOpen}
+              className="px-4 py-2 rounded-full text-xs font-semibold flex items-center justify-center gap-2 transition disabled:opacity-60"
+              style={{ background: isOpen ? "var(--ink)" : "transparent", color: isOpen ? "var(--bg)" : "var(--ink)" }}
+            >
+              <Power className="w-3.5 h-3.5" /> Buka
+            </button>
+            <button
+              type="button"
+              onClick={onCloseStore}
+              disabled={!isOpen}
+              className="px-4 py-2 rounded-full text-xs font-semibold flex items-center justify-center gap-2 transition disabled:opacity-60"
+              style={{ background: !isOpen ? "var(--accent)" : "transparent", color: !isOpen ? "white" : "var(--ink)" }}
+            >
+              <PowerOff className="w-3.5 h-3.5" /> Tutup
+            </button>
+          </div>
+          <div className="text-[10px] mono uppercase tracking-widest text-right" style={{ color: isOpen ? "var(--ink-dim)" : "var(--accent)" }}>
+            {isOpen ? "Website buka" : "Website tutup"}
+          </div>
+        </div>
+      </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         <StatCard label="Produk" value={stats.products} icon={Package} />
         <StatCard label="Promo Aktif" value={stats.promos} icon={BadgePercent} />
@@ -1261,6 +1325,53 @@ function PromoEditor({ promo, products, onSave, onClose }) {
             style={{ background: "var(--accent)", color: "white" }}
           >
             Simpan Promo
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StoreStatusEditor({ storeStatus, onClose, onSave }) {
+  const [reason, setReason] = useState(storeStatus?.closedReason || "");
+  const canSave = reason.trim().length > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.5)" }}>
+      <div className="w-full max-w-lg rounded-[2rem] border p-6 sm:p-7" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <div>
+            <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Status Website</div>
+            <h2 className="serif text-3xl leading-none" style={{ fontWeight: 500 }}>Tutup website</h2>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <p className="text-sm leading-relaxed mb-5" style={{ color: "var(--ink-dim)" }}>
+          Alasan ini akan tampil di halaman depan dan pembeli tidak bisa membuat order sampai website dibuka lagi.
+        </p>
+        <div className="mb-6">
+          <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>Alasan Tutup</label>
+          <textarea
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            rows={4}
+            placeholder="Contoh: Toko tutup sementara karena admin sedang istirahat."
+            className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 resize-y"
+            style={{ borderColor: "var(--line)" }}
+          />
+        </div>
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>Batal</button>
+          <button
+            type="button"
+            onClick={() => onSave(reason)}
+            disabled={!canSave}
+            className="flex-1 py-3 rounded-full font-semibold text-sm disabled:opacity-40"
+            style={{ background: "var(--accent)", color: "white" }}
+          >
+            Tutup Website
           </button>
         </div>
       </div>

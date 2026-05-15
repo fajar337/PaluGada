@@ -17,6 +17,11 @@ import { addItem, getItem, loadProducts, storage, updateItem } from "./features/
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 const UI_STATE_KEY = "pa_ui_state";
+const DEFAULT_STORE_STATUS = {
+  isOpen: true,
+  closedReason: "",
+  updatedAt: null,
+};
 
 function loadUiState() {
   if (typeof window === "undefined") {
@@ -46,6 +51,7 @@ export default function App() {
   const [products, setProducts] = useState([]);
   const [resellerTiers, setResellerTiers] = useState(RESELLER_TIERS);
   const [promos, setPromos] = useState([]);
+  const [storeStatus, setStoreStatus] = useState(DEFAULT_STORE_STATUS);
   const [orders, setOrders] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [productRequests, setProductRequests] = useState([]);
@@ -119,6 +125,7 @@ export default function App() {
       Object.assign(RESELLER_TIERS, savedTiers);
       setResellerTiers(savedTiers);
       setPromos(await storage.get("pa_promos", []));
+      setStoreStatus(await storage.get("pa_store_status", DEFAULT_STORE_STATUS));
       setReviews(await storage.get("pa_reviews", []));
       setLoaded(true);
     })();
@@ -337,8 +344,15 @@ export default function App() {
   const cartTotal = cartItems.reduce((sum, item) => sum + item.effectivePrice * item.qty, 0);
   const cartOriginal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
+  const isStoreOpen = storeStatus?.isOpen !== false;
+  const closedReason = storeStatus?.closedReason?.trim() || "Toko sedang tutup sementara. Silakan cek lagi nanti.";
 
   const addToCart = (id, qty = 1, selection = null) => {
+    if (!isStoreOpen) {
+      showToast("Toko sedang tutup: " + closedReason);
+      return false;
+    }
+
     const key = selection ? `${id}:${selection.planId}:${selection.optionId}` : id;
     setCart((current) => {
       const existing = current.find((item) => (item.key || item.id) === key);
@@ -350,6 +364,7 @@ export default function App() {
     setCartPulse(true);
     setTimeout(() => setCartPulse(false), 520);
     showToast("Ditambahkan ke keranjang");
+    return true;
   };
 
   const updateQty = (key, delta) => {
@@ -394,6 +409,11 @@ export default function App() {
   };
 
   const placeOrder = async (buyer) => {
+    if (!isStoreOpen) {
+      showToast("Toko sedang tutup: " + closedReason);
+      return null;
+    }
+
     const order = {
       id: "ORD-" + Date.now().toString(36).toUpperCase(),
       buyer,
@@ -588,6 +608,7 @@ export default function App() {
             resellerTiers={resellerTiers}
             promos={promos}
             reviews={reviews}
+            storeStatus={storeStatus}
             reseller={reseller}
             getPrice={getPrice}
             search={search}
@@ -609,14 +630,16 @@ export default function App() {
             resellerTiers={resellerTiers}
             promos={promos}
             reviews={reviews.filter((review) => review.productId === activeProduct.id)}
+            storeStatus={storeStatus}
             reseller={reseller}
             getPrice={getPrice}
             onBack={() => setView("home")}
             onAdd={(qty, selection) => addToCart(activeProduct.id, qty, selection)}
             onReview={(data) => addReview(activeProduct.id, data)}
             onBuy={(qty, selection) => {
-              addToCart(activeProduct.id, qty, selection);
-              setView("checkout");
+              if (addToCart(activeProduct.id, qty, selection)) {
+                setView("checkout");
+              }
             }}
           />
         )}
@@ -628,7 +651,14 @@ export default function App() {
             updateQty={updateQty}
             remove={removeFromCart}
             onBack={() => setView("home")}
-            onCheckout={() => setView("checkout")}
+            storeStatus={storeStatus}
+            onCheckout={() => {
+              if (!isStoreOpen) {
+                showToast("Toko sedang tutup: " + closedReason);
+                return;
+              }
+              setView("checkout");
+            }}
           />
         )}
         {view === "track-order" && (
@@ -639,9 +669,13 @@ export default function App() {
             items={cartItems}
             total={cartTotal}
             reseller={reseller}
+            storeStatus={storeStatus}
             onBack={() => setView("cart")}
             onPlace={async (buyer) => {
               const order = await placeOrder(buyer);
+              if (!order) {
+                return;
+              }
               setActiveOrder(order);
               setView("order-success");
               showToast("Booking " + order.id + " berhasil dibuat!");
@@ -719,6 +753,11 @@ export default function App() {
               await storage.set("pa_reseller_tiers", nextTiers);
             }}
             promos={promos}
+            storeStatus={storeStatus}
+            setStoreStatus={async (nextStoreStatus) => {
+              setStoreStatus(nextStoreStatus);
+              await storage.set("pa_store_status", nextStoreStatus);
+            }}
             setPromos={async (nextPromos) => {
               setPromos(nextPromos);
               await storage.set("pa_promos", nextPromos);
