@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
 import { AdminPanel } from "./features/palugada/components/admin";
 import { AdminLogin, ResellerLogin, ResellerRegister } from "./features/palugada/components/auth";
 import { FloatingWhatsApp, Footer, Header, StyleBlock } from "./features/palugada/components/layout";
@@ -12,6 +13,7 @@ import {
   getResellerProfileByUid,
   loginResellerAuth,
   saveResellerProfile,
+  changeCurrentUserPassword,
 } from "./features/palugada/lib/firebase";
 import { addItem, getItem, loadProducts, storage, updateItem } from "./features/palugada/lib/storage";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
@@ -67,6 +69,7 @@ export default function App() {
   const [search, setSearch] = useState(initialUiState.search || "");
   const [category, setCategory] = useState(initialUiState.category || "Semua");
   const [toast, setToast] = useState(null);
+  const [storeClosedNoticeVisible, setStoreClosedNoticeVisible] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const historyReadyRef = useRef(false);
   const historyKeyRef = useRef("");
@@ -146,6 +149,12 @@ export default function App() {
       setView("reseller-login");
     }
   }, [adminLoggedIn, authResolved, loaded, reseller, view]);
+
+  useEffect(() => {
+    if (storeStatus?.isOpen === false) {
+      setStoreClosedNoticeVisible(true);
+    }
+  }, [storeStatus?.closedReason, storeStatus?.isOpen]);
 
   useEffect(() => {
     if (!products.length || !initialUiState.activeProductId) {
@@ -778,6 +787,11 @@ export default function App() {
               await storage.set("pa_resellers", nextResellers);
             }}
             onCreateReseller={createResellerByAdmin}
+            onChangeAdminPassword={async ({ currentPassword, nextPassword }) => {
+              await changeCurrentUserPassword(currentPassword, nextPassword);
+              showToast("Password admin berhasil diganti");
+              return { ok: true };
+            }}
             productRequests={productRequests}
             setProductRequests={async (nextRequests) => {
               setProductRequests(nextRequests);
@@ -794,7 +808,39 @@ export default function App() {
 
       {!view.startsWith("admin") && view !== "reseller-login" && view !== "reseller-register" && <Footer />}
       {!view.startsWith("admin") && view !== "reseller-login" && view !== "reseller-register" && <FloatingWhatsApp />}
+      {!view.startsWith("admin") && !isStoreOpen && storeClosedNoticeVisible && (
+        <StoreClosedPopup reason={closedReason} onClose={() => setStoreClosedNoticeVisible(false)} />
+      )}
       {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full text-sm font-medium shadow-2xl toast-pop" style={{ background: "var(--ink)", color: "var(--bg)" }}>{toast}</div>}
+    </div>
+  );
+}
+
+function StoreClosedPopup({ reason, onClose }) {
+  useEffect(() => {
+    const delay = Math.min(14000, Math.max(4500, 2500 + String(reason || "").length * 75));
+    const timer = setTimeout(onClose, delay);
+    return () => clearTimeout(timer);
+  }, [onClose, reason]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y px-4 backdrop-blur-md" style={{ background: "rgba(20,21,31,0.45)" }}>
+      <div className="relative w-full max-w-lg rounded-[2rem] border p-6 sm:p-7 shadow-2xl zoomin" style={{ borderColor: "var(--accent)", background: "var(--bg-2)" }}>
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 p-2 rounded-full border transition hover:bg-white"
+          style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+          aria-label="Tutup notifikasi"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <div className="pr-10">
+          <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Toko Sedang Tutup</div>
+          <h2 className="serif text-4xl leading-none mb-4" style={{ fontWeight: 600 }}>Order belum bisa dibuat.</h2>
+          <p className="serif text-2xl leading-tight" style={{ color: "var(--ink)" }}>{reason}</p>
+        </div>
+      </div>
     </div>
   );
 }

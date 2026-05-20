@@ -1,11 +1,14 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import {
   GoogleAuthProvider,
+  EmailAuthProvider,
   createUserWithEmailAndPassword,
   getAuth,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
   signOut,
   signInWithPopup,
+  updatePassword,
   updateProfile,
 } from "firebase/auth";
 import {
@@ -102,4 +105,15 @@ export async function createResellerAuthByAdmin({ name, email, password }) {
   await signOut(secondaryAuth);
 
   return credential.user;
+}
+
+export async function changeCurrentUserPassword(currentPassword, nextPassword) {
+  const user = firebaseAuth.currentUser;
+  if (!user?.email) {
+    throw new Error("Admin belum login");
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, nextPassword);
 }

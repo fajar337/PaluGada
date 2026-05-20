@@ -467,9 +467,9 @@ export function getProductStartingCompareAt(product, promos = []) {
   return best?.compareAt || best?.displayPrice || 0;
 }
 
-export const ADMIN_WHATSAPP_NUMBER = "6289513947458";
-export const INSTAGRAM_URL = "https://www.instagram.com/fjr.muustafa";
-export const CONTACT_EMAIL = "mustofafajar733@gmail.com";
+export const ADMIN_WHATSAPP_NUMBER = "62895372490058";
+export const INSTAGRAM_URL = "https://www.instagram.com/palugada_premium/";
+export const CONTACT_EMAIL = "palugadapremium@gmail.com";
 
 export const PAYMENT_METHODS = ["DANA", "OVO", "GoPay", "ShopeePay", "SeaBank", "QRIS"];
 

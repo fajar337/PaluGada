@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BadgePercent, Check, ChevronDown, Crown, Edit3, Inbox, LogOut, MessageSquareQuote, Package, Plus, Power, PowerOff, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
+import { ArrowLeft, BadgePercent, Check, ChevronDown, Crown, Edit3, Inbox, KeyRound, LogOut, MessageSquareQuote, Package, Plus, Power, PowerOff, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
 import { ICONS, RESELLER_TIERS, fmtIDR } from "../constants";
 import { Field, ProductIcon } from "./shared";
 
@@ -23,6 +23,7 @@ export function AdminPanel({
   onCreateReseller,
   productRequests = [],
   setProductRequests,
+  onChangeAdminPassword,
   onLogout,
 }) {
   const [tab, setTab] = useState(() => {
@@ -36,6 +37,7 @@ export function AdminPanel({
   const [editingPromo, setEditingPromo] = useState(null);
   const [showResellerCreator, setShowResellerCreator] = useState(false);
   const [showStoreStatusEditor, setShowStoreStatusEditor] = useState(false);
+  const [showAdminPasswordEditor, setShowAdminPasswordEditor] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const stats = {
     products: products.length,
@@ -44,6 +46,7 @@ export function AdminPanel({
     orders: orders.length,
     requests: productRequests.length,
     revenue: orders.reduce((sum, order) => sum + order.total, 0),
+    revenueThisMonth: getMonthRevenue(orders, 0),
   };
 
   const askDelete = (title, description, onConfirm) => {
@@ -204,6 +207,7 @@ export function AdminPanel({
               })
             }
             onCloseStore={() => setShowStoreStatusEditor(true)}
+            onChangePassword={() => setShowAdminPasswordEditor(true)}
           />
         )}
         {tab === "products" && <ProductsTab products={products} onEdit={setEditing} onDelete={deleteProduct} />}
@@ -251,6 +255,18 @@ export function AdminPanel({
           }}
         />
       )}
+      {showAdminPasswordEditor && (
+        <AdminPasswordEditor
+          onClose={() => setShowAdminPasswordEditor(false)}
+          onSave={async (payload) => {
+            const result = await onChangeAdminPassword?.(payload);
+            if (result?.ok) {
+              setShowAdminPasswordEditor(false);
+            }
+            return result;
+          }}
+        />
+      )}
       {confirmState && (
         <ConfirmDialog
           title={confirmState.title}
@@ -263,8 +279,13 @@ export function AdminPanel({
   );
 }
 
-function DashboardTab({ stats, orders, resellers, productRequests, storeStatus, onOpenStore, onCloseStore }) {
+function DashboardTab({ stats, orders, resellers, productRequests, storeStatus, onOpenStore, onCloseStore, onChangePassword }) {
   const isOpen = storeStatus?.isOpen !== false;
+  const [view, setView] = useState("overview");
+
+  if (view === "revenue") {
+    return <RevenueHistory orders={orders} onBack={() => setView("overview")} />;
+  }
 
   return (
     <div>
@@ -295,6 +316,14 @@ function DashboardTab({ stats, orders, resellers, productRequests, storeStatus, 
               <PowerOff className="w-3.5 h-3.5" /> Tutup
             </button>
           </div>
+          <button
+            type="button"
+            onClick={onChangePassword}
+            className="px-4 py-2 rounded-full border text-xs font-semibold flex items-center justify-center gap-2 transition hover:bg-white"
+            style={{ borderColor: "var(--line)", background: "var(--bg-2)", color: "var(--ink)" }}
+          >
+            <KeyRound className="w-3.5 h-3.5" /> Ganti Password
+          </button>
           <div className="text-[10px] mono uppercase tracking-widest text-right" style={{ color: isOpen ? "var(--ink-dim)" : "var(--accent)" }}>
             {isOpen ? "Website buka" : "Website tutup"}
           </div>
@@ -306,7 +335,7 @@ function DashboardTab({ stats, orders, resellers, productRequests, storeStatus, 
         <StatCard label="Stok" value={stats.stock} icon={Sparkles} />
         <StatCard label="Pesanan" value={stats.orders} icon={Receipt} />
         <StatCard label="Request" value={stats.requests} icon={Inbox} />
-        <StatCard label="Pendapatan" value={fmtIDR(stats.revenue)} icon={TrendingUp} accent />
+        <StatCard label="Pendapatan Bulan Ini" value={fmtIDR(stats.revenueThisMonth)} icon={TrendingUp} accent onClick={() => setView("revenue")} />
       </div>
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="paper-card p-7">
@@ -475,12 +504,44 @@ function PromosTab({ promos, products, onEdit, onDelete, onToggle }) {
 
 function OrdersTab({ orders, onChangeStatus, onDelete }) {
   const statusOptions = ["Menunggu Pembayaran", "Menunggu Verifikasi", "Diproses", "Selesai", "Dibatalkan"];
+  const renewalReminders = orders
+    .map((order) => ({ order, running: getOrderRunningInfo(order) }))
+    .filter(({ running }) => running?.needsRenewalReminder);
 
   return (
     <div>
       <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Sales</div>
       <h1 className="serif leading-none mb-2" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Pesanan<span className="serif-italic">.</span></h1>
       <p className="text-sm mb-10" style={{ color: "var(--ink-dim)" }}>{orders.length} pesanan total</p>
+      {renewalReminders.length > 0 && (
+        <div className="paper-card p-5 mb-5" style={{ borderColor: "var(--accent)", background: "var(--bg-3)" }}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Notif Perpanjangan</div>
+              <div className="serif text-2xl leading-none" style={{ fontWeight: 600 }}>
+                {renewalReminders.length} pesanan sisa 1 hari
+              </div>
+              <p className="text-sm mt-2" style={{ color: "var(--ink-dim)" }}>
+                Klik tombol WhatsApp untuk chat pelanggan dan tawarkan perpanjangan produk.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 lg:justify-end">
+              {renewalReminders.slice(0, 3).map(({ order, running }) => (
+                <a
+                  key={order.id}
+                  href={createRenewalWhatsappUrl(order, running)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-4 py-2 rounded-full text-xs font-semibold"
+                  style={{ background: "var(--accent)", color: "white" }}
+                >
+                  Chat {order.buyer.name}
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="space-y-4">
         {orders.map((order) => {
           const running = getOrderRunningInfo(order);
@@ -504,7 +565,12 @@ function OrdersTab({ orders, onChangeStatus, onDelete }) {
               <div className="text-right">
                 <div className="serif text-3xl" style={{ color: "var(--accent)", fontWeight: 600 }}>{fmtIDR(order.total)}</div>
                 <div className="mt-2 flex justify-end gap-2">
-                  <StatusDropdown value={order.status} options={statusOptions} onChange={(value) => onChangeStatus(order.id, value)} />
+                  <StatusDropdown
+                    value={order.status}
+                    options={statusOptions}
+                    onChange={(value) => onChangeStatus(order.id, value)}
+                    disabled={order.status === "Selesai"}
+                  />
                   <button onClick={() => onDelete(order.id)} className="px-3 py-1 rounded-full text-xs border bg-white hover:bg-red-50 transition" style={{ borderColor: "var(--line)", color: "#991b1b" }}>
                     Hapus
                   </button>
@@ -516,6 +582,25 @@ function OrdersTab({ orders, onChangeStatus, onDelete }) {
                 <span>Invoice: {new Date(order.createdAt).toLocaleDateString("id-ID")}</span>
                 <span>Durasi: {running.durationDays} hari</span>
                 <span>Berakhir: {running.endDate.toLocaleDateString("id-ID")}</span>
+              </div>
+            )}
+            {running?.needsRenewalReminder && (
+              <div className="mb-4 rounded-2xl border p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--accent)", background: "var(--bg-3)" }}>
+                <div>
+                  <div className="text-[10px] mono uppercase tracking-widest mb-1" style={{ color: "var(--accent)" }}>Sisa 1 Hari</div>
+                  <div className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                    Produk hampir berakhir. Hubungi pelanggan untuk perpanjangan.
+                  </div>
+                </div>
+                <a
+                  href={createRenewalWhatsappUrl(order, running)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-4 py-2 rounded-full text-xs font-semibold text-center"
+                  style={{ background: "var(--accent)", color: "white" }}
+                >
+                  Chat Pelanggan
+                </a>
               </div>
             )}
             <div className="border-t pt-3 space-y-1" style={{ borderColor: "var(--line)" }}>
@@ -530,6 +615,72 @@ function OrdersTab({ orders, onChangeStatus, onDelete }) {
           );
         })}
         {orders.length === 0 && <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada pesanan masuk</div>}
+      </div>
+    </div>
+  );
+}
+
+function RevenueHistory({ orders, onBack }) {
+  const summaries = [-1, 0, 1].map((offset) => getMonthRevenueSummary(orders, offset));
+  const previous = summaries[0];
+  const current = summaries[1];
+  const difference = current.total - previous.total;
+  const percentage = previous.total > 0 ? Math.round((difference / previous.total) * 100) : current.total > 0 ? 100 : 0;
+  const trendLabel = difference > 0 ? "Naik" : difference < 0 ? "Turun" : "Stabil";
+  const trendColor = difference >= 0 ? "var(--accent)" : "#991b1b";
+
+  return (
+    <div>
+      <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
+        <ArrowLeft className="w-4 h-4" /> Kembali ke dashboard
+      </button>
+      <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Revenue</div>
+      <h1 className="serif leading-none mb-2" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Riwayat Pendapatan<span className="serif-italic">.</span></h1>
+      <p className="text-sm mb-8" style={{ color: "var(--ink-dim)" }}>Pendapatan bulanan berdasarkan tanggal order dibuat</p>
+
+      <div className="paper-card p-6 sm:p-7 mb-6" style={{ borderColor: "var(--accent)" }}>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>Perbandingan dari bulan lalu</div>
+            <div className="serif text-4xl leading-none" style={{ color: trendColor, fontWeight: 600 }}>
+              {trendLabel} {Math.abs(percentage)}%
+            </div>
+          </div>
+          <div className="text-sm sm:text-right" style={{ color: "var(--ink-dim)" }}>
+            <div>Bulan lalu: <strong style={{ color: "var(--ink)" }}>{fmtIDR(previous.total)}</strong></div>
+            <div>Bulan ini: <strong style={{ color: "var(--ink)" }}>{fmtIDR(current.total)}</strong></div>
+            <div>Selisih: <strong style={{ color: trendColor }}>{difference >= 0 ? "+" : "-"}{fmtIDR(Math.abs(difference))}</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4 mb-8">
+        {summaries.map((summary) => (
+          <div key={summary.key} className="paper-card p-6">
+            <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: summary.offset === 0 ? "var(--accent)" : "var(--ink-dim)" }}>
+              {summary.offset === -1 ? "Bulan Lalu" : summary.offset === 0 ? "Bulan Ini" : "Bulan Depan"}
+            </div>
+            <div className="serif text-3xl leading-none mb-3" style={{ color: summary.offset === 0 ? "var(--accent)" : "var(--ink)", fontWeight: 600 }}>
+              {fmtIDR(summary.total)}
+            </div>
+            <div className="text-sm" style={{ color: "var(--ink-dim)" }}>{summary.label} - {summary.orders.length} order</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="paper-card overflow-hidden">
+        <div className="px-5 py-4 border-b text-xs mono uppercase tracking-widest" style={{ borderColor: "var(--line)", color: "var(--accent)" }}>Order Bulan Ini</div>
+        {current.orders.map((order) => (
+          <div key={order.id} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] px-5 py-4 border-b last:border-0" style={{ borderColor: "var(--line)" }}>
+            <div className="min-w-0">
+              <div className="mono text-xs" style={{ color: "var(--accent)" }}>{order.id}</div>
+              <div className="font-semibold">{order.buyer?.name || "Pembeli"}</div>
+              <div className="text-xs" style={{ color: "var(--ink-dim)" }}>{new Date(order.createdAt).toLocaleString("id-ID")}</div>
+            </div>
+            <div className="serif text-2xl sm:text-right" style={{ color: "var(--accent)", fontWeight: 600 }}>{fmtIDR(order.total || 0)}</div>
+          </div>
+        ))}
+        {current.orders.length === 0 && <div className="text-sm text-center py-12 serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada pendapatan bulan ini</div>}
       </div>
     </div>
   );
@@ -753,20 +904,21 @@ function ReviewsTab({ products, reviews, setReviews, onDeleteReview }) {
   );
 }
 
-function StatusDropdown({ value, options, onChange }) {
+function StatusDropdown({ value, options, onChange, disabled = false }) {
   const [open, setOpen] = useState(false);
 
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen((current) => !current)}
-        className="min-w-[220px] px-4 py-2.5 rounded-full text-sm border flex items-center justify-between gap-3 transition"
-        style={{ borderColor: "var(--line)", background: "var(--bg-2)", color: "var(--ink)" }}
+        onClick={() => !disabled && setOpen((current) => !current)}
+        disabled={disabled}
+        className="min-w-[220px] px-4 py-2.5 rounded-full text-sm border flex items-center justify-between gap-3 transition disabled:opacity-70 disabled:cursor-not-allowed"
+        style={{ borderColor: "var(--line)", background: disabled ? "var(--bg-3)" : "var(--bg-2)", color: "var(--ink)" }}
       >
         <span>{value}</span>
-        <ChevronDown className={`w-4 h-4 transition ${open ? "rotate-180" : ""}`} />
+        {disabled ? <Check className="w-4 h-4" /> : <ChevronDown className={`w-4 h-4 transition ${open ? "rotate-180" : ""}`} />}
       </button>
-      {open && (
+      {open && !disabled && (
         <div
           className="absolute right-0 mt-2 min-w-full overflow-hidden rounded-[1.25rem] border shadow-2xl z-20"
           style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}
@@ -930,23 +1082,77 @@ function getOrderRunningInfo(order) {
     durationDays,
     endDate,
     expired,
+    needsRenewalReminder: remainingDays === 1,
     remainingDays: Math.max(0, remainingDays),
     label: expired ? "Berakhir" : `Sisa ${remainingDays} hari`,
   };
 }
 
 function parseDurationDays(duration = "") {
-  const monthMatch = String(duration).match(/(\d+)\s*Bulan/i);
+  const monthMatch = String(duration).match(/(\d+)\s*(Bulan|Month|Months)/i);
   if (monthMatch) {
     return Number(monthMatch[1]) * 30;
   }
 
-  const dayMatch = String(duration).match(/(\d+)\s*Hari/i);
+  const dayMatch = String(duration).match(/(\d+)\s*(Hari|Day|Days)/i);
   if (dayMatch) {
     return Number(dayMatch[1]);
   }
 
   return 0;
+}
+
+function getMonthRevenue(orders = [], monthOffset = 0) {
+  return getMonthRevenueSummary(orders, monthOffset).total;
+}
+
+function getMonthRevenueSummary(orders = [], monthOffset = 0) {
+  const target = new Date();
+  target.setMonth(target.getMonth() + monthOffset, 1);
+  target.setHours(0, 0, 0, 0);
+
+  const year = target.getFullYear();
+  const month = target.getMonth();
+  const monthOrders = orders.filter((order) => {
+    const createdAt = new Date(order.createdAt);
+    return !Number.isNaN(createdAt.getTime()) && createdAt.getFullYear() === year && createdAt.getMonth() === month;
+  });
+
+  return {
+    key: `${year}-${month}`,
+    offset: monthOffset,
+    label: target.toLocaleDateString("id-ID", { month: "long", year: "numeric" }),
+    orders: monthOrders,
+    total: monthOrders.reduce((sum, order) => sum + (Number(order.total) || 0), 0),
+  };
+}
+
+function createRenewalWhatsappUrl(order, running) {
+  const phone = normalizeWhatsapp(order.buyer?.wa || "");
+  const productSummary = getOrderProductSummary(order);
+  const endDate = running?.endDate ? running.endDate.toLocaleDateString("id-ID") : "besok";
+  const message = [
+    `Halo ${order.buyer?.name || "kak"}, admin Palugada mau mengingatkan.`,
+    "",
+    `Produk ${productSummary} akan berakhir pada ${endDate}.`,
+    "Apakah mau dibantu perpanjangan?",
+  ].join("\n");
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+function getOrderProductSummary(order) {
+  const items = order.items || [];
+  if (!items.length) {
+    return "yang kamu pesan";
+  }
+
+  return items
+    .map((item) => {
+      const variant = item.plan ? ` - ${item.plan} (${item.duration})` : item.duration ? ` (${item.duration})` : "";
+      return `${item.name}${variant}`;
+    })
+    .join(", ");
 }
 
 function getPromoTargetLabel(promo, products) {
@@ -1379,6 +1585,88 @@ function StoreStatusEditor({ storeStatus, onClose, onSave }) {
   );
 }
 
+function AdminPasswordEditor({ onClose, onSave }) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [nextPassword, setNextPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (!currentPassword || !nextPassword || !confirmPassword) {
+      setError("Semua kolom wajib diisi");
+      return;
+    }
+
+    if (nextPassword.length < 6) {
+      setError("Password baru minimal 6 karakter");
+      return;
+    }
+
+    if (nextPassword !== confirmPassword) {
+      setError("Konfirmasi password baru belum sama");
+      return;
+    }
+
+    setError("");
+    setSaving(true);
+
+    try {
+      const result = await onSave({ currentPassword, nextPassword });
+      if (result?.error) {
+        setError(result.error);
+      }
+    } catch (submitError) {
+      const code = submitError?.code || "";
+      if (code.includes("wrong-password") || code.includes("invalid-credential")) {
+        setError("Password lama salah");
+      } else if (code.includes("weak-password")) {
+        setError("Password baru terlalu lemah");
+      } else {
+        setError("Gagal mengganti password admin");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.5)" }}>
+      <div className="w-full max-w-lg rounded-[2rem] border p-6 sm:p-7" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <div>
+            <div className="text-[10px] mono uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: "var(--accent)" }}>
+              <KeyRound className="w-3.5 h-3.5" /> Admin
+            </div>
+            <h2 className="serif text-3xl leading-none" style={{ fontWeight: 500 }}>Ganti password</h2>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="space-y-4 mb-5">
+          <Field label="Password Lama" value={currentPassword} onChange={setCurrentPassword} type="password" placeholder="Password admin saat ini" />
+          <Field label="Password Baru" value={nextPassword} onChange={setNextPassword} type="password" placeholder="Minimal 6 karakter" />
+          <Field label="Konfirmasi Password Baru" value={confirmPassword} onChange={setConfirmPassword} type="password" placeholder="Ulangi password baru" />
+        </div>
+        {error && <div className="text-xs mb-5" style={{ color: "var(--accent)" }}>{error}</div>}
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>Batal</button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={saving}
+            className="flex-1 py-3 rounded-full font-semibold text-sm disabled:opacity-40"
+            style={{ background: "var(--accent)", color: "white" }}
+          >
+            {saving ? "Menyimpan..." : "Simpan Password"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NavBtn({ active, onClick, icon, children }) {
   const Icon = icon;
   return (
@@ -1388,16 +1676,22 @@ function NavBtn({ active, onClick, icon, children }) {
   );
 }
 
-function StatCard({ label, value, icon, accent }) {
+function StatCard({ label, value, icon, accent, onClick }) {
   const Icon = icon;
+  const Component = onClick ? "button" : "div";
   return (
-    <div className="paper-card p-6 relative overflow-hidden" style={{ background: accent ? "var(--accent)" : undefined, color: accent ? "white" : undefined, borderColor: accent ? "var(--accent)" : undefined }}>
+    <Component
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className={`paper-card p-6 relative overflow-hidden ${onClick ? "text-left transition hover:scale-[1.01] active:scale-[0.99]" : ""}`}
+      style={{ background: accent ? "var(--accent)" : undefined, color: accent ? "white" : undefined, borderColor: accent ? "var(--accent)" : undefined }}
+    >
       <div className="flex items-center justify-between mb-4">
         <div className="text-[10px] mono uppercase tracking-widest" style={{ color: accent ? "rgba(255,255,255,0.7)" : "var(--ink-dim)" }}>{label}</div>
         <Icon className="w-4 h-4" />
       </div>
       <div className="serif text-3xl" style={{ fontWeight: 600 }}>{value}</div>
-    </div>
+    </Component>
   );
 }
 
