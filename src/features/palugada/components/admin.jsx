@@ -1,9 +1,125 @@
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, BadgePercent, Check, ChevronDown, Crown, Edit3, Inbox, KeyRound, LogOut, MessageSquareQuote, Package, Plus, Power, PowerOff, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, BadgePercent, Check, ChevronDown, Crown, Edit3, Inbox, KeyRound, LogOut, Menu, MessageSquareQuote, Package, Plus, Power, PowerOff, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
 import { ICONS, RESELLER_TIERS, fmtIDR } from "../constants";
 import { Field, ProductIcon } from "./shared";
 
 const ADMIN_TAB_KEY = "pa_admin_tab";
+const SWIPE_EDGE = 30;
+const SWIPE_THRESHOLD = 60;
+
+function useSwipeDrawer(onOpen) {
+  const touchRef = useRef(null);
+
+  const onTouchStart = useCallback((e) => {
+    const x = e.touches[0].clientX;
+    const screenW = window.innerWidth;
+    if (x >= screenW - SWIPE_EDGE) {
+      touchRef.current = { startX: x, startY: e.touches[0].clientY };
+    }
+  }, []);
+
+  const onTouchEnd = useCallback((e) => {
+    if (!touchRef.current) return;
+    const endX = e.changedTouches[0].clientX;
+    const dx = touchRef.current.startX - endX;
+    const dy = Math.abs(e.changedTouches[0].clientY - touchRef.current.startY);
+    touchRef.current = null;
+    if (dx > SWIPE_THRESHOLD && dx > dy) onOpen();
+  }, [onOpen]);
+
+  useEffect(() => {
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [onTouchStart, onTouchEnd]);
+}
+
+const ADMIN_TABS = [
+  { key: "dashboard", label: "Dashboard", icon: Sparkles },
+  { key: "products", label: "Produk", icon: Package },
+  { key: "promos", label: "Promo", icon: BadgePercent },
+  { key: "orders", label: "Pesanan", icon: Receipt },
+  { key: "reviews", label: "Review", icon: Star },
+  { key: "requests", label: "Request", icon: Inbox },
+  { key: "resellers", label: "Reseller", icon: Users },
+];
+
+function MobileSidebar({ open, tab, onSelect, onLogout, onClose }) {
+  const panelRef = useRef(null);
+  const touchRef = useRef(null);
+
+  useEffect(() => {
+    if (open) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+  const onTouchStart = (e) => {
+    touchRef.current = { startX: e.touches[0].clientX };
+  };
+
+  const onTouchMove = (e) => {
+    if (!touchRef.current || !panelRef.current) return;
+    const dx = e.touches[0].clientX - touchRef.current.startX;
+    if (dx > 0) {
+      panelRef.current.style.transform = `translateX(${dx}px)`;
+      panelRef.current.style.transition = "none";
+    }
+  };
+
+  const onTouchEnd = (e) => {
+    if (!touchRef.current || !panelRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchRef.current.startX;
+    panelRef.current.style.transition = "";
+    panelRef.current.style.transform = "";
+    touchRef.current = null;
+    if (dx > SWIPE_THRESHOLD) onClose();
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 md:hidden">
+      <div className="absolute inset-0 backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.35)" }} onClick={onClose} />
+      <aside
+        ref={panelRef}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        className="absolute right-0 top-0 bottom-0 w-64 flex flex-col p-6 shadow-2xl admin-sidebar-in"
+        style={{ background: "var(--bg-2)", borderLeft: "1px solid var(--line)" }}
+      >
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center border-2" style={{ background: "var(--bg)", borderColor: "var(--ink)" }}>
+              <span className="serif text-lg leading-none" style={{ color: "var(--ink)", fontWeight: 800 }}>PG</span>
+            </div>
+            <div>
+              <div className="serif text-lg uppercase" style={{ fontWeight: 800 }}>Palugada</div>
+              <div className="text-[9px] mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>admin</div>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-full" style={{ color: "var(--ink-dim)" }}>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <nav className="space-y-1 flex-1">
+          {ADMIN_TABS.map(({ key, label, icon }) => (
+            <NavBtn key={key} active={tab === key} onClick={() => { onSelect(key); onClose(); }} icon={icon}>{label}</NavBtn>
+          ))}
+        </nav>
+
+        <button onClick={() => { onLogout(); onClose(); }} className="flex items-center gap-2 text-sm hover:text-red-500 transition mt-6" style={{ color: "var(--ink-dim)" }}>
+          <LogOut className="w-4 h-4" /> Keluar
+        </button>
+      </aside>
+    </div>
+  );
+}
 
 export function AdminPanel({
   products,
@@ -33,6 +149,9 @@ export function AdminPanel({
 
     return window.localStorage.getItem(ADMIN_TAB_KEY) || "dashboard";
   });
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const openMobileSidebar = useCallback(() => setMobileSidebarOpen(true), []);
+  useSwipeDrawer(openMobileSidebar);
   const [editing, setEditing] = useState(null);
   const [editingPromo, setEditingPromo] = useState(null);
   const [showResellerCreator, setShowResellerCreator] = useState(false);
@@ -182,14 +301,19 @@ export function AdminPanel({
         </button>
       </aside>
 
+      <MobileSidebar open={mobileSidebarOpen} tab={tab} onSelect={setPersistedTab} onLogout={onLogout} onClose={() => setMobileSidebarOpen(false)} />
+
       <div className="flex-1 safe-x py-6 md:p-12 overflow-x-hidden">
-        <div className="flex gap-2 md:hidden mb-6 overflow-x-auto ios-scroll pb-1">
-          {["dashboard", "products", "promos", "orders", "reviews", "requests", "resellers"].map((item) => (
-            <button key={item} onClick={() => setPersistedTab(item)} className="px-4 py-2 rounded-full text-xs capitalize whitespace-nowrap" style={{ background: tab === item ? "var(--ink)" : "var(--bg-2)", color: tab === item ? "var(--bg)" : "var(--ink)", border: "1px solid var(--line)" }}>
-              {item === "promos" ? "promo" : item}
-            </button>
-          ))}
-          <button onClick={onLogout} className="ml-auto px-4 py-2 rounded-full text-xs border" style={{ borderColor: "var(--line)" }}>Logout</button>
+        <div className="flex items-center justify-between md:hidden mb-6">
+          <div className="flex items-center gap-2">
+            <span className="serif text-lg uppercase" style={{ fontWeight: 800 }}>Palugada</span>
+            <span className="text-[9px] mono uppercase tracking-widest px-2 py-1 rounded-full" style={{ color: "var(--bg)", background: "var(--ink)" }}>
+              {ADMIN_TABS.find((t) => t.key === tab)?.label || tab}
+            </span>
+          </div>
+          <button onClick={() => setMobileSidebarOpen(true)} className="p-2 rounded-xl border" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
+            <Menu className="w-5 h-5" />
+          </button>
         </div>
 
         {tab === "dashboard" && (
