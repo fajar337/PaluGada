@@ -57,6 +57,14 @@ export function StyleBlock() {
       @keyframes filterFade { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
       .filter-fade { animation: filterFade 0.28s ease-out both; }
 
+      @keyframes loading-letter { 0%,80%,100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-6px); } }
+      .loading-letter { display: inline-block; animation: loading-letter 1.4s ease-in-out infinite; }
+      @keyframes loading-fade { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+      .loading-fade { animation: loading-fade 0.5s ease-out both; }
+
+      @keyframes adminSidebarIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+      .admin-sidebar-in { animation: adminSidebarIn 0.28s cubic-bezier(.2,.8,.2,1) both; }
+
       .marquee { display: flex; gap: 3rem; animation: marquee 30s linear infinite; }
       @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 

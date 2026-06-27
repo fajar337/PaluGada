@@ -585,9 +585,14 @@ export default function App() {
   };
 
   if (!loaded) {
+    const letters = "LOADING...".split("");
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
-        <div className="mono text-sm tracking-widest" style={{ color: "var(--ink-dim)" }}>LOADING...</div>
+        <div className="mono text-sm tracking-widest loading-fade" style={{ color: "var(--ink-dim)" }}>
+          {letters.map((ch, i) => (
+            <span key={i} className="loading-letter" style={{ animationDelay: `${i * 0.1}s` }}>{ch}</span>
+          ))}
+        </div>
       </div>
     );
   }
