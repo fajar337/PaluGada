@@ -108,15 +108,14 @@ function MobileSidebar({ open, tab, onSelect, onLogout, onClose }) {
           </button>
         </div>
 
-        <nav className="space-y-1 flex-1">
+        <nav className="space-y-1">
           {ADMIN_TABS.map(({ key, label, icon }) => (
             <NavBtn key={key} active={tab === key} onClick={() => { onSelect(key); onClose(); }} icon={icon}>{label}</NavBtn>
           ))}
+          <button onClick={() => { onLogout(); onClose(); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition hover:text-red-500" style={{ color: "var(--ink-dim)", fontWeight: 500 }}>
+            <LogOut className="w-4 h-4" /> Keluar
+          </button>
         </nav>
-
-        <button onClick={() => { onLogout(); onClose(); }} className="flex items-center gap-2 text-sm hover:text-red-500 transition mt-6" style={{ color: "var(--ink-dim)" }}>
-          <LogOut className="w-4 h-4" /> Keluar
-        </button>
       </aside>
     </div>
   );
@@ -375,7 +374,7 @@ export function AdminPanel({
           </div>
         </div>
 
-        <nav className="space-y-1 flex-1">
+        <nav className="space-y-1">
           <NavBtn active={tab === "dashboard"} onClick={() => setPersistedTab("dashboard")} icon={Sparkles}>Dashboard</NavBtn>
           <NavBtn active={tab === "products"} onClick={() => setPersistedTab("products")} icon={Package}>Produk</NavBtn>
           <NavBtn active={tab === "promos"} onClick={() => setPersistedTab("promos")} icon={BadgePercent}>Promo</NavBtn>
@@ -384,11 +383,10 @@ export function AdminPanel({
           <NavBtn active={tab === "reviews"} onClick={() => setPersistedTab("reviews")} icon={Star}>Review</NavBtn>
           <NavBtn active={tab === "requests"} onClick={() => setPersistedTab("requests")} icon={Inbox}>Request</NavBtn>
           <NavBtn active={tab === "resellers"} onClick={() => setPersistedTab("resellers")} icon={Users}>Reseller</NavBtn>
+          <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition hover:text-red-500" style={{ color: "var(--ink-dim)", fontWeight: 500 }}>
+            <LogOut className="w-4 h-4" /> Keluar
+          </button>
         </nav>
-
-        <button onClick={onLogout} className="flex items-center gap-2 text-sm hover:text-red-500 transition mt-6" style={{ color: "var(--ink-dim)" }}>
-          <LogOut className="w-4 h-4" /> Keluar
-        </button>
       </aside>
 
       <MobileSidebar open={mobileSidebarOpen} tab={tab} onSelect={setPersistedTab} onLogout={onLogout} onClose={() => setMobileSidebarOpen(false)} />
