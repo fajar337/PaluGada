@@ -753,11 +753,24 @@ export default function App() {
   if (!loaded) {
     const letters = "LOADING...".split("");
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
-        <div className="mono text-sm tracking-widest loading-fade" style={{ color: "var(--ink-dim)" }}>
-          {letters.map((ch, i) => (
-            <span key={i} className="loading-letter" style={{ animationDelay: `${i * 0.1}s` }}>{ch}</span>
-          ))}
+      <div className="min-h-screen flex items-center justify-center overflow-hidden grain" style={{ background: "var(--bg)" }}>
+        <div className="loading-fade flex flex-col items-center gap-5">
+          <div className="loading-mark">
+            <span className="serif">PG</span>
+          </div>
+          <div className="mono text-sm tracking-widest loading-text" style={{ color: "var(--ink-dim)" }}>
+            {letters.map((ch, i) => (
+              <span key={`${ch}-${i}`} className="loading-letter" style={{ animationDelay: `${i * 0.08}s` }}>{ch}</span>
+            ))}
+          </div>
+          <div className="loading-track">
+            <div className="loading-bar" />
+          </div>
+          <div className="loading-dots" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
         </div>
       </div>
     );

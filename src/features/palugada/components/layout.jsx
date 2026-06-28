@@ -57,10 +57,25 @@ export function StyleBlock() {
       @keyframes filterFade { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
       .filter-fade { animation: filterFade 0.28s ease-out both; }
 
-      @keyframes loading-letter { 0%,80%,100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-6px); } }
-      .loading-letter { display: inline-block; animation: loading-letter 1.4s ease-in-out infinite; }
+      @keyframes loading-letter { 0%,80%,100% { opacity: 0.25; transform: translateY(0) scale(1); } 40% { opacity: 1; transform: translateY(-8px) scale(1.08); } }
+      .loading-text { min-width: 9.5rem; text-align: center; }
+      .loading-letter { display: inline-block; animation: loading-letter 1.25s ease-in-out infinite; }
       @keyframes loading-fade { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
       .loading-fade { animation: loading-fade 0.5s ease-out both; }
+      @keyframes loading-mark-pulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(122,75,42,0.22); } 50% { transform: scale(1.06); box-shadow: 0 0 0 14px rgba(122,75,42,0); } }
+      .loading-mark {
+        width: 4.75rem; height: 4.75rem; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+        border: 2px solid var(--ink); background: var(--bg-2); color: var(--ink); animation: loading-mark-pulse 1.6s ease-in-out infinite;
+      }
+      .loading-mark span { font-size: 2rem; line-height: 1; font-weight: 800; }
+      .loading-track { width: min(14rem, 70vw); height: 0.35rem; overflow: hidden; border-radius: 999px; background: var(--line); }
+      @keyframes loading-bar-slide { from { transform: translateX(-100%); } to { transform: translateX(220%); } }
+      .loading-bar { width: 45%; height: 100%; border-radius: inherit; background: var(--accent); animation: loading-bar-slide 1.15s ease-in-out infinite; }
+      .loading-dots { display: flex; gap: 0.4rem; }
+      @keyframes loading-dot { 0%,100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-4px); } }
+      .loading-dots span { width: 0.45rem; height: 0.45rem; border-radius: 999px; background: var(--accent); animation: loading-dot 1s ease-in-out infinite; }
+      .loading-dots span:nth-child(2) { animation-delay: 0.14s; }
+      .loading-dots span:nth-child(3) { animation-delay: 0.28s; }
 
       @keyframes adminSidebarIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
       .admin-sidebar-in { animation: adminSidebarIn 0.28s cubic-bezier(.2,.8,.2,1) both; }
