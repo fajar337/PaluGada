@@ -5,10 +5,13 @@ import { collection, doc, getDoc, getDocs, setDoc, writeBatch } from "firebase/f
 const REMOTE_COLLECTIONS = {
   pa_products: { collection: "products", type: "array" },
   pa_promos: { collection: "promos", type: "array" },
+  pa_coupons: { collection: "coupons", type: "array" },
   pa_orders: { collection: "orders", type: "array" },
   pa_resellers: { collection: "resellers", type: "array" },
   pa_reviews: { collection: "reviews", type: "array" },
   pa_product_requests: { collection: "productRequests", type: "array" },
+  pa_notifications: { collection: "notifications", type: "array" },
+  pa_activity_logs: { collection: "activityLogs", type: "array" },
   pa_admin: { collection: "appConfig", type: "single", docId: "admin" },
   pa_store_status: { collection: "appConfig", type: "single", docId: "storeStatus" },
   pa_reseller_tiers: { collection: "appConfig", type: "single", docId: "resellerTiers" },

@@ -297,6 +297,8 @@ export function Footer() {
               <li><a href="#faq" className="hover:opacity-70 transition">FAQ</a></li>
               <li><a href="#garansi" className="hover:opacity-70 transition">Cara Garansi</a></li>
               <li><a href="#cara-order" className="hover:opacity-70 transition">Cara Order</a></li>
+              <li><a href="#aturan-pakai" className="hover:opacity-70 transition">Aturan Pakai</a></li>
+              <li><a href="#privasi" className="hover:opacity-70 transition">Privasi</a></li>
             </ul>
           </div>
           <div className="lg:col-span-3">
@@ -345,4 +347,3 @@ export function FloatingWhatsApp() {
     </a>
   );
 }
-

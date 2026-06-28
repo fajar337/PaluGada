@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Award,
+  BadgePercent,
   Check,
   ChevronDown,
   Crown,
@@ -328,6 +329,7 @@ export function Home({
         <FAQAccordion />
       </section>
 
+      <PolicySection />
       <ProductRequestSection onRequestProduct={onRequestProduct} />
       <CombinedReviewsSection reviews={reviews} products={products} />
     </div>
@@ -496,6 +498,74 @@ function CombinedReviewsSection({ reviews, products }) {
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+function PolicySection() {
+  const policies = [
+    {
+      id: "cara-order",
+      title: "Cara Order",
+      items: [
+        "Pilih produk, plan, durasi, lalu checkout.",
+        "Bayar sesuai metode yang dipilih dan konfirmasi lewat WhatsApp.",
+        "Akun atau akses dikirim setelah pembayaran diverifikasi admin.",
+      ],
+    },
+    {
+      id: "garansi",
+      title: "Garansi & Refund",
+      items: [
+        "Garansi mengikuti catatan produk dan plan yang dipilih.",
+        "Klaim garansi berlaku untuk kendala akun yang bukan akibat pelanggaran aturan pakai.",
+        "Refund diproses jika produk tidak tersedia dan pengganti tidak disetujui pembeli.",
+      ],
+    },
+    {
+      id: "aturan-pakai",
+      title: "Aturan Pakai",
+      items: [
+        "Jangan ubah email, password, PIN, region, atau data akun tanpa izin admin.",
+        "Jangan membagikan akses ke pihak lain di luar ketentuan plan.",
+        "Pelanggaran aturan pakai dapat membatalkan garansi.",
+      ],
+    },
+    {
+      id: "privasi",
+      title: "Privasi",
+      items: [
+        "Data nama, email, dan WhatsApp dipakai untuk proses order dan layanan purna jual.",
+        "Bukti pembayaran hanya dipakai untuk verifikasi transaksi.",
+        "Data pelanggan tidak dijual atau dibagikan untuk keperluan promosi pihak ketiga.",
+      ],
+    },
+  ];
+
+  return (
+    <section className="max-w-7xl mx-auto px-6 pb-20">
+      <div className="text-xs mono uppercase tracking-widest mb-3 flex items-center gap-3" style={{ color: "var(--accent)" }}>
+        <span className="w-8 h-px" style={{ background: "var(--accent)" }}></span>
+        Kebijakan Toko
+      </div>
+      <h2 className="serif leading-none mb-8" style={{ fontSize: "clamp(2.75rem, 5vw, 4.75rem)", fontWeight: 500 }}>
+        Biar sama-sama <span className="serif-italic">jelas.</span>
+      </h2>
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {policies.map((policy) => (
+          <article key={policy.id} id={policy.id} className="paper-card p-6 scroll-mt-28">
+            <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>{policy.title}</div>
+            <ul className="space-y-3 text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>
+              {policy.items.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "var(--accent)" }} />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
@@ -693,12 +763,14 @@ function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, o
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {plan.options.map((option) => {
                   const active = selection?.planId === plan.id && selection?.optionId === option.id;
+                  const outOfStock = option.stock !== undefined && option.stock !== null && Number(option.stock) <= 0;
 
                   return (
                     <button
                       key={option.id}
-                      onClick={() => setSelection({ planId: plan.id, optionId: option.id })}
-                      className="text-left rounded-2xl border px-4 py-3 transition hover:-translate-y-0.5"
+                      onClick={() => !outOfStock && setSelection({ planId: plan.id, optionId: option.id })}
+                      disabled={outOfStock}
+                      className="text-left rounded-2xl border px-4 py-3 transition hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
 	                      style={{
                         borderColor: active ? "var(--ink)" : "var(--line)",
                         background: active ? "var(--ink)" : "var(--bg-2)",
@@ -706,6 +778,9 @@ function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, o
                       }}
                     >
 	                      <div className="text-sm font-semibold">{option.duration}</div>
+                      {option.stock !== undefined && option.stock !== null && (
+                        <div className="text-[10px] mono uppercase mt-1 opacity-60">{outOfStock ? "Stok habis" : `Stok ${option.stock}`}</div>
+                      )}
                       {getPricingForSelection(product, promos, { plan, option }).compareAt > getPrice(product, getPricingForSelection(product, promos, { plan, option }).displayPrice) && (
                         <div className="text-[10px] line-through opacity-50 mt-1">{fmtIDR(getPricingForSelection(product, promos, { plan, option }).compareAt)}</div>
                       )}
@@ -865,11 +940,13 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
                       {plan.options.map((option) => {
                         const active = selection?.planId === plan.id && selection?.optionId === option.id;
+                        const outOfStock = option.stock !== undefined && option.stock !== null && Number(option.stock) <= 0;
                         return (
                           <button
                             key={option.id}
-                            onClick={() => setSelection({ planId: plan.id, optionId: option.id })}
-                            className="rounded-2xl border px-4 py-3 text-left transition hover:scale-[1.01]"
+                            onClick={() => !outOfStock && setSelection({ planId: plan.id, optionId: option.id })}
+                            disabled={outOfStock}
+                            className="rounded-2xl border px-4 py-3 text-left transition hover:scale-[1.01] disabled:opacity-40 disabled:hover:scale-100"
                             style={{
                               borderColor: active ? "var(--ink)" : "var(--line)",
                               background: active ? "var(--ink)" : "white",
@@ -877,6 +954,9 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
                             }}
                           >
                             <div className="text-sm font-semibold">{option.duration}</div>
+                            {option.stock !== undefined && option.stock !== null && (
+                              <div className="text-[10px] mono uppercase mt-1 opacity-60">{outOfStock ? "Stok habis" : `Stok ${option.stock}`}</div>
+                            )}
                             {getPricingForSelection(product, promos, { plan, option }).compareAt > getPrice(product, getPricingForSelection(product, promos, { plan, option }).displayPrice) && (
                               <div className="text-[10px] line-through opacity-50 mt-1">{fmtIDR(getPricingForSelection(product, promos, { plan, option }).compareAt)}</div>
                             )}
@@ -1246,11 +1326,24 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
   );
 }
 
-export function Checkout({ items, total, reseller, storeStatus = { isOpen: true, closedReason: "" }, onBack, onPlace }) {
+export function Checkout({
+  items,
+  subtotal,
+  total,
+  couponDiscount = 0,
+  appliedCoupon,
+  reseller,
+  storeStatus = { isOpen: true, closedReason: "" },
+  onBack,
+  onApplyCoupon,
+  onRemoveCoupon,
+  onPlace,
+}) {
   const [name, setName] = useState(reseller?.name || "");
   const [email, setEmail] = useState(reseller?.email || "");
   const [wa, setWa] = useState(reseller?.wa || "");
   const [method, setMethod] = useState("DANA");
+  const [couponCode, setCouponCode] = useState(appliedCoupon?.code || "");
   const [submitting, setSubmitting] = useState(false);
   const isStoreOpen = storeStatus?.isOpen !== false;
 
@@ -1337,6 +1430,30 @@ export function Checkout({ items, total, reseller, storeStatus = { isOpen: true,
             ))}
           </div>
           <div className="border-t pt-5 mb-6" style={{ borderColor: "var(--line)" }}>
+            <div className="space-y-2 text-sm mb-5">
+              <div className="flex justify-between gap-4">
+                <span style={{ color: "var(--ink-dim)" }}>Subtotal</span>
+                <span>{fmtIDR(subtotal)}</span>
+              </div>
+              {couponDiscount > 0 && (
+                <div className="flex justify-between gap-4">
+                  <span style={{ color: "var(--ink-dim)" }}>Kupon {appliedCoupon?.code}</span>
+                  <span style={{ color: "var(--accent)" }}>-{fmtIDR(couponDiscount)}</span>
+                </div>
+              )}
+            </div>
+            <CouponBox
+              code={couponCode}
+              setCode={setCouponCode}
+              appliedCoupon={appliedCoupon}
+              onApply={() => onApplyCoupon?.(couponCode)}
+              onRemove={() => {
+                setCouponCode("");
+                onRemoveCoupon?.();
+              }}
+            />
+          </div>
+          <div className="border-t pt-5 mb-6" style={{ borderColor: "var(--line)" }}>
             <div className="text-xs mono uppercase mb-1" style={{ color: "var(--ink-dim)" }}>Total</div>
             <div className="serif" style={{ color: "var(--accent)", fontSize: "2.5rem", fontWeight: 600, lineHeight: 1 }}>{fmtIDR(total)}</div>
           </div>
@@ -1346,6 +1463,40 @@ export function Checkout({ items, total, reseller, storeStatus = { isOpen: true,
           <p className="text-[10px] mono uppercase mt-4 text-center" style={{ color: "var(--ink-dim)" }}>Pengiriman akun via WhatsApp setelah valid</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CouponBox({ code, setCode, appliedCoupon, onApply, onRemove }) {
+  return (
+    <div className="mb-5 rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
+      <div className="text-[10px] mono uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: "var(--accent)" }}>
+        <BadgePercent className="w-3.5 h-3.5" /> Kode Kupon
+      </div>
+      {appliedCoupon ? (
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold text-sm">{appliedCoupon.code}</div>
+            <div className="text-xs" style={{ color: "var(--ink-dim)" }}>{appliedCoupon.title}</div>
+          </div>
+          <button type="button" onClick={onRemove} className="px-3 py-2 rounded-full border text-xs font-semibold" style={{ borderColor: "var(--line-2)" }}>
+            Hapus
+          </button>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            value={code}
+            onChange={(event) => setCode(event.target.value.toUpperCase().replace(/\s+/g, ""))}
+            placeholder="PALU10"
+            className="min-w-0 flex-1 px-4 py-3 rounded-xl border bg-white text-sm focus:outline-none focus:border-zinc-800"
+            style={{ borderColor: "var(--line)" }}
+          />
+          <button type="button" onClick={onApply} disabled={!code.trim()} className="px-4 rounded-xl text-sm font-semibold disabled:opacity-40" style={{ background: "var(--ink)", color: "var(--bg)" }}>
+            Pakai
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1428,6 +1579,12 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
                     <span className="mono opacity-70">{fmtIDR(item.price * item.qty)}</span>
                   </div>
                 ))}
+                {order.coupon && Number(order.discount || 0) > 0 && (
+                  <div className="flex justify-between gap-4 text-sm mt-4 pt-4 border-t" style={{ borderColor: "rgba(255,255,255,0.15)" }}>
+                    <span>Kupon {order.coupon.code}</span>
+                    <span className="mono" style={{ color: "var(--gold)" }}>-{fmtIDR(order.discount)}</span>
+                  </div>
+                )}
               </div>
               <div className="border-t pt-5 mb-5" style={{ borderColor: "rgba(255,255,255,0.15)" }}>
                 <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-3">Detail Pembayaran</div>
@@ -1539,10 +1696,11 @@ function createInvoiceText(order, payment) {
     `Metode        : ${payment.label}`,
     `Atas Nama     : ${payment.accountName}`,
     `Tujuan        : ${payment.accountNumber}`,
+    order.coupon ? `Kupon         : ${order.coupon.code} (-${fmtIDR(order.discount)})` : null,
     `Total Bayar   : ${fmtIDR(order.total)}`,
     "",
     "Catatan:",
     "Akun dikirim admin via WhatsApp setelah pembayaran diverifikasi.",
     "Simpan invoice ini sebagai bukti booking pesanan.",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
