@@ -761,21 +761,13 @@ export default function App() {
               <span className="serif">PG</span>
             </div>
             <div className="mono text-sm tracking-widest loading-text" style={{ color: "var(--ink-dim)" }}>
-              {letters.map((ch, i) => (
-                <span key={`${ch}-${i}`} className="loading-letter" style={{ animationDelay: `${i * 0.09}s` }}>{ch}</span>
-              ))}
-            </div>
-            <div className="loading-track">
-              <div className="loading-bar" />
-            </div>
-            <div className="loading-dots" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
+            {letters.map((ch, i) => (
+              <span key={`${ch}-${i}`} className="loading-letter" style={{ animationDelay: `${i * 0.09}s` }}>{ch}</span>
+            ))}
           </div>
         </div>
-      </>
+      </div>
+    </>
     );
   }
 
