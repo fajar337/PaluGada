@@ -529,13 +529,14 @@ export function getWhatsAppConfirmationUrl(order) {
     `Metode: ${order.buyer.method}`,
     `Atas Nama: ${payment.accountName}`,
     `Tujuan: ${payment.accountNumber}`,
+    order.coupon ? `Kupon: ${order.coupon.code} (-${fmtIDR(order.discount)})` : null,
     `Total: ${fmtIDR(order.total)}`,
     "",
     "Produk:",
     items,
     "",
     "Saya akan kirim bukti transfer di chat ini.",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   return `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }

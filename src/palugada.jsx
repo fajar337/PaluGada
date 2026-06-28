@@ -5,7 +5,7 @@ import { AdminLogin, ResellerLogin, ResellerRegister } from "./features/palugada
 import { FloatingWhatsApp, Footer, Header, StyleBlock } from "./features/palugada/components/layout";
 import { ResellerDashboard } from "./features/palugada/components/reseller";
 import { CartView, Checkout, Detail, Home, OrderSuccess, TrackOrder } from "./features/palugada/components/storefront";
-import { CONTACT_EMAIL, RESELLER_TIERS, getDefaultPlanSelection, getPlanSelection, getPricingForSelection } from "./features/palugada/constants";
+import { CONTACT_EMAIL, RESELLER_TIERS, fmtIDR, getDefaultPlanSelection, getPlanSelection, getPricingForSelection } from "./features/palugada/constants";
 import {
   createResellerAuthByAdmin,
   firebaseAuth,
@@ -53,16 +53,21 @@ export default function App() {
   const [products, setProducts] = useState([]);
   const [resellerTiers, setResellerTiers] = useState(RESELLER_TIERS);
   const [promos, setPromos] = useState([]);
+  const [coupons, setCoupons] = useState([]);
   const [storeStatus, setStoreStatus] = useState(DEFAULT_STORE_STATUS);
   const [orders, setOrders] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [productRequests, setProductRequests] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [notificationPermission, setNotificationPermission] = useState("default");
   const [resellers, setResellers] = useState([]);
   const [resellerOrders, setResellerOrders] = useState([]);
   const [adminLoggedIn, setAdminLoggedIn] = useState(false);
   const [authResolved, setAuthResolved] = useState(false);
   const [reseller, setReseller] = useState(null);
   const [cart, setCart] = useState(initialUiState.cart || []);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [cartPulse, setCartPulse] = useState(false);
   const [activeProduct, setActiveProduct] = useState(null);
   const [activeOrder, setActiveOrder] = useState(null);
@@ -128,8 +133,14 @@ export default function App() {
       Object.assign(RESELLER_TIERS, savedTiers);
       setResellerTiers(savedTiers);
       setPromos(await storage.get("pa_promos", []));
+      setCoupons(await storage.get("pa_coupons", []));
       setStoreStatus(await storage.get("pa_store_status", DEFAULT_STORE_STATUS));
       setReviews(await storage.get("pa_reviews", []));
+      setNotifications(await storage.get("pa_notifications", []));
+      setActivityLogs(await storage.get("pa_activity_logs", []));
+      if (typeof window !== "undefined" && "Notification" in window) {
+        setNotificationPermission(window.Notification.permission);
+      }
       setLoaded(true);
     })();
 
@@ -319,6 +330,50 @@ export default function App() {
     setTimeout(() => setToast(null), 2400);
   };
 
+  const pushAdminNotification = (payload) => {
+    const notification = {
+      id: payload.id || "NTF-" + Date.now().toString(36).toUpperCase(),
+      type: payload.type || "info",
+      title: payload.title,
+      body: payload.body || "",
+      target: payload.target || "dashboard",
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    setNotifications((current) => {
+      const nextNotifications = [notification, ...current.filter((item) => item.id !== notification.id)].slice(0, 80);
+      return nextNotifications;
+    });
+    void addItem("pa_notifications", notification);
+
+    if (typeof window !== "undefined" && "Notification" in window && window.Notification.permission === "granted") {
+      new window.Notification(notification.title, { body: notification.body || "Palugada admin" });
+    }
+
+    return notification;
+  };
+
+  const requestNotificationPermission = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setNotificationPermission("unsupported");
+      return "unsupported";
+    }
+
+    const permission = await window.Notification.requestPermission();
+    setNotificationPermission(permission);
+    if (permission === "granted") {
+      pushAdminNotification({
+        type: "system",
+        title: "Notifikasi browser aktif",
+        body: "Order, request, dan pembayaran baru akan muncul di browser ini.",
+        target: "dashboard",
+      });
+      showToast("Notifikasi browser aktif");
+    }
+    return permission;
+  };
+
   const getPrice = (product, basePrice = product.price) => {
     if (!reseller) {
       return basePrice;
@@ -352,13 +407,29 @@ export default function App() {
 
   const cartTotal = cartItems.reduce((sum, item) => sum + item.effectivePrice * item.qty, 0);
   const cartOriginal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const couponDiscount = getCouponDiscount(appliedCoupon, cartTotal);
+  const cartPayableTotal = Math.max(0, cartTotal - couponDiscount);
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const isStoreOpen = storeStatus?.isOpen !== false;
   const closedReason = storeStatus?.closedReason?.trim() || "Toko sedang tutup sementara. Silakan cek lagi nanti.";
 
+  useEffect(() => {
+    if (appliedCoupon && (!appliedCoupon.active || Number(appliedCoupon.minTotal || 0) > cartTotal || cartTotal <= 0)) {
+      setAppliedCoupon(null);
+    }
+  }, [appliedCoupon, cartTotal]);
+
   const addToCart = (id, qty = 1, selection = null) => {
     if (!isStoreOpen) {
       showToast("Toko sedang tutup: " + closedReason);
+      return false;
+    }
+
+    const product = products.find((item) => item.id === id);
+    const selectedPlan = getPlanSelection(product, selection?.planId, selection?.optionId);
+    const optionStock = selectedPlan?.option?.stock;
+    if (optionStock !== undefined && optionStock !== null && Number(optionStock) < qty) {
+      showToast("Stok pilihan ini habis");
       return false;
     }
 
@@ -384,6 +455,39 @@ export default function App() {
 
   const removeFromCart = (key) => {
     setCart((current) => current.filter((item) => (item.key || item.id) !== key));
+  };
+
+  const applyCoupon = (code) => {
+    const normalizedCode = normalizeCouponCode(code);
+    const coupon = coupons.find((item) => item.active && normalizeCouponCode(item.code) === normalizedCode);
+
+    if (!normalizedCode || !coupon) {
+      setAppliedCoupon(null);
+      showToast("Kode kupon tidak ditemukan atau nonaktif");
+      return { ok: false };
+    }
+
+    if (Number(coupon.minTotal || 0) > cartTotal) {
+      setAppliedCoupon(null);
+      showToast(`Minimal belanja ${fmtIDR(coupon.minTotal)} untuk kupon ini`);
+      return { ok: false };
+    }
+
+    const discount = getCouponDiscount(coupon, cartTotal);
+    if (discount <= 0) {
+      setAppliedCoupon(null);
+      showToast("Kupon belum punya nilai diskon");
+      return { ok: false };
+    }
+
+    setAppliedCoupon(coupon);
+    showToast(`Kupon ${coupon.code} berhasil dipakai`);
+    return { ok: true, coupon, discount };
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    showToast("Kupon dihapus");
   };
 
   const addReview = async (productId, data) => {
@@ -414,6 +518,12 @@ export default function App() {
     const nextRequests = [request, ...productRequests];
     setProductRequests(nextRequests);
     await addItem("pa_product_requests", request);
+    pushAdminNotification({
+      type: "request",
+      title: "Request produk baru",
+      body: `${request.name} mencari ${request.appName}.`,
+      target: "requests",
+    });
     showToast("Request produk berhasil dikirim");
   };
 
@@ -436,9 +546,20 @@ export default function App() {
         originalPrice: item.price,
         qty: item.qty,
       })),
-      total: cartTotal,
+      total: cartPayableTotal,
       originalTotal: cartOriginal,
-      profit: cartOriginal - cartTotal,
+      subtotal: cartTotal,
+      discount: couponDiscount,
+      coupon: appliedCoupon
+        ? {
+            id: appliedCoupon.id,
+            code: appliedCoupon.code,
+            title: appliedCoupon.title,
+            type: appliedCoupon.type,
+            value: appliedCoupon.value,
+          }
+        : null,
+      profit: cartOriginal - cartPayableTotal,
       status: "Menunggu Pembayaran",
       resellerId: reseller?.id || null,
       createdAt: new Date().toISOString(),
@@ -447,13 +568,19 @@ export default function App() {
     const nextOrders = [order, ...orders];
     setOrders(nextOrders);
     await addItem("pa_orders", order);
+    pushAdminNotification({
+      type: "order",
+      title: "Order baru masuk",
+      body: `${order.buyer.name} membuat order ${order.id} senilai ${fmtIDR(order.total)}.`,
+      target: "orders",
+    });
     if (reseller) {
       setResellerOrders((current) => [order, ...current]);
     }
 
     if (reseller) {
       const nextTotalOrders = (reseller.totalOrders || 0) + 1;
-      const nextTotalSpent = (reseller.totalSpent || 0) + cartTotal;
+      const nextTotalSpent = (reseller.totalSpent || 0) + cartPayableTotal;
       let nextTier = "Bronze";
       if (nextTotalSpent >= (resellerTiers.Gold?.min ?? RESELLER_TIERS.Gold.min)) nextTier = "Gold";
       else if (nextTotalSpent >= (resellerTiers.Silver?.min ?? RESELLER_TIERS.Silver.min)) nextTier = "Silver";
@@ -476,10 +603,43 @@ export default function App() {
 
     const nextProducts = products.map((product) => {
       const soldQty = cart.filter((item) => item.id === product.id).reduce((sum, item) => sum + item.qty, 0);
-      return soldQty ? { ...product, stock: Math.max(0, product.stock - soldQty) } : product;
+      if (!soldQty) {
+        return product;
+      }
+
+      const pricingPlans = (product.pricingPlans || []).map((plan) => ({
+        ...plan,
+        options: (plan.options || []).map((option) => {
+          const optionSoldQty = cart
+            .filter((item) => item.id === product.id && item.planId === plan.id && item.optionId === option.id)
+            .reduce((sum, item) => sum + item.qty, 0);
+          const hasOptionStock = option.stock !== undefined && option.stock !== null;
+          return hasOptionStock && optionSoldQty
+            ? { ...option, stock: Math.max(0, Number(option.stock || 0) - optionSoldQty) }
+            : option;
+        }),
+      }));
+
+      return {
+        ...product,
+        stock: Math.max(0, product.stock - soldQty),
+        pricingPlans,
+      };
     });
     setProducts(nextProducts);
+    nextProducts
+      .filter((product) => product.stock <= 5 && cart.some((item) => item.id === product.id))
+      .forEach((product) => {
+        pushAdminNotification({
+          id: `NTF-STOCK-${product.id}-${product.stock}`,
+          type: "stock",
+          title: "Stok produk menipis",
+          body: `${product.name} tersisa ${product.stock} stok.`,
+          target: "products",
+        });
+      });
     setCart([]);
+    setAppliedCoupon(null);
 
     return order;
   };
@@ -562,6 +722,12 @@ export default function App() {
 
     setOrders(nextOrders);
     setActiveOrder(nextActiveOrder);
+    pushAdminNotification({
+      type: "payment",
+      title: "Pembayaran perlu diverifikasi",
+      body: `${activeOrder?.buyer?.name || "Pembeli"} sudah klik konfirmasi untuk ${orderId}.`,
+      target: "orders",
+    });
     if (nextActiveOrder) {
       await updateItem("pa_orders", orderId, nextActiveOrder);
     } else {
@@ -681,10 +847,15 @@ export default function App() {
         {view === "checkout" && (
           <Checkout
             items={cartItems}
-            total={cartTotal}
+            subtotal={cartTotal}
+            total={cartPayableTotal}
+            couponDiscount={couponDiscount}
+            appliedCoupon={appliedCoupon}
             reseller={reseller}
             storeStatus={storeStatus}
             onBack={() => setView("cart")}
+            onApplyCoupon={applyCoupon}
+            onRemoveCoupon={removeCoupon}
             onPlace={async (buyer) => {
               const order = await placeOrder(buyer);
               if (!order) {
@@ -767,6 +938,7 @@ export default function App() {
               await storage.set("pa_reseller_tiers", nextTiers);
             }}
             promos={promos}
+            coupons={coupons}
             storeStatus={storeStatus}
             setStoreStatus={async (nextStoreStatus) => {
               setStoreStatus(nextStoreStatus);
@@ -776,11 +948,27 @@ export default function App() {
               setPromos(nextPromos);
               await storage.set("pa_promos", nextPromos);
             }}
+            setCoupons={async (nextCoupons) => {
+              setCoupons(nextCoupons);
+              await storage.set("pa_coupons", nextCoupons);
+            }}
             reviews={reviews}
             setReviews={async (nextReviews) => {
               setReviews(nextReviews);
               await storage.set("pa_reviews", nextReviews);
             }}
+            notifications={notifications}
+            setNotifications={async (nextNotifications) => {
+              setNotifications(nextNotifications);
+              await storage.set("pa_notifications", nextNotifications);
+            }}
+            activityLogs={activityLogs}
+            setActivityLogs={async (nextActivityLogs) => {
+              setActivityLogs(nextActivityLogs);
+              await storage.set("pa_activity_logs", nextActivityLogs);
+            }}
+            notificationPermission={notificationPermission}
+            onRequestNotifications={requestNotificationPermission}
             orders={orders}
             setOrders={async (nextOrders) => {
               setOrders(nextOrders);
@@ -819,6 +1007,22 @@ export default function App() {
       {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full text-sm font-medium shadow-2xl toast-pop" style={{ background: "var(--ink)", color: "var(--bg)" }}>{toast}</div>}
     </div>
   );
+}
+
+function normalizeCouponCode(code = "") {
+  return String(code).trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function getCouponDiscount(coupon, subtotal) {
+  if (!coupon?.active || subtotal <= 0 || Number(coupon.minTotal || 0) > subtotal) {
+    return 0;
+  }
+
+  const value = Math.max(0, Number(coupon.value) || 0);
+  const rawDiscount = coupon.type === "percent" ? Math.round(subtotal * Math.min(value, 100) / 100) : value;
+  const maxDiscount = Math.max(0, Number(coupon.maxDiscount) || 0);
+  const cappedDiscount = maxDiscount > 0 ? Math.min(rawDiscount, maxDiscount) : rawDiscount;
+  return Math.min(subtotal, cappedDiscount);
 }
 
 function StoreClosedPopup({ reason, onClose }) {

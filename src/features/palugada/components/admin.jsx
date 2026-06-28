@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, BadgePercent, Check, ChevronDown, Crown, Edit3, Inbox, KeyRound, LogOut, Menu, MessageSquareQuote, Package, Plus, Power, PowerOff, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
+import { ArrowLeft, BadgePercent, Bell, Check, CheckCheck, ChevronDown, Crown, Edit3, Inbox, KeyRound, LogOut, Menu, MessageSquareQuote, Package, Plus, Power, PowerOff, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
 import { ICONS, RESELLER_TIERS, fmtIDR } from "../constants";
 import { Field, ProductIcon } from "./shared";
 
@@ -41,6 +41,7 @@ const ADMIN_TABS = [
   { key: "dashboard", label: "Dashboard", icon: Sparkles },
   { key: "products", label: "Produk", icon: Package },
   { key: "promos", label: "Promo", icon: BadgePercent },
+  { key: "coupons", label: "Kupon", icon: BadgePercent },
   { key: "orders", label: "Pesanan", icon: Receipt },
   { key: "reviews", label: "Review", icon: Star },
   { key: "requests", label: "Request", icon: Inbox },
@@ -127,11 +128,19 @@ export function AdminPanel({
   resellerTiers = RESELLER_TIERS,
   setResellerTiers,
   promos = [],
+  coupons = [],
   storeStatus = { isOpen: true, closedReason: "" },
   setStoreStatus,
   setPromos,
+  setCoupons,
   reviews,
   setReviews,
+  notifications = [],
+  setNotifications,
+  activityLogs = [],
+  setActivityLogs,
+  notificationPermission = "default",
+  onRequestNotifications,
   orders,
   setOrders,
   resellers,
@@ -154,6 +163,7 @@ export function AdminPanel({
   useSwipeDrawer(openMobileSidebar);
   const [editing, setEditing] = useState(null);
   const [editingPromo, setEditingPromo] = useState(null);
+  const [editingCoupon, setEditingCoupon] = useState(null);
   const [showResellerCreator, setShowResellerCreator] = useState(false);
   const [showStoreStatusEditor, setShowStoreStatusEditor] = useState(false);
   const [showAdminPasswordEditor, setShowAdminPasswordEditor] = useState(false);
@@ -161,9 +171,11 @@ export function AdminPanel({
   const stats = {
     products: products.length,
     promos: promos.filter((promo) => promo.active).length,
+    coupons: coupons.filter((coupon) => coupon.active).length,
     stock: products.reduce((sum, product) => sum + product.stock, 0),
     orders: orders.length,
     requests: productRequests.length,
+    unreadNotifications: notifications.filter((notification) => !notification.read).length,
     revenue: orders.reduce((sum, order) => sum + order.total, 0),
     revenueThisMonth: getMonthRevenue(orders, 0),
   };
@@ -183,6 +195,16 @@ export function AdminPanel({
     setConfirmState(null);
   };
 
+  const logActivity = (action, detail = "") => {
+    const log = {
+      id: "LOG-" + Date.now().toString(36).toUpperCase(),
+      action,
+      detail,
+      createdAt: new Date().toISOString(),
+    };
+    setActivityLogs?.([log, ...activityLogs].slice(0, 120));
+  };
+
   const saveProduct = (data) => {
     const pricingPlans = (data.pricingPlans || [])
       .map((plan, planIndex) => ({
@@ -193,6 +215,7 @@ export function AdminPanel({
             id: option.id || createStableId(option.duration, `option-${optionIndex + 1}`),
             duration: String(option.duration || "").trim(),
             price: Math.max(0, Number(option.price) || 0),
+            stock: Math.max(0, Number(option.stock) || 0),
           }))
           .filter((option) => option.duration),
       }))
@@ -206,32 +229,49 @@ export function AdminPanel({
     };
     if (data.id && products.find((product) => product.id === data.id)) {
       setProducts(products.map((product) => (product.id === data.id ? payload : product)));
+      logActivity("Produk diperbarui", payload.name);
     } else {
       setProducts([...products, { ...payload, id: "p_" + Date.now().toString(36) }]);
+      logActivity("Produk ditambahkan", payload.name);
     }
     setEditing(null);
   };
 
   const deleteProduct = (id) =>
     askDelete("Hapus produk?", "Produk ini akan dihapus dari katalog admin.", () =>
-      setProducts(products.filter((product) => product.id !== id))
+      {
+        setProducts(products.filter((product) => product.id !== id));
+        logActivity("Produk dihapus", id);
+      }
     );
 
-  const updateOrderStatus = (id, status) =>
+  const updateOrderStatus = (id, status) => {
     setOrders(orders.map((order) => (order.id === id ? { ...order, status } : order)));
+    logActivity("Status pesanan diubah", `${id} -> ${status}`);
+  };
 
   const deleteOrder = (id) =>
     askDelete("Hapus pesanan?", "Pesanan ini akan dihapus permanen dari daftar.", () =>
       setOrders(orders.filter((order) => order.id !== id))
     );
 
+  const updateOrderServicePeriod = (id, servicePeriod) => {
+    setOrders(orders.map((order) => (order.id === id ? { ...order, servicePeriod } : order)));
+    logActivity("Masa aktif pesanan diatur", `${id}: ${servicePeriod.startAt} - ${servicePeriod.endAt}`);
+  };
+
   const deleteReseller = (id) =>
     askDelete("Hapus reseller?", "Akun reseller ini akan dihapus dari daftar reseller.", () =>
-      setResellers(resellers.filter((reseller) => reseller.id !== id))
+      {
+        setResellers(resellers.filter((reseller) => reseller.id !== id));
+        logActivity("Reseller dihapus", id);
+      }
     );
 
-  const updateRequestStatus = (id, status) =>
+  const updateRequestStatus = (id, status) => {
     setProductRequests(productRequests.map((request) => (request.id === id ? { ...request, status } : request)));
+    logActivity("Status request diubah", `${id} -> ${status}`);
+  };
 
   const savePromo = (data) => {
     const payload = {
@@ -247,23 +287,67 @@ export function AdminPanel({
 
     if (payload.id && promos.find((promo) => promo.id === payload.id)) {
       setPromos(promos.map((promo) => (promo.id === payload.id ? payload : promo)));
+      logActivity("Promo diperbarui", payload.title);
     } else {
       setPromos([{ ...payload, id: "promo_" + Date.now().toString(36) }, ...promos]);
+      logActivity("Promo ditambahkan", payload.title);
     }
     setEditingPromo(null);
   };
 
-  const togglePromo = (id) =>
+  const togglePromo = (id) => {
     setPromos(promos.map((promo) => (promo.id === id ? { ...promo, active: !promo.active } : promo)));
+    logActivity("Status promo diubah", id);
+  };
 
   const deletePromo = (id) =>
     askDelete("Hapus promo?", "Promo ini akan dihapus dari panel admin dan ticker depan.", () =>
-      setPromos(promos.filter((promo) => promo.id !== id))
+      {
+        setPromos(promos.filter((promo) => promo.id !== id));
+        logActivity("Promo dihapus", id);
+      }
+    );
+
+  const saveCoupon = (data) => {
+    const payload = {
+      ...data,
+      code: String(data.code || "").trim().toUpperCase().replace(/\s+/g, ""),
+      title: String(data.title || "").trim(),
+      type: data.type === "percent" ? "percent" : "fixed",
+      value: Math.max(0, Number(data.value) || 0),
+      minTotal: Math.max(0, Number(data.minTotal) || 0),
+      maxDiscount: Math.max(0, Number(data.maxDiscount) || 0),
+    };
+
+    if (payload.id && coupons.find((coupon) => coupon.id === payload.id)) {
+      setCoupons(coupons.map((coupon) => (coupon.id === payload.id ? payload : coupon)));
+      logActivity("Kupon diperbarui", payload.code);
+    } else {
+      setCoupons([{ ...payload, id: "coupon_" + Date.now().toString(36) }, ...coupons]);
+      logActivity("Kupon ditambahkan", payload.code);
+    }
+    setEditingCoupon(null);
+  };
+
+  const toggleCoupon = (id) => {
+    setCoupons(coupons.map((coupon) => (coupon.id === id ? { ...coupon, active: !coupon.active } : coupon)));
+    logActivity("Status kupon diubah", id);
+  };
+
+  const deleteCoupon = (id) =>
+    askDelete("Hapus kupon?", "Kode kupon ini tidak bisa dipakai pembeli setelah dihapus.", () =>
+      {
+        setCoupons(coupons.filter((coupon) => coupon.id !== id));
+        logActivity("Kupon dihapus", id);
+      }
     );
 
   const deleteRequest = (id) =>
     askDelete("Hapus request?", "Request produk ini akan dihapus dari panel admin.", () =>
-      setProductRequests(productRequests.filter((request) => request.id !== id))
+      {
+        setProductRequests(productRequests.filter((request) => request.id !== id));
+        logActivity("Request dihapus", id);
+      }
     );
 
   const setPersistedTab = (nextTab) => {
@@ -272,6 +356,11 @@ export function AdminPanel({
       window.localStorage.setItem(ADMIN_TAB_KEY, nextTab);
     }
   };
+
+  const markNotificationsRead = () =>
+    setNotifications?.(notifications.map((notification) => ({ ...notification, read: true })));
+
+  const clearNotifications = () => setNotifications?.([]);
 
   return (
     <div className="min-h-screen flex" style={{ background: "var(--bg)" }}>
@@ -290,6 +379,7 @@ export function AdminPanel({
           <NavBtn active={tab === "dashboard"} onClick={() => setPersistedTab("dashboard")} icon={Sparkles}>Dashboard</NavBtn>
           <NavBtn active={tab === "products"} onClick={() => setPersistedTab("products")} icon={Package}>Produk</NavBtn>
           <NavBtn active={tab === "promos"} onClick={() => setPersistedTab("promos")} icon={BadgePercent}>Promo</NavBtn>
+          <NavBtn active={tab === "coupons"} onClick={() => setPersistedTab("coupons")} icon={BadgePercent}>Kupon</NavBtn>
           <NavBtn active={tab === "orders"} onClick={() => setPersistedTab("orders")} icon={Receipt}>Pesanan</NavBtn>
           <NavBtn active={tab === "reviews"} onClick={() => setPersistedTab("reviews")} icon={Star}>Review</NavBtn>
           <NavBtn active={tab === "requests"} onClick={() => setPersistedTab("requests")} icon={Inbox}>Request</NavBtn>
@@ -319,16 +409,27 @@ export function AdminPanel({
         {tab === "dashboard" && (
           <DashboardTab
             stats={stats}
+            products={products}
             orders={orders}
             resellers={resellers}
             productRequests={productRequests}
+            notifications={notifications}
+            activityLogs={activityLogs}
             storeStatus={storeStatus}
+            notificationPermission={notificationPermission}
+            onRequestNotifications={onRequestNotifications}
+            onMarkNotificationsRead={markNotificationsRead}
+            onClearNotifications={clearNotifications}
+            onOpenNotificationTarget={setPersistedTab}
             onOpenStore={() =>
-              setStoreStatus?.({
-                isOpen: true,
-                closedReason: "",
-                updatedAt: new Date().toISOString(),
-              })
+              {
+                setStoreStatus?.({
+                  isOpen: true,
+                  closedReason: "",
+                  updatedAt: new Date().toISOString(),
+                });
+                logActivity("Website dibuka", "Order diaktifkan");
+              }
             }
             onCloseStore={() => setShowStoreStatusEditor(true)}
             onChangePassword={() => setShowAdminPasswordEditor(true)}
@@ -336,7 +437,8 @@ export function AdminPanel({
         )}
         {tab === "products" && <ProductsTab products={products} onEdit={setEditing} onDelete={deleteProduct} />}
         {tab === "promos" && <PromosTab promos={promos} products={products} onEdit={setEditingPromo} onDelete={deletePromo} onToggle={togglePromo} />}
-        {tab === "orders" && <OrdersTab orders={orders} onChangeStatus={updateOrderStatus} onDelete={deleteOrder} />}
+        {tab === "coupons" && <CouponsTab coupons={coupons} onEdit={setEditingCoupon} onDelete={deleteCoupon} onToggle={toggleCoupon} />}
+        {tab === "orders" && <OrdersTab orders={orders} onChangeStatus={updateOrderStatus} onSaveServicePeriod={updateOrderServicePeriod} onDelete={deleteOrder} />}
         {tab === "reviews" && <ReviewsTab products={products} reviews={reviews} setReviews={setReviews} onDeleteReview={askDelete} />}
         {tab === "requests" && <RequestsTab productRequests={productRequests} onChangeStatus={updateRequestStatus} onDelete={deleteRequest} />}
         {tab === "resellers" && (
@@ -352,6 +454,7 @@ export function AdminPanel({
 
       {editing && <ProductEditor product={editing === "new" ? null : editing} onSave={saveProduct} onClose={() => setEditing(null)} />}
       {editingPromo && <PromoEditor promo={editingPromo === "new" ? null : editingPromo} products={products} onSave={savePromo} onClose={() => setEditingPromo(null)} />}
+      {editingCoupon && <CouponEditor coupon={editingCoupon === "new" ? null : editingCoupon} onSave={saveCoupon} onClose={() => setEditingCoupon(null)} />}
       {showResellerCreator && (
         <ResellerCreator
           resellerTiers={resellerTiers}
@@ -359,6 +462,7 @@ export function AdminPanel({
           onCreate={async (payload) => {
             const result = await onCreateReseller(payload);
             if (result?.ok) {
+              logActivity("Reseller diaktifkan", payload.email);
               setShowResellerCreator(false);
             }
             return result;
@@ -375,6 +479,7 @@ export function AdminPanel({
               closedReason: reason.trim(),
               updatedAt: new Date().toISOString(),
             });
+            logActivity("Website ditutup", reason.trim());
             setShowStoreStatusEditor(false);
           }}
         />
@@ -385,6 +490,7 @@ export function AdminPanel({
           onSave={async (payload) => {
             const result = await onChangeAdminPassword?.(payload);
             if (result?.ok) {
+              logActivity("Password admin diganti", "Password berhasil diperbarui");
               setShowAdminPasswordEditor(false);
             }
             return result;
@@ -403,7 +509,24 @@ export function AdminPanel({
   );
 }
 
-function DashboardTab({ stats, orders, resellers, productRequests, storeStatus, onOpenStore, onCloseStore, onChangePassword }) {
+function DashboardTab({
+  stats,
+  products,
+  orders,
+  resellers,
+  productRequests,
+  notifications,
+  activityLogs,
+  storeStatus,
+  notificationPermission,
+  onRequestNotifications,
+  onMarkNotificationsRead,
+  onClearNotifications,
+  onOpenNotificationTarget,
+  onOpenStore,
+  onCloseStore,
+  onChangePassword,
+}) {
   const isOpen = storeStatus?.isOpen !== false;
   const [view, setView] = useState("overview");
 
@@ -456,11 +579,23 @@ function DashboardTab({ stats, orders, resellers, productRequests, storeStatus, 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         <StatCard label="Produk" value={stats.products} icon={Package} />
         <StatCard label="Promo Aktif" value={stats.promos} icon={BadgePercent} />
+        <StatCard label="Kupon Aktif" value={stats.coupons} icon={BadgePercent} />
         <StatCard label="Stok" value={stats.stock} icon={Sparkles} />
         <StatCard label="Pesanan" value={stats.orders} icon={Receipt} />
         <StatCard label="Request" value={stats.requests} icon={Inbox} />
+        <StatCard label="Notif Baru" value={stats.unreadNotifications} icon={Bell} />
         <StatCard label="Pendapatan Bulan Ini" value={fmtIDR(stats.revenueThisMonth)} icon={TrendingUp} accent onClick={() => setView("revenue")} />
       </div>
+      <NotificationCenter
+        notifications={notifications}
+        notificationPermission={notificationPermission}
+        onRequestNotifications={onRequestNotifications}
+        onMarkRead={onMarkNotificationsRead}
+        onClear={onClearNotifications}
+        onOpenTarget={onOpenNotificationTarget}
+      />
+      <ExportPanel products={products} orders={orders} resellers={resellers} productRequests={productRequests} />
+      <ActivityLogPanel activityLogs={activityLogs} />
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="paper-card p-7">
           <div className="text-xs mono uppercase tracking-widest mb-5" style={{ color: "var(--accent)" }}>Pesanan Terbaru</div>
@@ -509,7 +644,310 @@ function DashboardTab({ stats, orders, resellers, productRequests, storeStatus, 
   );
 }
 
+function NotificationCenter({
+  notifications = [],
+  notificationPermission = "default",
+  onRequestNotifications,
+  onMarkRead,
+  onClear,
+  onOpenTarget,
+}) {
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
+  const latestNotifications = notifications.slice(0, 6);
+  const permissionLabel =
+    notificationPermission === "granted"
+      ? "Browser aktif"
+      : notificationPermission === "denied"
+        ? "Browser diblokir"
+        : notificationPermission === "unsupported"
+          ? "Browser tidak mendukung"
+          : "Aktifkan browser";
+
+  return (
+    <div className="paper-card p-5 sm:p-7 mb-10">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-5">
+        <div>
+          <div className="text-xs mono uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: "var(--accent)" }}>
+            <Bell className="w-4 h-4" /> Pusat Notifikasi
+          </div>
+          <h2 className="serif text-3xl leading-none" style={{ fontWeight: 500 }}>
+            {unreadCount > 0 ? `${unreadCount} perlu dicek.` : "Semua aman."}
+          </h2>
+          <p className="text-sm mt-2" style={{ color: "var(--ink-dim)" }}>
+            Order baru, konfirmasi pembayaran, request produk, dan stok rendah masuk otomatis di sini.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          <button
+            type="button"
+            onClick={onRequestNotifications}
+            disabled={notificationPermission === "granted" || notificationPermission === "unsupported"}
+            className="px-4 py-2 rounded-full border text-xs font-semibold flex items-center gap-2 disabled:opacity-60"
+            style={{ borderColor: "var(--line)", background: "var(--bg-2)", color: "var(--ink)" }}
+          >
+            <Bell className="w-3.5 h-3.5" /> {permissionLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onMarkRead}
+            disabled={unreadCount === 0}
+            className="px-4 py-2 rounded-full border text-xs font-semibold flex items-center gap-2 disabled:opacity-40"
+            style={{ borderColor: "var(--line)", background: "var(--bg-2)", color: "var(--ink)" }}
+          >
+            <CheckCheck className="w-3.5 h-3.5" /> Tandai Dibaca
+          </button>
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={notifications.length === 0}
+            className="px-4 py-2 rounded-full border text-xs font-semibold disabled:opacity-40"
+            style={{ borderColor: "var(--line)", background: "var(--bg-2)", color: "var(--ink)" }}
+          >
+            Bersihkan
+          </button>
+        </div>
+      </div>
+
+      {latestNotifications.length === 0 ? (
+        <div className="rounded-2xl border border-dashed p-6 text-center text-sm serif-italic" style={{ borderColor: "var(--line)", color: "var(--ink-dim)" }}>
+          belum ada notifikasi
+        </div>
+      ) : (
+        <div className="grid lg:grid-cols-2 gap-3">
+          {latestNotifications.map((notification) => (
+            <div
+              key={notification.id}
+              className="rounded-2xl border p-4"
+              style={{
+                borderColor: notification.read ? "var(--line)" : "var(--accent)",
+                background: notification.read ? "var(--bg-2)" : "var(--bg-3)",
+              }}
+            >
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <div className="text-[10px] mono uppercase tracking-widest mb-1" style={{ color: "var(--accent)" }}>
+                    {getNotificationTypeLabel(notification.type)}
+                  </div>
+                  <div className="font-semibold text-sm">{notification.title}</div>
+                </div>
+                {!notification.read && (
+                  <span className="w-2.5 h-2.5 rounded-full mt-1 shrink-0" style={{ background: "var(--accent)" }} />
+                )}
+              </div>
+              {notification.body && (
+                <p className="text-xs leading-relaxed mb-3" style={{ color: "var(--ink-dim)" }}>
+                  {notification.body}
+                </p>
+              )}
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] mono" style={{ color: "var(--ink-dim)" }}>
+                  {new Date(notification.createdAt).toLocaleString("id-ID")}
+                </span>
+                {notification.target && notification.target !== "dashboard" && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenTarget?.(notification.target)}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                    style={{ background: "var(--ink)", color: "var(--bg)" }}
+                  >
+                    Buka
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function getNotificationTypeLabel(type) {
+  const labels = {
+    order: "Order",
+    payment: "Pembayaran",
+    request: "Request",
+    stock: "Stok",
+    system: "Sistem",
+  };
+
+  return labels[type] || "Info";
+}
+
+function ExportPanel({ products = [], orders = [], resellers = [], productRequests = [] }) {
+  const revenueRows = getRevenueExportRows(orders);
+
+  return (
+    <div className="paper-card p-5 sm:p-7 mb-10">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Export Laporan</div>
+          <h2 className="serif text-3xl leading-none" style={{ fontWeight: 500 }}>Download CSV.</h2>
+          <p className="text-sm mt-2" style={{ color: "var(--ink-dim)" }}>
+            Ambil data toko untuk rekap, arsip, atau olah lanjut di spreadsheet.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          <ExportButton label="Pesanan" filename="palugada-pesanan.csv" rows={orders.map(mapOrderExport)} />
+          <ExportButton label="Produk" filename="palugada-produk.csv" rows={products.map(mapProductExport)} />
+          <ExportButton label="Reseller" filename="palugada-reseller.csv" rows={resellers.map(mapResellerExport)} />
+          <ExportButton label="Request" filename="palugada-request.csv" rows={productRequests.map(mapRequestExport)} />
+          <ExportButton label="Revenue" filename="palugada-revenue.csv" rows={revenueRows} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityLogPanel({ activityLogs = [] }) {
+  return (
+    <div className="paper-card p-5 sm:p-7 mb-10">
+      <div className="flex items-start justify-between gap-4 mb-5">
+        <div>
+          <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Aktivitas Admin</div>
+          <h2 className="serif text-3xl leading-none" style={{ fontWeight: 500 }}>Riwayat perubahan.</h2>
+        </div>
+        <div className="text-xs mono" style={{ color: "var(--ink-dim)" }}>{activityLogs.length} log</div>
+      </div>
+      {activityLogs.length === 0 ? (
+        <div className="rounded-2xl border border-dashed p-6 text-center text-sm serif-italic" style={{ borderColor: "var(--line)", color: "var(--ink-dim)" }}>
+          belum ada aktivitas admin
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {activityLogs.slice(0, 8).map((log) => (
+            <div key={log.id} className="flex flex-col gap-1 border-b last:border-b-0 pb-3 last:pb-0" style={{ borderColor: "var(--line)" }}>
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-semibold text-sm">{log.action}</span>
+                <span className="text-[10px] mono" style={{ color: "var(--ink-dim)" }}>{new Date(log.createdAt).toLocaleString("id-ID")}</span>
+              </div>
+              {log.detail && <div className="text-xs" style={{ color: "var(--ink-dim)" }}>{log.detail}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExportButton({ label, filename, rows }) {
+  return (
+    <button
+      type="button"
+      onClick={() => downloadCsv(filename, rows)}
+      disabled={!rows.length}
+      className="px-4 py-2 rounded-full border text-xs font-semibold disabled:opacity-40"
+      style={{ borderColor: "var(--line)", background: "var(--bg-2)", color: "var(--ink)" }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function downloadCsv(filename, rows) {
+  if (!rows.length) {
+    return;
+  }
+
+  const headers = Object.keys(rows[0]);
+  const csv = [
+    headers.join(","),
+    ...rows.map((row) => headers.map((key) => escapeCsv(row[key])).join(",")),
+  ].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function escapeCsv(value) {
+  const text = String(value ?? "");
+  if (/[",\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function mapOrderExport(order) {
+  return {
+    id: order.id,
+    tanggal: order.createdAt ? new Date(order.createdAt).toLocaleString("id-ID") : "",
+    nama: order.buyer?.name || "",
+    email: order.buyer?.email || "",
+    whatsapp: order.buyer?.wa || "",
+    status: order.status,
+    metode: order.buyer?.method || "",
+    subtotal: order.subtotal || order.total,
+    diskon: order.discount || 0,
+    kupon: order.coupon?.code || "",
+    total: order.total,
+    resellerId: order.resellerId || "",
+    produk: (order.items || []).map((item) => `${item.qty}x ${item.name}${item.plan ? ` ${item.plan}` : ""}`).join("; "),
+  };
+}
+
+function mapProductExport(product) {
+  return {
+    id: product.id,
+    nama: product.name,
+    kategori: product.category,
+    harga: product.price,
+    hargaLama: product.oldPrice,
+    stok: product.stock,
+    durasi: product.duration,
+  };
+}
+
+function mapResellerExport(reseller) {
+  return {
+    id: reseller.id,
+    nama: reseller.name,
+    email: reseller.email,
+    whatsapp: reseller.wa,
+    tier: reseller.tier,
+    totalOrders: reseller.totalOrders || 0,
+    totalSpent: reseller.totalSpent || 0,
+    joinedAt: reseller.joinedAt || "",
+  };
+}
+
+function mapRequestExport(request) {
+  return {
+    id: request.id,
+    tanggal: request.createdAt ? new Date(request.createdAt).toLocaleString("id-ID") : "",
+    nama: request.name,
+    whatsapp: request.wa,
+    appName: request.appName,
+    status: request.status,
+    note: request.note || "",
+  };
+}
+
+function getRevenueExportRows(orders = []) {
+  return [-2, -1, 0].map((offset) => {
+    const summary = getMonthRevenueSummary(orders, offset);
+    return {
+      bulan: summary.label,
+      pesanan: summary.count,
+      pendapatan: summary.total,
+    };
+  });
+}
+
 function ProductsTab({ products, onEdit, onDelete }) {
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("Semua");
+  const categories = ["Semua", ...Array.from(new Set(products.map((product) => product.category).filter(Boolean)))];
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory = categoryFilter === "Semua" || product.category === categoryFilter;
+    const haystack = [product.name, product.category, product.duration, product.description].join(" ").toLowerCase();
+    return matchesCategory && (!normalizedQuery || haystack.includes(normalizedQuery));
+  });
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
@@ -523,6 +961,16 @@ function ProductsTab({ products, onEdit, onDelete }) {
         </button>
       </div>
 
+      <div className="paper-card p-4 mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+        <Field label="Cari Produk" value={query} onChange={setQuery} placeholder="Nama, kategori, atau durasi" />
+        <AdminSelect
+          label="Kategori"
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          options={categories.map((category) => ({ value: category, label: category }))}
+        />
+      </div>
+
       <div className="paper-card overflow-hidden">
         <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-4 text-[10px] mono uppercase tracking-widest border-b" style={{ color: "var(--ink-dim)", borderColor: "var(--line)" }}>
           <div className="col-span-5">Produk</div>
@@ -531,7 +979,7 @@ function ProductsTab({ products, onEdit, onDelete }) {
           <div className="col-span-1">Stok</div>
           <div className="col-span-2 text-right">Aksi</div>
         </div>
-        {products.map((product) => (
+        {filteredProducts.map((product) => (
           <div key={product.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 px-5 py-4 items-center border-b last:border-0 hover:bg-stone-50" style={{ borderColor: "var(--line)" }}>
             <div className="md:col-span-5 flex items-center gap-3 min-w-0">
               <ProductIcon icon={product.icon} color={product.color} size={42} />
@@ -549,6 +997,9 @@ function ProductsTab({ products, onEdit, onDelete }) {
             </div>
           </div>
         ))}
+        {filteredProducts.length === 0 && (
+          <div className="text-center py-12 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>produk tidak ditemukan</div>
+        )}
       </div>
     </div>
   );
@@ -626,8 +1077,87 @@ function PromosTab({ promos, products, onEdit, onDelete, onToggle }) {
   );
 }
 
-function OrdersTab({ orders, onChangeStatus, onDelete }) {
+function CouponsTab({ coupons, onEdit, onDelete, onToggle }) {
+  const activeCount = coupons.filter((coupon) => coupon.active).length;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+        <div>
+          <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Voucher</div>
+          <h1 className="serif leading-none" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Kupon<span className="serif-italic">.</span></h1>
+          <p className="text-sm mt-2" style={{ color: "var(--ink-dim)" }}>{activeCount} kupon aktif dari {coupons.length} total kupon</p>
+        </div>
+        <button onClick={() => onEdit("new")} className="px-5 py-3 rounded-full font-semibold text-sm flex items-center gap-2" style={{ background: "var(--accent)", color: "white" }}>
+          <Plus className="w-4 h-4" /> Tambah Kupon
+        </button>
+      </div>
+
+      {coupons.length === 0 ? (
+        <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada kupon dibuat</div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          {coupons.map((coupon) => (
+            <article key={coupon.id} className="paper-card p-6">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <span className="text-[10px] mono uppercase tracking-widest px-2 py-1 rounded-full" style={{ background: coupon.active ? "var(--ink)" : "var(--bg-3)", color: coupon.active ? "var(--bg)" : "var(--ink-dim)" }}>
+                    {coupon.active ? "Aktif" : "Nonaktif"}
+                  </span>
+                  <h3 className="serif text-2xl leading-none mt-4 mb-2" style={{ fontWeight: 600 }}>{coupon.code}</h3>
+                  <p className="text-sm mb-3" style={{ color: "var(--ink-dim)" }}>{coupon.title || "Kupon tanpa judul"}</p>
+                  <div className="text-sm font-semibold" style={{ color: "var(--accent)" }}>
+                    {coupon.type === "percent" ? `${Number(coupon.value || 0)}%` : fmtIDR(coupon.value)} diskon
+                  </div>
+                  <div className="mt-2 text-xs" style={{ color: "var(--ink-dim)" }}>
+                    Min. belanja {fmtIDR(coupon.minTotal || 0)}
+                    {Number(coupon.maxDiscount || 0) > 0 ? ` · Maks. diskon ${fmtIDR(coupon.maxDiscount)}` : ""}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => onEdit(coupon)} className="p-2 rounded-lg hover:bg-stone-100"><Edit3 className="w-4 h-4" /></button>
+                  <button onClick={() => onDelete(coupon.id)} className="p-2 rounded-lg hover:bg-stone-100" style={{ color: "var(--accent)" }}><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>
+                <button
+                  onClick={() => onToggle(coupon.id)}
+                  className="px-3 py-2 rounded-full border bg-white hover:bg-stone-50 transition"
+                  style={{ borderColor: coupon.active ? "var(--ink)" : "var(--line)" }}
+                >
+                  {coupon.active ? "Nonaktifkan" : "Aktifkan"}
+                </button>
+                <span>ID: {coupon.id}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrdersTab({ orders, onChangeStatus, onSaveServicePeriod, onDelete }) {
+  const [editingPeriodOrder, setEditingPeriodOrder] = useState(null);
+  const [fulfillmentOrder, setFulfillmentOrder] = useState(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("Semua");
   const statusOptions = ["Menunggu Pembayaran", "Menunggu Verifikasi", "Diproses", "Selesai", "Dibatalkan"];
+  const filterOptions = ["Semua", ...statusOptions];
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOrders = orders.filter((order) => {
+    const matchesStatus = statusFilter === "Semua" || order.status === statusFilter;
+    const haystack = [
+      order.id,
+      order.buyer?.name,
+      order.buyer?.email,
+      order.buyer?.wa,
+      order.status,
+      order.coupon?.code,
+      ...(order.items || []).map((item) => `${item.name} ${item.plan || ""} ${item.duration || ""}`),
+    ].join(" ").toLowerCase();
+    return matchesStatus && (!normalizedQuery || haystack.includes(normalizedQuery));
+  });
   const renewalReminders = orders
     .map((order) => ({ order, running: getOrderRunningInfo(order) }))
     .filter(({ running }) => running?.needsRenewalReminder);
@@ -636,7 +1166,16 @@ function OrdersTab({ orders, onChangeStatus, onDelete }) {
     <div>
       <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Sales</div>
       <h1 className="serif leading-none mb-2" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Pesanan<span className="serif-italic">.</span></h1>
-      <p className="text-sm mb-10" style={{ color: "var(--ink-dim)" }}>{orders.length} pesanan total</p>
+      <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>{filteredOrders.length} dari {orders.length} pesanan</p>
+      <div className="paper-card p-4 mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_240px]">
+        <Field label="Cari Pesanan" value={query} onChange={setQuery} placeholder="Order ID, nama, WA, produk" />
+        <AdminSelect
+          label="Status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={filterOptions.map((status) => ({ value: status, label: status }))}
+        />
+      </div>
       {renewalReminders.length > 0 && (
         <div className="paper-card p-5 mb-5" style={{ borderColor: "var(--accent)", background: "var(--bg-3)" }}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -667,7 +1206,7 @@ function OrdersTab({ orders, onChangeStatus, onDelete }) {
         </div>
       )}
       <div className="space-y-4">
-        {orders.map((order) => {
+        {filteredOrders.map((order) => {
           const running = getOrderRunningInfo(order);
           return (
           <div key={order.id} className="paper-card p-6">
@@ -708,6 +1247,27 @@ function OrdersTab({ orders, onChangeStatus, onDelete }) {
                 <span>Berakhir: {running.endDate.toLocaleDateString("id-ID")}</span>
               </div>
             )}
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingPeriodOrder(order)}
+                className="px-4 py-2 rounded-full border text-xs font-semibold"
+                style={{ borderColor: "var(--line)", background: "var(--bg-2)", color: "var(--ink)" }}
+              >
+                Atur Masa Aktif
+              </button>
+              <button
+                type="button"
+                onClick={() => setFulfillmentOrder(order)}
+                className="px-4 py-2 rounded-full border text-xs font-semibold"
+                style={{ borderColor: "var(--line)", background: "var(--ink)", color: "var(--bg)" }}
+              >
+                Kirim Akun
+              </button>
+              {order.servicePeriod?.note && (
+                <span className="text-xs" style={{ color: "var(--ink-dim)" }}>{order.servicePeriod.note}</span>
+              )}
+            </div>
             {running?.needsRenewalReminder && (
               <div className="mb-4 rounded-2xl border p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--accent)", background: "var(--bg-3)" }}>
                 <div>
@@ -738,8 +1298,28 @@ function OrdersTab({ orders, onChangeStatus, onDelete }) {
           </div>
           );
         })}
-        {orders.length === 0 && <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada pesanan masuk</div>}
+        {filteredOrders.length === 0 && <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>pesanan tidak ditemukan</div>}
       </div>
+      {editingPeriodOrder && (
+        <ServicePeriodEditor
+          order={editingPeriodOrder}
+          onClose={() => setEditingPeriodOrder(null)}
+          onSave={(servicePeriod) => {
+            onSaveServicePeriod(editingPeriodOrder.id, servicePeriod);
+            setEditingPeriodOrder(null);
+          }}
+        />
+      )}
+      {fulfillmentOrder && (
+        <FulfillmentSender
+          order={fulfillmentOrder}
+          onClose={() => setFulfillmentOrder(null)}
+          onSent={() => {
+            onChangeStatus(fulfillmentOrder.id, "Selesai");
+            setFulfillmentOrder(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -810,20 +1390,153 @@ function RevenueHistory({ orders, onBack }) {
   );
 }
 
+function ServicePeriodEditor({ order, onClose, onSave }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const fallbackRunning = getOrderRunningInfo({ ...order, servicePeriod: null });
+  const [startAt, setStartAt] = useState(order.servicePeriod?.startAt || order.createdAt?.slice(0, 10) || today);
+  const [endAt, setEndAt] = useState(order.servicePeriod?.endAt || fallbackRunning?.endDate?.toISOString().slice(0, 10) || today);
+  const [note, setNote] = useState(order.servicePeriod?.note || "");
+  const canSave = startAt && endAt && new Date(endAt).getTime() >= new Date(startAt).getTime();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.5)" }}>
+      <div className="w-full max-w-lg rounded-[2rem] border p-6 sm:p-7" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <div>
+            <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Masa Aktif</div>
+            <h2 className="serif text-3xl leading-none" style={{ fontWeight: 500 }}>{order.id}</h2>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="space-y-4 mb-5">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Tanggal Mulai" value={startAt} onChange={setStartAt} type="date" />
+            <Field label="Tanggal Berakhir" value={endAt} onChange={setEndAt} type="date" />
+          </div>
+          <div>
+            <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>Catatan</label>
+            <textarea
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              rows={3}
+              placeholder="Contoh: akun dikirim, garansi full sampai tanggal akhir."
+              className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 resize-y"
+              style={{ borderColor: "var(--line)" }}
+            />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>Batal</button>
+          <button
+            type="button"
+            onClick={() => onSave({ startAt, endAt, note: note.trim(), updatedAt: new Date().toISOString() })}
+            disabled={!canSave}
+            className="flex-1 py-3 rounded-full font-semibold text-sm disabled:opacity-40"
+            style={{ background: "var(--accent)", color: "white" }}
+          >
+            Simpan
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FulfillmentSender({ order, onClose, onSent }) {
+  const [login, setLogin] = useState("");
+  const [password, setPassword] = useState("");
+  const [instruction, setInstruction] = useState("");
+  const canSend = login.trim() || password.trim() || instruction.trim();
+  const whatsappUrl = createFulfillmentWhatsappUrl(order, { login, password, instruction });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.5)" }}>
+      <div className="w-full max-w-lg rounded-[2rem] border p-6 sm:p-7" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <div>
+            <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Fulfillment</div>
+            <h2 className="serif text-3xl leading-none" style={{ fontWeight: 500 }}>Kirim akun</h2>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="rounded-2xl border p-4 text-sm leading-relaxed mb-5" style={{ borderColor: "var(--line)", background: "var(--bg-3)", color: "var(--ink-dim)" }}>
+          Data login di sini hanya dipakai untuk membuat pesan WhatsApp dan tidak disimpan ke database order.
+        </div>
+        <div className="space-y-4 mb-5">
+          <Field label="Email / Username / Link" value={login} onChange={setLogin} placeholder="Akun, invite link, atau email login" />
+          <Field label="Password / Kode" value={password} onChange={setPassword} placeholder="Password, PIN, atau kode akses" />
+          <div>
+            <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>Instruksi</label>
+            <textarea
+              value={instruction}
+              onChange={(event) => setInstruction(event.target.value)}
+              rows={4}
+              placeholder="Contoh: Jangan ubah email/password. Garansi aktif sesuai masa layanan."
+              className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 resize-y"
+              style={{ borderColor: "var(--line)" }}
+            />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>Batal</button>
+          <a
+            href={canSend ? whatsappUrl : undefined}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(event) => {
+              if (!canSend) {
+                event.preventDefault();
+                return;
+              }
+              onSent();
+            }}
+            className={`flex-1 py-3 rounded-full font-semibold text-sm text-center ${canSend ? "" : "opacity-40 pointer-events-none"}`}
+            style={{ background: "var(--accent)", color: "white" }}
+          >
+            Kirim via WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RequestsTab({ productRequests, onChangeStatus, onDelete }) {
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("Semua");
   const statusOptions = ["Baru", "Dicek", "Tersedia", "Tidak Tersedia", "Selesai"];
+  const filterOptions = ["Semua", ...statusOptions];
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredRequests = productRequests.filter((request) => {
+    const matchesStatus = statusFilter === "Semua" || request.status === statusFilter;
+    const haystack = [request.id, request.name, request.wa, request.appName, request.note, request.status].join(" ").toLowerCase();
+    return matchesStatus && (!normalizedQuery || haystack.includes(normalizedQuery));
+  });
 
   return (
     <div>
       <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Product Requests</div>
       <h1 className="serif leading-none mb-2" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Request<span className="serif-italic">.</span></h1>
-      <p className="text-sm mb-10" style={{ color: "var(--ink-dim)" }}>{productRequests.length} request produk/apps premium</p>
+      <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>{filteredRequests.length} dari {productRequests.length} request produk/apps premium</p>
+      <div className="paper-card p-4 mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+        <Field label="Cari Request" value={query} onChange={setQuery} placeholder="Nama, WA, aplikasi, catatan" />
+        <AdminSelect
+          label="Status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={filterOptions.map((status) => ({ value: status, label: status }))}
+        />
+      </div>
 
-      {productRequests.length === 0 ? (
-        <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada request masuk</div>
+      {filteredRequests.length === 0 ? (
+        <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>request tidak ditemukan</div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
-          {productRequests.map((request) => (
+          {filteredRequests.map((request) => (
             <div key={request.id} className="paper-card p-6">
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div>
@@ -1189,6 +1902,24 @@ function normalizeWhatsapp(value = "") {
 }
 
 function getOrderRunningInfo(order) {
+  if (order.servicePeriod?.startAt && order.servicePeriod?.endAt) {
+    const startDate = new Date(order.servicePeriod.startAt);
+    const endDate = new Date(order.servicePeriod.endAt);
+    if (Number.isFinite(startDate.getTime()) && Number.isFinite(endDate.getTime())) {
+      const remainingDays = Math.ceil((endDate.getTime() - new Date().getTime()) / 86400000);
+      const expired = remainingDays <= 0;
+      const durationDays = Math.max(0, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000));
+      return {
+        durationDays,
+        endDate,
+        expired,
+        needsRenewalReminder: remainingDays === 1,
+        remainingDays: Math.max(0, remainingDays),
+        label: expired ? "Berakhir" : `Sisa ${remainingDays} hari`,
+      };
+    }
+  }
+
   const durationDays = Math.max(...order.items.map((item) => parseDurationDays(item.duration)));
   if (!Number.isFinite(durationDays) || durationDays <= 0 || !order.createdAt) {
     return null;
@@ -1265,6 +1996,28 @@ function createRenewalWhatsappUrl(order, running) {
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
+function createFulfillmentWhatsappUrl(order, payload) {
+  const phone = normalizeWhatsapp(order.buyer?.wa || "");
+  const items = (order.items || [])
+    .map((item) => `- ${item.name}${item.plan ? ` - ${item.plan} (${item.duration})` : ""}`)
+    .join("\n");
+  const message = [
+    `Halo ${order.buyer?.name || ""}, pesanan Palugada kamu sudah siap.`,
+    "",
+    `Order ID: ${order.id}`,
+    "Produk:",
+    items,
+    "",
+    payload.login ? `Login/Link: ${payload.login}` : null,
+    payload.password ? `Password/Kode: ${payload.password}` : null,
+    payload.instruction ? `Instruksi: ${payload.instruction}` : null,
+    "",
+    "Terima kasih sudah order di Palugada.",
+  ].filter(Boolean).join("\n");
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
 function getOrderProductSummary(order) {
   const items = order.items || [];
   if (!items.length) {
@@ -1300,6 +2053,8 @@ function getPromoTargetLabel(promo, products) {
 }
 
 function ResellersTab({ resellers, resellerTiers = RESELLER_TIERS, onSaveTiers, onDelete, onCreate }) {
+  const [query, setQuery] = useState("");
+  const [tierFilter, setTierFilter] = useState("Semua");
   const [tierDrafts, setTierDrafts] = useState(() =>
     Object.fromEntries(
       Object.entries(resellerTiers).map(([name, config]) => [
@@ -1328,6 +2083,13 @@ function ResellersTab({ resellers, resellerTiers = RESELLER_TIERS, onSaveTiers, 
     Object.assign(RESELLER_TIERS, nextTiers);
     onSaveTiers?.(nextTiers);
   };
+  const tierOptions = ["Semua", ...Object.keys(resellerTiers)];
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredResellers = resellers.filter((reseller) => {
+    const matchesTier = tierFilter === "Semua" || reseller.tier === tierFilter;
+    const haystack = [reseller.id, reseller.name, reseller.email, reseller.wa, reseller.tier].join(" ").toLowerCase();
+    return matchesTier && (!normalizedQuery || haystack.includes(normalizedQuery));
+  });
 
   return (
     <div>
@@ -1335,7 +2097,7 @@ function ResellersTab({ resellers, resellerTiers = RESELLER_TIERS, onSaveTiers, 
         <div>
           <div className="text-xs mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Partners</div>
           <h1 className="serif leading-none mb-2" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Reseller<span className="serif-italic">.</span></h1>
-          <p className="text-sm" style={{ color: "var(--ink-dim)" }}>{resellers.length} reseller terdaftar</p>
+          <p className="text-sm" style={{ color: "var(--ink-dim)" }}>{filteredResellers.length} dari {resellers.length} reseller terdaftar</p>
         </div>
         <button onClick={onCreate} className="px-5 py-3 rounded-full font-semibold text-sm flex items-center gap-2" style={{ background: "var(--accent)", color: "white" }}>
           <Plus className="w-4 h-4" /> Aktifkan Reseller
@@ -1390,11 +2152,21 @@ function ResellersTab({ resellers, resellerTiers = RESELLER_TIERS, onSaveTiers, 
         </div>
       </div>
 
-      {resellers.length === 0 ? (
-        <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada reseller terdaftar</div>
+      <div className="paper-card p-4 mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+        <Field label="Cari Reseller" value={query} onChange={setQuery} placeholder="Nama, email, WhatsApp, ID" />
+        <AdminSelect
+          label="Tier"
+          value={tierFilter}
+          onChange={setTierFilter}
+          options={tierOptions.map((tier) => ({ value: tier, label: tier }))}
+        />
+      </div>
+
+      {filteredResellers.length === 0 ? (
+        <div className="paper-card text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>reseller tidak ditemukan</div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {resellers.map((reseller) => (
+          {filteredResellers.map((reseller) => (
             <div key={reseller.id} className="paper-card p-6 relative">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -1662,6 +2434,71 @@ function PromoEditor({ promo, products, onSave, onClose }) {
   );
 }
 
+function CouponEditor({ coupon, onSave, onClose }) {
+  const blank = {
+    id: null,
+    code: "",
+    title: "",
+    active: true,
+    type: "percent",
+    value: 10,
+    minTotal: 0,
+    maxDiscount: 0,
+  };
+  const [data, setData] = useState(coupon || blank);
+  const set = (key, value) => setData((current) => ({ ...current, [key]: value }));
+  const canSave = String(data.code || "").trim() && String(data.title || "").trim() && Number(data.value || 0) > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center safe-x safe-y overflow-y-auto backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.5)" }}>
+      <div className="flex w-full max-w-xl my-4 sm:my-0 max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[2rem] sm:rounded-3xl border bg-white" style={{ borderColor: "var(--line)" }}>
+        <div className="relative flex items-center justify-between p-6 border-b backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.95)" }}>
+          <div>
+            <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Kupon</div>
+            <h2 className="serif text-3xl" style={{ fontWeight: 500 }}>{coupon ? "Edit" : "Tambah"} Kupon</h2>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4 scrollbar ios-scroll">
+          <div className="rounded-2xl border p-4 text-sm leading-relaxed" style={{ borderColor: "var(--line)", background: "var(--bg-3)", color: "var(--ink-dim)" }}>
+            Kode kupon dipakai pembeli di checkout. Diskon dihitung dari total setelah promo produk dan harga reseller.
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Kode Kupon" value={data.code} onChange={(value) => set("code", value.toUpperCase().replace(/\s+/g, ""))} placeholder="PALU10" />
+            <Field label="Judul" value={data.title} onChange={(value) => set("title", value)} placeholder="Diskon pelanggan baru" />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <AdminSelect
+              label="Tipe Diskon"
+              value={data.type}
+              onChange={(value) => set("type", value)}
+              options={[
+                { value: "percent", label: "Persen" },
+                { value: "fixed", label: "Nominal Rupiah" },
+              ]}
+            />
+            <Field label={data.type === "percent" ? "Nilai Persen" : "Nominal Diskon"} value={data.value} onChange={(value) => set("value", Number(value) || 0)} type="number" />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Minimal Belanja" value={data.minTotal} onChange={(value) => set("minTotal", Number(value) || 0)} type="number" />
+            <Field label="Maksimal Diskon" value={data.maxDiscount} onChange={(value) => set("maxDiscount", Number(value) || 0)} type="number" />
+          </div>
+          <label className="flex items-center gap-3 rounded-2xl border p-4 text-sm" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
+            <input type="checkbox" checked={data.active} onChange={(event) => set("active", event.target.checked)} className="w-4 h-4" />
+            Kupon aktif dan bisa dipakai pembeli
+          </label>
+        </div>
+
+        <div className="relative flex gap-3 p-6 border-t backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.95)" }}>
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>Batal</button>
+          <button type="button" onClick={() => onSave(data)} disabled={!canSave} className="flex-1 py-3 rounded-full font-semibold text-sm disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>Simpan Kupon</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StoreStatusEditor({ storeStatus, onClose, onSave }) {
   const [reason, setReason] = useState(storeStatus?.closedReason || "");
   const canSave = reason.trim().length > 0;
@@ -1842,6 +2679,7 @@ function createBlankOption(index = 0) {
     id: `option-${Date.now().toString(36)}-${index}`,
     duration: "",
     price: 0,
+    stock: 0,
   };
 }
 
@@ -1995,9 +2833,10 @@ function ProductEditor({ product, onSave, onClose }) {
 
                     <div className="space-y-2">
                       {(plan.options || []).map((option, optionIndex) => (
-                        <div key={option.id || optionIndex} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:items-end">
+                        <div key={option.id || optionIndex} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_8rem_auto] sm:items-end">
                           <Field label={optionIndex === 0 ? "Durasi / Opsi" : " "} value={option.duration} onChange={(value) => updateOption(planIndex, optionIndex, "duration", value)} placeholder="1 Bulan" />
                           <Field label={optionIndex === 0 ? "Harga Opsi" : " "} value={option.price} onChange={(value) => updateOption(planIndex, optionIndex, "price", Number(value) || 0)} type="number" />
+                          <Field label={optionIndex === 0 ? "Stok" : " "} value={option.stock ?? 0} onChange={(value) => updateOption(planIndex, optionIndex, "stock", Number(value) || 0)} type="number" />
                           <button type="button" onClick={() => removeOption(planIndex, optionIndex)} className="h-12 px-4 rounded-xl border hover:bg-red-50" style={{ borderColor: "var(--line)", color: "#991b1b" }} aria-label="Hapus opsi">
                             <Trash2 className="w-4 h-4" />
                           </button>
