@@ -57,9 +57,13 @@ export function StyleBlock() {
       @keyframes filterFade { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
       .filter-fade { animation: filterFade 0.28s ease-out both; }
 
-      @keyframes loading-letter { 0%,80%,100% { opacity: 0.25; transform: translateY(0) scale(1); } 40% { opacity: 1; transform: translateY(-8px) scale(1.08); } }
-      .loading-text { min-width: 9.5rem; text-align: center; }
-      .loading-letter { display: inline-block; animation: loading-letter 1.25s ease-in-out infinite; }
+      @keyframes loading-letter {
+        0%,100% { opacity: 0.35; transform: translateY(0) scale(1); }
+        35% { opacity: 1; transform: translateY(-18px) scale(1.08); }
+        70% { opacity: 0.65; transform: translateY(5px) scale(0.98); }
+      }
+      .loading-text { min-width: 9.5rem; min-height: 2.25rem; text-align: center; }
+      .loading-letter { display: inline-flex; min-width: 0.72em; justify-content: center; animation: loading-letter 0.95s cubic-bezier(.2,.8,.2,1) infinite; will-change: transform, opacity; }
       @keyframes loading-fade { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
       .loading-fade { animation: loading-fade 0.5s ease-out both; }
       @keyframes loading-mark-pulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(122,75,42,0.22); } 50% { transform: scale(1.06); box-shadow: 0 0 0 14px rgba(122,75,42,0); } }
