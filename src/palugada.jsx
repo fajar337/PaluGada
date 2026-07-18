@@ -1,22 +1,82 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { AdminPanel } from "./features/palugada/components/admin";
 import { AdminLogin, ResellerLogin, ResellerRegister } from "./features/palugada/components/auth";
 import { FloatingWhatsApp, Footer, Header, StyleBlock } from "./features/palugada/components/layout";
 import { ResellerDashboard } from "./features/palugada/components/reseller";
+import { SeoHead } from "./features/palugada/components/seo";
 import { CartView, Checkout, Detail, Home, OrderSuccess, TrackOrder } from "./features/palugada/components/storefront";
-import { CONTACT_EMAIL, RESELLER_TIERS, fmtIDR, getDefaultPlanSelection, getPlanSelection, getPricingForSelection } from "./features/palugada/constants";
-import {
-  createResellerAuthByAdmin,
-  firebaseAuth,
-  getResellerOrders,
-  getResellerProfileByUid,
-  loginResellerAuth,
-  saveResellerProfile,
-  changeCurrentUserPassword,
-} from "./features/palugada/lib/firebase";
-import { addItem, getItem, loadProducts, storage, updateItem } from "./features/palugada/lib/storage";
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { CONTACT_EMAIL, RESELLER_TIERS, SEED_PRODUCTS, fmtIDR, getDefaultPlanSelection, getPlanSelection, getPricingForSelection } from "./features/palugada/constants";
+import { getRouteState, getViewPath, slugifyProduct } from "./features/palugada/lib/seo";
+
+const AdminPanel = lazy(() =>
+  import("./features/palugada/components/admin").then((module) => ({ default: module.AdminPanel }))
+);
+
+let firebaseModulePromise;
+let storageModulePromise;
+
+function loadFirebaseModule() {
+  firebaseModulePromise ||= import("./features/palugada/lib/firebase");
+  return firebaseModulePromise;
+}
+
+function loadStorageModule() {
+  storageModulePromise ||= import("./features/palugada/lib/storage");
+  return storageModulePromise;
+}
+
+const storage = {
+  async get(...args) {
+    return (await loadStorageModule()).storage.get(...args);
+  },
+  async set(...args) {
+    return (await loadStorageModule()).storage.set(...args);
+  },
+};
+
+async function addItem(...args) {
+  return (await loadStorageModule()).addItem(...args);
+}
+
+async function getItem(...args) {
+  return (await loadStorageModule()).getItem(...args);
+}
+
+async function loadProducts(...args) {
+  return (await loadStorageModule()).loadProducts(...args);
+}
+
+async function updateItem(...args) {
+  return (await loadStorageModule()).updateItem(...args);
+}
+
+async function createResellerAuthByAdmin(...args) {
+  return (await loadFirebaseModule()).createResellerAuthByAdmin(...args);
+}
+
+async function getResellerOrders(...args) {
+  return (await loadFirebaseModule()).getResellerOrders(...args);
+}
+
+async function getResellerProfileByUid(...args) {
+  return (await loadFirebaseModule()).getResellerProfileByUid(...args);
+}
+
+async function loginResellerAuth(...args) {
+  return (await loadFirebaseModule()).loginResellerAuth(...args);
+}
+
+async function saveResellerProfile(...args) {
+  return (await loadFirebaseModule()).saveResellerProfile(...args);
+}
+
+async function changeCurrentUserPassword(...args) {
+  return (await loadFirebaseModule()).changeCurrentUserPassword(...args);
+}
+
+async function logoutCurrentUser() {
+  return (await loadFirebaseModule()).logoutCurrentUser();
+}
 
 const UI_STATE_KEY = "pa_ui_state";
 const DEFAULT_STORE_STATUS = {
@@ -30,10 +90,36 @@ function loadUiState() {
     return {};
   }
 
+  let savedState = {};
   try {
-    return JSON.parse(window.localStorage.getItem(UI_STATE_KEY) || "{}");
+    savedState = JSON.parse(window.localStorage.getItem(UI_STATE_KEY) || "{}");
   } catch {
-    return {};
+    savedState = {};
+  }
+
+  const routeState = getRouteState(window.location.pathname);
+  const querySearch = new URLSearchParams(window.location.search).get("q");
+
+  return {
+    ...savedState,
+    ...routeState,
+    activeProductId:
+      routeState.view === "detail" && !routeState.activeProductSlug ? savedState.activeProductId : null,
+    activeProductSlug: routeState.activeProductSlug || null,
+    search: querySearch ?? savedState.search ?? "",
+  };
+}
+
+function readCachedValue(key, fallback) {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  try {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
   }
 }
 
@@ -50,16 +136,16 @@ function scrollToPageTop() {
 export default function App() {
   const initialUiState = loadUiState();
   const [view, setView] = useState(initialUiState.view || "home");
-  const [products, setProducts] = useState([]);
-  const [resellerTiers, setResellerTiers] = useState(RESELLER_TIERS);
-  const [promos, setPromos] = useState([]);
-  const [coupons, setCoupons] = useState([]);
-  const [storeStatus, setStoreStatus] = useState(DEFAULT_STORE_STATUS);
+  const [products, setProducts] = useState(() => readCachedValue("pa_products", SEED_PRODUCTS));
+  const [resellerTiers, setResellerTiers] = useState(() => readCachedValue("pa_reseller_tiers", RESELLER_TIERS));
+  const [promos, setPromos] = useState(() => readCachedValue("pa_promos", []));
+  const [coupons, setCoupons] = useState(() => readCachedValue("pa_coupons", []));
+  const [storeStatus, setStoreStatus] = useState(() => readCachedValue("pa_store_status", DEFAULT_STORE_STATUS));
   const [orders, setOrders] = useState([]);
-  const [reviews, setReviews] = useState([]);
+  const [reviews, setReviews] = useState(() => readCachedValue("pa_reviews", []));
   const [productRequests, setProductRequests] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [activityLogs, setActivityLogs] = useState([]);
+  const [notifications, setNotifications] = useState(() => readCachedValue("pa_notifications", []));
+  const [activityLogs, setActivityLogs] = useState(() => readCachedValue("pa_activity_logs", []));
   const [notificationPermission, setNotificationPermission] = useState("default");
   const [resellers, setResellers] = useState([]);
   const [resellerOrders, setResellerOrders] = useState([]);
@@ -79,73 +165,147 @@ export default function App() {
   const historyReadyRef = useRef(false);
   const historyKeyRef = useRef("");
   const restoringHistoryRef = useRef(false);
+  const initialViewRef = useRef(view);
 
   useEffect(() => {
-    const adminEmail = import.meta.env.VITE_FIREBASE_ADMIN_EMAIL || CONTACT_EMAIL;
-    const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
-      const isAdmin = Boolean(user && user.email === adminEmail);
-      setAdminLoggedIn(isAdmin);
+    let cancelled = false;
+    let unsubscribe = () => {};
 
-      if (!user || user.email === adminEmail) {
-        setReseller(null);
-        setResellerOrders([]);
-        setAuthResolved(true);
-        return;
+    const loadingFrame = window.requestAnimationFrame(() => {
+      if (!cancelled) {
+        setLoaded(true);
       }
-
-      const profile = await getResellerProfileByUid(user.uid);
-      if (profile) {
-        setReseller({ ...profile, id: user.uid, email: user.email });
-        setAuthResolved(true);
-        return;
-      }
-
-      const created = await saveResellerProfile(user.uid, {
-        id: user.uid,
-        name: user.displayName || user.email?.split("@")[0] || "Reseller",
-        email: user.email || "",
-        wa: "",
-        avatar: user.photoURL || "",
-        tier: "Bronze",
-        totalOrders: 0,
-        totalSpent: 0,
-        joinedAt: new Date().toISOString(),
-      });
-      setReseller(
-        created || {
-          id: user.uid,
-          name: user.displayName || user.email?.split("@")[0] || "Reseller",
-          email: user.email || "",
-          wa: "",
-          avatar: user.photoURL || "",
-          tier: "Bronze",
-          totalOrders: 0,
-          totalSpent: 0,
-          joinedAt: new Date().toISOString(),
-        }
-      );
-      setAuthResolved(true);
     });
 
-    (async () => {
-      setProducts(await loadProducts());
-      const savedTiers = await storage.get("pa_reseller_tiers", RESELLER_TIERS);
-      Object.assign(RESELLER_TIERS, savedTiers);
-      setResellerTiers(savedTiers);
-      setPromos(await storage.get("pa_promos", []));
-      setCoupons(await storage.get("pa_coupons", []));
-      setStoreStatus(await storage.get("pa_store_status", DEFAULT_STORE_STATUS));
-      setReviews(await storage.get("pa_reviews", []));
-      setNotifications(await storage.get("pa_notifications", []));
-      setActivityLogs(await storage.get("pa_activity_logs", []));
-      if (typeof window !== "undefined" && "Notification" in window) {
-        setNotificationPermission(window.Notification.permission);
-      }
-      setLoaded(true);
-    })();
+    const hydrateBackend = async () => {
+      try {
+        const firebaseModule = await loadFirebaseModule();
+        if (cancelled) {
+          return;
+        }
 
-    return unsubscribe;
-  }, [adminLoggedIn]);
+        const adminEmail = import.meta.env.VITE_FIREBASE_ADMIN_EMAIL || CONTACT_EMAIL;
+        unsubscribe = firebaseModule.subscribeToAuthState(async (user) => {
+          if (cancelled) {
+            return;
+          }
+
+          const isAdmin = Boolean(user && user.email === adminEmail);
+          setAdminLoggedIn(isAdmin);
+
+          if (!user || user.email === adminEmail) {
+            setReseller(null);
+            setResellerOrders([]);
+            setAuthResolved(true);
+            return;
+          }
+
+          const profile = await getResellerProfileByUid(user.uid);
+          if (cancelled) {
+            return;
+          }
+          if (profile) {
+            setReseller({ ...profile, id: user.uid, email: user.email });
+            setAuthResolved(true);
+            return;
+          }
+
+          const created = await saveResellerProfile(user.uid, {
+            id: user.uid,
+            name: user.displayName || user.email?.split("@")[0] || "Reseller",
+            email: user.email || "",
+            wa: "",
+            avatar: user.photoURL || "",
+            tier: "Bronze",
+            totalOrders: 0,
+            totalSpent: 0,
+            joinedAt: new Date().toISOString(),
+          });
+          if (cancelled) {
+            return;
+          }
+          setReseller(created || {
+            id: user.uid,
+            name: user.displayName || user.email?.split("@")[0] || "Reseller",
+            email: user.email || "",
+            wa: "",
+            avatar: user.photoURL || "",
+            tier: "Bronze",
+            totalOrders: 0,
+            totalSpent: 0,
+            joinedAt: new Date().toISOString(),
+          });
+          setAuthResolved(true);
+        });
+
+        const [nextProducts, savedTiers, nextPromos, nextCoupons, nextStoreStatus, nextReviews, nextNotifications, nextActivityLogs] =
+          await Promise.all([
+            loadProducts(),
+            storage.get("pa_reseller_tiers", RESELLER_TIERS),
+            storage.get("pa_promos", []),
+            storage.get("pa_coupons", []),
+            storage.get("pa_store_status", DEFAULT_STORE_STATUS),
+            storage.get("pa_reviews", []),
+            storage.get("pa_notifications", []),
+            storage.get("pa_activity_logs", []),
+          ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setProducts(nextProducts);
+        Object.assign(RESELLER_TIERS, savedTiers);
+        setResellerTiers(savedTiers);
+        setPromos(nextPromos);
+        setCoupons(nextCoupons);
+        setStoreStatus(nextStoreStatus);
+        setReviews(nextReviews);
+        setNotifications(nextNotifications);
+        setActivityLogs(nextActivityLogs);
+        if ("Notification" in window) {
+          setNotificationPermission(window.Notification.permission);
+        }
+      } catch (error) {
+        console.warn("Backend hydration failed; using local storefront data.", error);
+        if (!cancelled) {
+          setAuthResolved(true);
+        }
+      }
+    };
+
+    let hydrationStarted = false;
+    const startHydration = () => {
+      if (hydrationStarted || cancelled) {
+        return;
+      }
+
+      hydrationStarted = true;
+      window.clearTimeout(backendDelay);
+      window.removeEventListener("pointerdown", startHydration);
+      window.removeEventListener("keydown", startHydration);
+      window.removeEventListener("wheel", startHydration);
+      void hydrateBackend();
+    };
+    const backendDelay = window.setTimeout(startHydration, 12000);
+    window.addEventListener("pointerdown", startHydration, { once: true, passive: true });
+    window.addEventListener("keydown", startHydration, { once: true });
+    window.addEventListener("wheel", startHydration, { once: true, passive: true });
+
+    if (initialViewRef.current.startsWith("admin") || initialViewRef.current.startsWith("reseller")) {
+      window.setTimeout(startHydration, 0);
+    }
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(loadingFrame);
+      window.clearTimeout(backendDelay);
+      window.removeEventListener("pointerdown", startHydration);
+      window.removeEventListener("keydown", startHydration);
+      window.removeEventListener("wheel", startHydration);
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!loaded || !authResolved) {
@@ -168,15 +328,22 @@ export default function App() {
   }, [storeStatus?.closedReason, storeStatus?.isOpen]);
 
   useEffect(() => {
-    if (!products.length || !initialUiState.activeProductId) {
+    if (!products.length || (!initialUiState.activeProductId && !initialUiState.activeProductSlug)) {
       return;
     }
 
-    const restoredProduct = products.find((product) => product.id === initialUiState.activeProductId);
+    const restoredProduct = initialUiState.activeProductSlug
+      ? products.find((product) => slugifyProduct(product.name) === initialUiState.activeProductSlug)
+      : products.find((product) => product.id === initialUiState.activeProductId);
     if (restoredProduct) {
       setActiveProduct(restoredProduct);
+      return;
     }
-  }, [initialUiState.activeProductId, products]);
+
+    if (initialUiState.activeProductSlug) {
+      setView("home");
+    }
+  }, [initialUiState.activeProductId, initialUiState.activeProductSlug, products]);
 
   useEffect(() => {
     if (!initialUiState.activeOrderId) {
@@ -223,6 +390,10 @@ export default function App() {
       return;
     }
 
+    if (view === "detail" && !activeProduct) {
+      return;
+    }
+
     const nextState = {
       palugada: true,
       view,
@@ -230,9 +401,11 @@ export default function App() {
       activeOrderId: activeOrder?.id || null,
     };
     const nextKey = JSON.stringify(nextState);
+    const currentSearch = view === "home" ? new URLSearchParams(window.location.search).get("q") || "" : "";
+    const nextPath = getViewPath(view, activeProduct, currentSearch);
 
     if (restoringHistoryRef.current) {
-      window.history.replaceState(nextState, "");
+      window.history.replaceState(nextState, "", nextPath);
       historyKeyRef.current = nextKey;
       restoringHistoryRef.current = false;
       historyReadyRef.current = true;
@@ -240,17 +413,17 @@ export default function App() {
     }
 
     if (!historyReadyRef.current) {
-      window.history.replaceState(nextState, "");
+      window.history.replaceState(nextState, "", nextPath);
       historyKeyRef.current = nextKey;
       historyReadyRef.current = true;
       return;
     }
 
     if (historyKeyRef.current !== nextKey) {
-      window.history.pushState(nextState, "");
+      window.history.pushState(nextState, "", nextPath);
       historyKeyRef.current = nextKey;
     }
-  }, [activeOrder?.id, activeProduct?.id, loaded, view]);
+  }, [activeOrder?.id, activeProduct, loaded, view]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -262,9 +435,10 @@ export default function App() {
       restoringHistoryRef.current = true;
       setView(nextView);
 
-      if (state?.activeProductId) {
+      if (state?.activeProductId || state?.activeProductSlug) {
         const restoredProduct =
           products.find((product) => product.id === state.activeProductId) ||
+          products.find((product) => slugifyProduct(product.name) === state.activeProductSlug) ||
           (await getItem("pa_products", state.activeProductId, null));
         setActiveProduct(restoredProduct || null);
       } else {
@@ -282,10 +456,9 @@ export default function App() {
     };
 
     const onPopState = (event) => {
-      const state = event.state;
-      if (!state?.palugada) {
-        return;
-      }
+      const state = event.state?.palugada
+        ? event.state
+        : { palugada: true, ...getRouteState(window.location.pathname) };
 
       void restoreHistoryState(state);
     };
@@ -774,6 +947,14 @@ export default function App() {
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--ink)" }}>
       <StyleBlock />
+      <SeoHead view={view} activeProduct={activeProduct} products={products} promos={promos} reviews={reviews} />
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:px-5 focus:py-3 focus:text-sm focus:font-semibold"
+        style={{ background: "var(--ink)", color: "var(--bg)" }}
+      >
+        Langsung ke konten utama
+      </a>
       {!view.startsWith("admin") && (
         <Header
           promos={promos}
@@ -789,7 +970,7 @@ export default function App() {
         />
       )}
 
-      <main>
+      <main id="main-content" tabIndex="-1">
         {view === "home" && (
           <Home
             products={products}
@@ -910,7 +1091,7 @@ export default function App() {
             orders={resellerOrders}
             onBack={() => setView("home")}
             onLogout={async () => {
-              await signOut(firebaseAuth);
+              await logoutCurrentUser();
               setReseller(null);
               setResellerOrders([]);
               setView("home");
@@ -922,9 +1103,9 @@ export default function App() {
             onBack={() => setView("home")}
             onLogin={async (email, password) => {
               const adminEmail = import.meta.env.VITE_FIREBASE_ADMIN_EMAIL || CONTACT_EMAIL;
-              const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+              const credential = await (await loadFirebaseModule()).loginAdminAuth(email, password);
               if (credential.user.email !== adminEmail) {
-                await signOut(firebaseAuth);
+                await logoutCurrentUser();
                 return { error: "Email ini tidak terdaftar sebagai admin" };
               }
 
@@ -934,7 +1115,8 @@ export default function App() {
           />
         )}
         {view === "admin" && adminLoggedIn && (
-          <AdminPanel
+          <Suspense fallback={null}>
+            <AdminPanel
             products={products}
             setProducts={async (nextProducts) => {
               setProducts(nextProducts);
@@ -999,11 +1181,12 @@ export default function App() {
               await storage.set("pa_product_requests", nextRequests);
             }}
             onLogout={async () => {
-              await signOut(firebaseAuth);
+              await logoutCurrentUser();
               setAdminLoggedIn(false);
               setView("home");
             }}
-          />
+            />
+          </Suspense>
         )}
       </main>
 
@@ -1012,7 +1195,7 @@ export default function App() {
       {!view.startsWith("admin") && !isStoreOpen && storeClosedNoticeVisible && (
         <StoreClosedPopup reason={closedReason} onClose={() => setStoreClosedNoticeVisible(false)} />
       )}
-      {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full text-sm font-medium shadow-2xl toast-pop" style={{ background: "var(--ink)", color: "var(--bg)" }}>{toast}</div>}
+      {toast && <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full text-sm font-medium shadow-2xl toast-pop" style={{ background: "var(--ink)", color: "var(--bg)" }}>{toast}</div>}
     </div>
   );
 }
@@ -1041,7 +1224,7 @@ function StoreClosedPopup({ reason, onClose }) {
   }, [onClose, reason]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y px-4 backdrop-blur-md" style={{ background: "rgba(20,21,31,0.45)" }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y px-4 backdrop-blur-md" style={{ background: "rgba(20,21,31,0.45)" }} role="dialog" aria-modal="true" aria-labelledby="store-closed-title" aria-describedby="store-closed-description">
       <div className="relative w-full max-w-lg rounded-[2rem] border p-6 sm:p-7 shadow-2xl zoomin" style={{ borderColor: "var(--accent)", background: "var(--bg-2)" }}>
         <button
           type="button"
@@ -1054,8 +1237,8 @@ function StoreClosedPopup({ reason, onClose }) {
         </button>
         <div className="pr-10">
           <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Toko Sedang Tutup</div>
-          <h2 className="serif text-4xl leading-none mb-4" style={{ fontWeight: 600 }}>Order belum bisa dibuat.</h2>
-          <p className="serif text-2xl leading-tight" style={{ color: "var(--ink)" }}>{reason}</p>
+          <h2 id="store-closed-title" className="serif text-4xl leading-none mb-4" style={{ fontWeight: 600 }}>Order belum bisa dibuat.</h2>
+          <p id="store-closed-description" className="serif text-2xl leading-tight" style={{ color: "var(--ink)" }}>{reason}</p>
         </div>
       </div>
     </div>

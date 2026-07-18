@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /checkout
+Disallow: /keranjang
+Disallow: /pesanan-berhasil
+Disallow: /reseller/dashboard
+
+Sitemap: https://palugadapremium.my.id/sitemap.xml
+Host: palugadapremium.my.id

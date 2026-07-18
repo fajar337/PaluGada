@@ -33,6 +33,7 @@ import {
   getProductStartingCompareAt,
   getWhatsAppConfirmationUrl,
 } from "../constants";
+import { STORE_FAQS } from "../lib/seo";
 import { Field, ProductIcon } from "./shared";
 
 export function Home({
@@ -143,7 +144,7 @@ export function Home({
                       Grand Opening • 1 Hari
                     </div>
                   )}
-                  <h3 className="serif text-3xl uppercase pr-16 mb-2" style={{ fontWeight: 700 }}>{featuredProduct?.name}</h3>
+                  <h2 className="serif text-3xl uppercase pr-16 mb-2" style={{ fontWeight: 700 }}>{featuredProduct?.name}</h2>
                   <p className="text-xs mb-4" style={{ color: "var(--ink-dim)" }}>{featuredProduct?.tagline}</p>
                 </div>
                 <div className="px-5 py-4 flex items-end justify-between" style={{ background: "var(--ink)", color: "var(--bg)" }}>
@@ -151,7 +152,7 @@ export function Home({
                     {getProductStartingCompareAt(featuredProduct || {}, promos) > getProductStartingPrice(featuredProduct || {}, promos) && (
                       <div className="text-[10px] line-through opacity-50">{fmtIDR(getProductStartingCompareAt(featuredProduct || {}, promos))}</div>
                     )}
-                    <div className="serif" style={{ color: "var(--accent)", fontSize: "1.7rem", fontWeight: 800, lineHeight: 1 }}>
+                    <div className="serif" style={{ color: "var(--gold)", fontSize: "1.7rem", fontWeight: 800, lineHeight: 1 }}>
                       {fmtIDR(getPrice(featuredProduct || {}, getProductStartingPrice(featuredProduct || {}, promos)))}
                     </div>
                   </div>
@@ -215,25 +216,29 @@ export function Home({
           </div>
           <div className="lg:col-span-6 lg:text-right">
             <div className="relative max-w-md lg:ml-auto">
+              <label htmlFor="catalog-search" className="sr-only">Cari aplikasi premium</label>
               <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "var(--ink-dim)" }} />
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari aplikasi…" className="w-full pl-11 pr-4 py-3 rounded-full text-sm border bg-white focus:outline-none focus:border-zinc-800" style={{ borderColor: "var(--line)" }} />
+              <input id="catalog-search" name="q" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari aplikasi…" className="w-full pl-11 pr-4 py-3 rounded-full text-sm border bg-white focus:outline-none focus:border-zinc-800" style={{ borderColor: "var(--line)" }} />
             </div>
           </div>
         </div>
 
-        <div
+        <nav
+          aria-label="Filter kategori produk"
           className="flex gap-2 overflow-x-auto pb-4 scrollbar mb-4 ios-scroll"
           style={{ touchAction: "pan-x pan-y pinch-zoom", overscrollBehaviorX: "contain", overscrollBehaviorY: "auto" }}
         >
           {categories.map((item) => (
-            <button key={item} onClick={() => setCategory(item)} className="px-4 py-2 rounded-full text-sm whitespace-nowrap border transition" style={{ borderColor: category === item ? "var(--ink)" : "var(--line)", background: category === item ? "var(--ink)" : "transparent", color: category === item ? "var(--bg)" : "var(--ink)", fontWeight: category === item ? 600 : 500 }}>
+            <button key={item} type="button" aria-pressed={category === item} onClick={() => setCategory(item)} className="px-4 py-2 rounded-full text-sm whitespace-nowrap border transition" style={{ borderColor: category === item ? "var(--ink)" : "var(--line)", background: category === item ? "var(--ink)" : "transparent", color: category === item ? "var(--bg)" : "var(--ink)", fontWeight: category === item ? 600 : 500 }}>
               {item}
             </button>
           ))}
-        </div>
+        </nav>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-10">
           <button
+            type="button"
+            aria-pressed={guaranteeOnly}
             onClick={() => setGuaranteeOnly((current) => !current)}
             className="px-4 py-2 rounded-full text-sm border transition w-fit"
             style={{ borderColor: guaranteeOnly ? "var(--ink)" : "var(--line)", background: guaranteeOnly ? "var(--ink)" : "transparent", color: guaranteeOnly ? "var(--bg)" : "var(--ink)" }}
@@ -242,6 +247,9 @@ export function Home({
           </button>
           <div className="relative w-full sm:w-auto">
             <button
+              type="button"
+              aria-expanded={sortOpen}
+              aria-haspopup="menu"
               onClick={() => setSortOpen((current) => !current)}
               className="w-full sm:w-auto min-w-[250px] px-4 py-3 rounded-[1.4rem] border text-sm flex items-center justify-between gap-3 transition"
               style={{ borderColor: "var(--line)", background: "var(--bg-2)", color: "var(--ink)" }}
@@ -251,6 +259,7 @@ export function Home({
             </button>
             {sortOpen && (
               <div
+                role="menu"
                 className="absolute right-0 mt-2 w-full overflow-hidden rounded-[1.4rem] border shadow-2xl z-20"
                 style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}
               >
@@ -258,6 +267,9 @@ export function Home({
                   const active = option.value === sortBy;
                   return (
                     <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={active}
                       key={option.value}
                       onClick={() => {
                         setSortBy(option.value);
@@ -326,6 +338,7 @@ export function Home({
       )}
 
       <section className="max-w-7xl mx-auto px-6 pb-8">
+        <h2 className="sr-only">Pertanyaan umum tentang pembelian dan garansi</h2>
         <FAQAccordion />
       </section>
 
@@ -395,8 +408,9 @@ function ProductRequestSection({ onRequestProduct }) {
           </div>
           <Field label="Nama Apps Premium" value={appName} onChange={setAppName} placeholder="Contoh: Disney+, Vidio, WPS, dll" />
           <div>
-            <label className="block text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>Catatan</label>
+            <label htmlFor="product-request-note" className="block text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>Catatan</label>
             <textarea
+              id="product-request-note"
               value={note}
               onChange={(event) => setNote(event.target.value)}
               placeholder="Tulis durasi, jenis akun, budget, atau request khusus..."
@@ -554,7 +568,7 @@ function PolicySection() {
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         {policies.map((policy) => (
           <article key={policy.id} id={policy.id} className="paper-card p-6 scroll-mt-28">
-            <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>{policy.title}</div>
+            <h3 className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>{policy.title}</h3>
             <ul className="space-y-3 text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>
               {policy.items.map((item) => (
                 <li key={item} className="flex gap-2">
@@ -579,13 +593,13 @@ function WebAppPromoSection() {
             <p className="text-sm sm:text-base leading-relaxed max-w-3xl mb-6" style={{ color: "var(--ink-dim)" }}>
               Akses PaluGada lebih cepat langsung dari HP kamu. Buka katalog aplikasi premium, cek stok, pilih plan, buat pesanan, dan lacak order dalam satu web app yang ringan. Simpan ke home screen biar terasa seperti aplikasi sendiri dan lebih praktis buat belanja kapan saja.
             </p>
-            <h3 className="serif text-3xl sm:text-4xl leading-none uppercase mb-6" style={{ fontWeight: 700 }}>
+            <h2 className="serif text-3xl sm:text-4xl leading-none uppercase mb-6" style={{ fontWeight: 700 }}>
               Buka PaluGada lebih cepat!
-            </h3>
+            </h2>
             <a
               href="https://www.mediafire.com/file/rmlsttad7a27m6g/PaluGada_Premium_v1.0.0.APK/file"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="inline-flex items-center justify-center rounded-full border px-6 py-3 text-base font-semibold transition hover-lift"
               style={{ borderColor: "var(--ink)", color: "var(--ink)", background: "transparent" }}
             >
@@ -597,9 +611,9 @@ function WebAppPromoSection() {
             <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--ink-dim)" }}>
               Our App
             </div>
-            <h2 className="serif uppercase leading-none" style={{ fontSize: "clamp(2.7rem, 5vw, 4.8rem)", fontWeight: 800, color: "var(--accent)" }}>
+            <p className="serif uppercase leading-none" style={{ fontSize: "clamp(2.7rem, 5vw, 4.8rem)", fontWeight: 800, color: "var(--accent)" }}>
               Web App
-            </h2>
+            </p>
             <div className="mt-6 rounded-[2rem] border p-5 sm:p-6 text-left" style={{ borderColor: "var(--line)", background: "var(--bg)" }}>
               <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>
                 Tips Mobile
@@ -619,35 +633,16 @@ function WebAppPromoSection() {
 
 function FAQAccordion() {
   const [open, setOpen] = useState("faq");
-  const items = [
-    {
-      id: "faq",
-      eyebrow: "Bantuan",
-      title: "FAQ",
-      body: "Pilih produk, buat booking, bayar sesuai metode pilihan, lalu konfirmasi lewat WhatsApp. Admin akan proses setelah pembayaran valid.",
-    },
-    {
-      id: "garansi",
-      eyebrow: "Garansi",
-      title: "Gimana Cara Garansi",
-      body: "Kalau akun bermasalah selama masa garansi, kirim Order ID dan kendalanya via WhatsApp. Admin akan bantu cek, replace, atau pandu ulang aksesnya.",
-    },
-    {
-      id: "cara-order",
-      eyebrow: "Cara Order",
-      title: "Gimana Cara Order",
-      body: "Masukkan produk ke cart, checkout, isi data WhatsApp aktif, pilih metode pembayaran, lalu kirim bukti transfer dari halaman booking.",
-    },
-  ];
 
   return (
     <div className="paper-card divide-y" style={{ borderColor: "var(--line)" }}>
-      {items.map((item) => {
+      {STORE_FAQS.map((item) => {
         const active = open === item.id;
+        const panelId = `${item.id}-panel`;
 
         return (
           <div key={item.id} id={item.id} className="scroll-mt-28" style={{ borderColor: "var(--line)" }}>
-            <button onClick={() => setOpen(active ? "" : item.id)} className="w-full p-6 text-left flex items-center justify-between gap-4">
+            <button type="button" aria-expanded={active} aria-controls={panelId} onClick={() => setOpen(active ? "" : item.id)} className="w-full p-6 text-left flex items-center justify-between gap-4">
               <div>
                 <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>{item.eyebrow}</div>
                 <h3 className="serif text-2xl leading-none" style={{ fontWeight: 500 }}>{item.title}</h3>
@@ -655,7 +650,7 @@ function FAQAccordion() {
               <Plus className={`w-5 h-5 transition ${active ? "rotate-45" : ""}`} />
             </button>
             {active && (
-              <p className="px-6 pb-6 text-sm leading-relaxed filter-fade" style={{ color: "var(--ink-dim)" }}>{item.body}</p>
+              <p id={panelId} className="px-6 pb-6 text-sm leading-relaxed filter-fade" style={{ color: "var(--ink-dim)" }}>{item.answer}</p>
             )}
           </div>
         );
@@ -671,7 +666,22 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
   const badge = getProductBadge(product, promos);
 
   return (
-    <article className={`group relative cursor-pointer slidein hover-lift overflow-hidden flex flex-col ${className}`.trim()} style={{ animationDelay: `${delay}s`, background: "var(--bg-2)", border: "1.5px solid var(--ink)" }} onClick={onOpen}>
+    <article
+      className={`group relative cursor-pointer slidein hover-lift overflow-hidden flex flex-col ${className}`.trim()}
+      style={{ animationDelay: `${delay}s`, background: "var(--bg-2)", border: "1.5px solid var(--ink)" }}
+      onClick={onOpen}
+    >
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpen();
+        }}
+        className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-12 focus:z-20 focus:rounded-full focus:px-4 focus:py-2 focus:text-xs focus:font-semibold"
+        style={{ background: "var(--ink)", color: "var(--bg)" }}
+      >
+        Lihat detail {product.name}
+      </button>
       <div className="flex items-center justify-between px-5 py-2.5 border-b mono text-[10px] uppercase tracking-[0.15em]" style={{ borderColor: "var(--ink)", background: "var(--bg-3)" }}>
         <span style={{ color: "var(--ink)", fontWeight: 600 }}>SKU/{num}</span>
         <span className="flex items-center gap-1.5">
@@ -719,7 +729,7 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
             {reseller && <span className="text-[9px] mono px-1.5 py-0.5 font-bold" style={{ background: "var(--gold)", color: "white" }}>RSL</span>}
           </div>
           {compareAtPrice > effectivePrice && <div className="text-[10px] line-through opacity-50 mb-1">{fmtIDR(compareAtPrice)}</div>}
-          <div className="serif leading-none truncate" style={{ color: "var(--accent)", fontSize: "1.7rem", fontWeight: 800 }}>
+          <div className="serif leading-none truncate" style={{ color: "var(--gold)", fontSize: "1.7rem", fontWeight: 800 }}>
             {fmtIDR(effectivePrice)}
           </div>
         </div>
@@ -740,7 +750,7 @@ function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, o
   const discount = compareAtPrice > effectivePrice ? Math.round((1 - effectivePrice / compareAtPrice) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y" role="dialog" aria-modal="true" aria-labelledby="quick-plan-title">
       <button className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} aria-label="Tutup pilihan plan" />
       <div className="relative w-full max-w-2xl paper-card p-5 sm:p-7 zoomin max-h-[calc(100dvh-2rem)] overflow-y-auto scrollbar ios-scroll">
         <div className="flex items-start justify-between gap-4 mb-6">
@@ -748,10 +758,10 @@ function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, o
             <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
               Pilih dulu sebelum masuk keranjang
             </div>
-            <h2 className="serif text-4xl leading-none uppercase" style={{ fontWeight: 600 }}>{product.name}</h2>
+            <h2 id="quick-plan-title" className="serif text-4xl leading-none uppercase" style={{ fontWeight: 600 }}>{product.name}</h2>
             <p className="text-sm mt-2" style={{ color: "var(--ink-dim)" }}>{product.tagline}</p>
           </div>
-          <button onClick={onClose} className="w-10 h-10 rounded-full border flex items-center justify-center shrink-0" style={{ borderColor: "var(--line-2)" }}>
+          <button type="button" onClick={onClose} className="w-10 h-10 rounded-full border flex items-center justify-center shrink-0" style={{ borderColor: "var(--line-2)" }} aria-label="Tutup pilihan plan">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -871,7 +881,7 @@ function ReviewStars({ rating, onChange, size = "md" }) {
         }
 
         return (
-          <button key={value} type="button" onClick={() => onChange(value)} className="transition hover:scale-110">
+          <button key={value} type="button" onClick={() => onChange(value)} className="transition hover:scale-110" aria-label={`Beri rating ${value} dari 5`} aria-pressed={value === rating}>
             {Icon}
           </button>
         );
@@ -1010,9 +1020,9 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
           </div>
           <div className="flex items-center gap-4 mb-6">
             <div className="flex items-center border rounded-full" style={{ borderColor: "var(--line-2)" }}>
-              <button onClick={() => setQty(Math.max(1, qty - 1))} className="p-3"><Minus className="w-4 h-4" /></button>
+              <button type="button" onClick={() => setQty(Math.max(1, qty - 1))} className="p-3" aria-label={`Kurangi jumlah ${product.name}`}><Minus className="w-4 h-4" /></button>
               <span className="px-5 mono font-bold">{qty}</span>
-              <button onClick={() => setQty(qty + 1)} className="p-3"><Plus className="w-4 h-4" /></button>
+              <button type="button" onClick={() => setQty(qty + 1)} className="p-3" aria-label={`Tambah jumlah ${product.name}`}><Plus className="w-4 h-4" /></button>
             </div>
             <div className="text-sm mono" style={{ color: "var(--ink-dim)" }}>STOK {product.stock}</div>
           </div>
@@ -1078,8 +1088,9 @@ function ReviewsSection({ reviews, onReview }) {
               </div>
             </div>
           </div>
-          <label className="block text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>Ulasan</label>
+          <label htmlFor="review-message" className="block text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>Ulasan</label>
           <textarea
+            id="review-message"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             placeholder="Ceritain pengalaman order kamu..."
@@ -1293,11 +1304,11 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
                 </div>
                 <div className="col-span-2 flex items-center justify-between gap-3 sm:col-span-1 sm:justify-end">
                   <div className="flex shrink-0 items-center border rounded-full" style={{ borderColor: "var(--line-2)" }}>
-                    <button onClick={() => updateQty(item.cartKey, -1)} className="p-2"><Minus className="w-3 h-3" /></button>
+                    <button type="button" onClick={() => updateQty(item.cartKey, -1)} className="p-2" aria-label={`Kurangi jumlah ${item.name}`}><Minus className="w-3 h-3" /></button>
                     <span className="px-3 mono text-sm">{item.qty}</span>
-                    <button onClick={() => updateQty(item.cartKey, 1)} className="p-2"><Plus className="w-3 h-3" /></button>
+                    <button type="button" onClick={() => updateQty(item.cartKey, 1)} className="p-2" aria-label={`Tambah jumlah ${item.name}`}><Plus className="w-3 h-3" /></button>
                   </div>
-                  <button onClick={() => remove(item.cartKey)} className="p-2 hover:text-red-500" style={{ color: "var(--ink-dim)" }}>
+                  <button type="button" onClick={() => remove(item.cartKey)} className="p-2 hover:text-red-500" style={{ color: "var(--ink-dim)" }} aria-label={`Hapus ${item.name} dari keranjang`}>
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -1539,7 +1550,7 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <a href={whatsappUrl} target="_blank" rel="noreferrer" onClick={onConfirmPayment} className="flex-1 py-4 rounded-full font-semibold text-sm text-center transition hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={onConfirmPayment} className="flex-1 py-4 rounded-full font-semibold text-sm text-center transition hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>
                 Konfirmasi Pembayaran via WhatsApp
               </a>
               <button onClick={onHome} className="flex-1 py-4 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>
@@ -1607,7 +1618,7 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
                   {payment.image && (
                     <div className="mt-4">
                       <div className="rounded-2xl overflow-hidden bg-white p-2">
-                        <img src={payment.image} alt="QRIS Palugada" className="w-full rounded-xl" />
+                        <img src={payment.image} alt="Kode QR pembayaran QRIS Palugada Premium" title="QRIS Palugada Premium" width="720" height="1015" loading="lazy" decoding="async" className="w-full rounded-xl" />
                       </div>
                       <a
                         href={payment.image}
@@ -1643,7 +1654,7 @@ function WhatsAppProofNotice({ whatsappUrl, onConfirmPayment }) {
       <a
         href={whatsappUrl}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
         onClick={onConfirmPayment}
         className="inline-flex px-4 py-2 rounded-full text-xs font-semibold"
         style={{ background: "var(--accent)", color: "white" }}

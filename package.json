@@ -4,8 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "prebuild": "node scripts/generate-sitemap.mjs",
     "dev": "vite",
     "build": "vite build",
+    "postbuild": "node scripts/generate-public-pages.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

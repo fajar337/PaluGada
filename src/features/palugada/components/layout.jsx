@@ -5,13 +5,12 @@ import { ADMIN_WHATSAPP_NUMBER, CONTACT_EMAIL, INSTAGRAM_URL, RESELLER_TIERS } f
 export function StyleBlock() {
   return (
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Manrope:wght@300;400;500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,300..700&family=JetBrains+Mono:wght@400;500;600&display=swap');
       :root {
         --bg: #ede7d6;
         --bg-2: #f8f5ec;
         --bg-3: #e1dac4;
         --ink: #15110d;
-        --ink-dim: #6b6660;
+        --ink-dim: #5d5852;
         --line: #cdc5af;
         --line-2: #15110d;
         --accent: #7a4b2a;
@@ -23,6 +22,7 @@ export function StyleBlock() {
       html { overflow-x: hidden; -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
       body { background: var(--bg); overflow-x: hidden; min-width: 320px; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
       button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+      :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
       .serif { font-family: 'Bricolage Grotesque', sans-serif; font-optical-sizing: auto; letter-spacing: -0.025em; }
       .serif-italic { font-family: 'Newsreader', serif; font-style: italic; font-optical-sizing: auto; letter-spacing: -0.01em; }
       .mono { font-family: 'JetBrains Mono', monospace; }
@@ -96,6 +96,11 @@ export function StyleBlock() {
       @media (max-width: 640px) {
         .hover-lift:hover { transform: none; box-shadow: none; }
       }
+
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+      }
     `}</style>
   );
 }
@@ -142,20 +147,21 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
 
   return (
     <>
-      <div
+      <aside
+        aria-label="Promo dan informasi toko"
         className="border-b overflow-hidden mono text-[11px] uppercase tracking-widest py-2"
         style={{ borderColor: "var(--line-2)", background: "var(--ink)", color: "var(--bg)" }}
       >
         <div className="marquee whitespace-nowrap">
           {[...Array(2)].map((_, index) => (
-            <div key={index} className="flex gap-12">
+            <div key={index} className="flex gap-12" aria-hidden={index === 1 ? "true" : undefined}>
               {tickerItems.map((item) => (
                 <span key={`${index}-${item}`} className="ticker-dot">{item}</span>
               ))}
             </div>
           ))}
         </div>
-      </div>
+      </aside>
 
       <header
         className="sticky top-0 z-40 border-b backdrop-blur-xl"
@@ -168,13 +174,15 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
                 onClick={onHome}
                 className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center border-2"
                 style={{ background: "var(--bg)", borderColor: "var(--ink)" }}
+                aria-label="PG, kembali ke beranda Palugada Premium"
+                title="Beranda Palugada Premium"
               >
                 <span className="serif text-xl leading-none" style={{ color: "var(--ink)", fontWeight: 800 }}>
                   PG
                 </span>
               </button>
             </div>
-            <button onClick={handleBrandTextTap} className="leading-none text-left min-w-0">
+            <button onClick={handleBrandTextTap} className="leading-none text-left min-w-0" aria-label="Palugada Premium - beranda">
               <div className="serif text-xl sm:text-2xl tracking-tight uppercase" style={{ fontWeight: 800 }}>
                 Palu<span style={{ color: "var(--accent)" }}>gada</span>
               </div>
@@ -184,7 +192,7 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <nav className="flex items-center gap-2" aria-label="Navigasi utama">
             {reseller ? (
               <button
                 onClick={onResellerDash}
@@ -231,6 +239,7 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
               onClick={onTrackOrder}
               className="flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-2 rounded-full text-sm border hover:bg-white transition"
               style={{ borderColor: "var(--line)" }}
+              aria-label="Lacak pesanan"
             >
               <PackageSearch className="w-4 h-4" /> <span className="hidden lg:inline">Cek Order</span>
             </button>
@@ -247,6 +256,7 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
               onClick={onCart}
               className={`relative flex items-center gap-2 px-4 sm:px-5 py-3 sm:py-2.5 rounded-full text-sm font-semibold transition hover:scale-105 ${cartPulse ? "cart-bounce" : ""}`}
               style={{ background: "var(--ink)", color: "var(--bg)" }}
+              aria-label={`Cart, buka keranjang, ${cartCount} item`}
             >
               <ShoppingCart className="w-4 h-4" />
               <span className="hidden min-[380px]:inline">Cart</span>
@@ -259,7 +269,7 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
                 </span>
               )}
             </button>
-          </div>
+          </nav>
         </div>
       </header>
     </>
@@ -279,48 +289,48 @@ export function Footer() {
         <div className="grid lg:grid-cols-12 gap-10 mb-12">
           <div className="lg:col-span-5">
             <div className="serif text-6xl mb-4 leading-none uppercase" style={{ fontWeight: 800 }}>
-              Palu<span style={{ color: "var(--accent)" }}>gada</span>
+              Palu<span style={{ color: "var(--gold)" }}>gada</span>
             </div>
             <p className="text-sm max-w-sm leading-relaxed mb-3" style={{ color: "#a3a4b3" }}>
               Toko serba ada untuk aplikasi premium. Apa lu mau, gua ada — dari Netflix sampai ChatGPT,
               semuanya dengan harga ramah kantong.
             </p>
-            <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>
+            <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--gold)" }}>
               "apa lu mau, gua ada"
             </div>
           </div>
-          <div className="lg:col-span-2">
-            <div className="text-[10px] mono uppercase tracking-widest mb-4" style={{ color: "var(--accent)" }}>
+          <nav className="lg:col-span-2" aria-labelledby="footer-toko-heading">
+            <h2 id="footer-toko-heading" className="text-[10px] mono uppercase tracking-widest mb-4" style={{ color: "var(--gold)" }}>
               Toko
-            </div>
+            </h2>
             <ul className="space-y-2 text-sm">
-              <li><a href="#katalog" className="hover:opacity-70 transition">Streaming</a></li>
-              <li><a href="#katalog" className="hover:opacity-70 transition">AI Tools</a></li>
-              <li><a href="#katalog" className="hover:opacity-70 transition">Editor</a></li>
-              <li><a href="#katalog" className="hover:opacity-70 transition">Music</a></li>
+              <li><a href="/#katalog" className="hover:opacity-70 transition">Streaming</a></li>
+              <li><a href="/#katalog" className="hover:opacity-70 transition">AI Tools</a></li>
+              <li><a href="/#katalog" className="hover:opacity-70 transition">Editor</a></li>
+              <li><a href="/#katalog" className="hover:opacity-70 transition">Music</a></li>
             </ul>
-          </div>
-          <div className="lg:col-span-2">
-            <div className="text-[10px] mono uppercase tracking-widest mb-4" style={{ color: "var(--accent)" }}>
+          </nav>
+          <nav className="lg:col-span-2" aria-labelledby="footer-bantuan-heading">
+            <h2 id="footer-bantuan-heading" className="text-[10px] mono uppercase tracking-widest mb-4" style={{ color: "var(--gold)" }}>
               Bantuan
-            </div>
+            </h2>
             <ul className="space-y-2 text-sm">
-              <li><a href="#faq" className="hover:opacity-70 transition">FAQ</a></li>
-              <li><a href="#garansi" className="hover:opacity-70 transition">Cara Garansi</a></li>
-              <li><a href="#cara-order" className="hover:opacity-70 transition">Cara Order</a></li>
-              <li><a href="#aturan-pakai" className="hover:opacity-70 transition">Aturan Pakai</a></li>
-              <li><a href="#privasi" className="hover:opacity-70 transition">Privasi</a></li>
+              <li><a href="/#faq" className="hover:opacity-70 transition">FAQ</a></li>
+              <li><a href="/#garansi" className="hover:opacity-70 transition">Cara Garansi</a></li>
+              <li><a href="/#cara-order" className="hover:opacity-70 transition">Cara Order</a></li>
+              <li><a href="/#aturan-pakai" className="hover:opacity-70 transition">Aturan Pakai</a></li>
+              <li><a href="/#privasi" className="hover:opacity-70 transition">Privasi</a></li>
             </ul>
-          </div>
+          </nav>
           <div className="lg:col-span-3">
-            <div className="text-[10px] mono uppercase tracking-widest mb-4" style={{ color: "var(--accent)" }}>
+            <div className="text-[10px] mono uppercase tracking-widest mb-4" style={{ color: "var(--gold)" }}>
               Kontak
             </div>
             <div className="flex items-center gap-3">
-              <a href={whatsappUrl} target="_blank" rel="noreferrer" aria-label="WhatsApp Palugada" className="w-11 h-11 rounded-full border flex items-center justify-center hover:scale-105 transition" style={{ borderColor: "#2a2c3a", background: "rgba(255,255,255,0.04)" }}>
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp Palugada" className="w-11 h-11 rounded-full border flex items-center justify-center hover:scale-105 transition" style={{ borderColor: "#2a2c3a", background: "rgba(255,255,255,0.04)" }}>
                 <MessageCircle className="w-5 h-5" />
               </a>
-              <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" aria-label="Instagram Palugada" className="w-11 h-11 rounded-full border flex items-center justify-center hover:scale-105 transition" style={{ borderColor: "#2a2c3a", background: "rgba(255,255,255,0.04)" }}>
+              <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" aria-label="Instagram Palugada" className="w-11 h-11 rounded-full border flex items-center justify-center hover:scale-105 transition" style={{ borderColor: "#2a2c3a", background: "rgba(255,255,255,0.04)" }}>
                 <AtSign className="w-5 h-5" />
               </a>
               <a href={emailUrl} aria-label="Email Palugada" className="w-11 h-11 rounded-full border flex items-center justify-center hover:scale-105 transition" style={{ borderColor: "#2a2c3a", background: "rgba(255,255,255,0.04)" }}>
@@ -348,7 +358,7 @@ export function FloatingWhatsApp() {
     <a
       href={whatsappUrl}
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       className="fixed right-4 bottom-5 z-40 rounded-full shadow-2xl float flex items-center gap-2 px-4 py-3 text-sm font-semibold"
       style={{ background: "#1f7a4d", color: "white", paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Chat WhatsApp Palugada"

@@ -1,0 +1,23 @@
+{
+  "id": "/",
+  "name": "Palugada Premium",
+  "short_name": "Palugada",
+  "description": "Toko akun premium murah dan terpercaya untuk layanan digital favorit.",
+  "lang": "id-ID",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ede7d6",
+  "theme_color": "#ede7d6",
+  "categories": ["shopping", "business", "utilities"],
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Lihat Katalog", "short_name": "Katalog", "url": "/#katalog" },
+    { "name": "Lacak Pesanan", "short_name": "Lacak Order", "url": "/lacak-pesanan" }
+  ]
+}

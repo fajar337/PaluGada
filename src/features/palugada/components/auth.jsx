@@ -64,7 +64,7 @@ export function ResellerLogin({ onBack, onLogin, onRegister }) {
         <a
           href={getResellerJoinUrl()}
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className="block w-full text-center py-4 rounded-full font-semibold text-sm border"
           style={{ borderColor: "var(--line)", color: "var(--ink)" }}
         >
@@ -120,7 +120,7 @@ export function ResellerRegister({ onBack, onLogin }) {
         <a
           href={getResellerJoinUrl()}
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className="block w-full text-center py-4 rounded-full font-semibold text-sm"
           style={{ background: "var(--accent)", color: "white" }}
         >
@@ -211,11 +211,12 @@ export function AdminLogin({ onBack, onLogin }) {
           <div className="space-y-4">
             <Field label="Email Admin" value={email} onChange={setEmail} type="email" placeholder="admin@email.com" />
             <div>
-              <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>
+              <label htmlFor="admin-password" className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>
                 Password
               </label>
               <div className="relative">
                 <input
+                  id="admin-password"
                   type={show ? "text" : "password"}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -223,7 +224,7 @@ export function AdminLogin({ onBack, onLogin }) {
                   className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 pr-12"
                   style={{ borderColor: "var(--line)" }}
                 />
-                <button onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--ink-dim)" }}>
+                <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--ink-dim)" }} aria-label={show ? "Sembunyikan password" : "Tampilkan password"}>
                   {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>

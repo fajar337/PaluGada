@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Eye, EyeOff, Sparkles } from "lucide-react";
 import { ICONS } from "../constants";
 
@@ -21,6 +21,8 @@ export function ProductIcon({ icon, color, size = 48 }) {
 }
 
 export function Field({ label, value, onChange, type = "text", placeholder, min }) {
+  const generatedId = useId();
+  const inputId = `field-${generatedId.replace(/:/g, "")}`;
   const isPassword = type === "password";
   const isNumber = type === "number";
   const [showPassword, setShowPassword] = useState(false);
@@ -28,6 +30,7 @@ export function Field({ label, value, onChange, type = "text", placeholder, min 
   return (
     <div>
       <label
+        htmlFor={inputId}
         className="text-[10px] mono uppercase tracking-widest block mb-1.5"
         style={{ color: "var(--ink-dim)" }}
       >
@@ -35,6 +38,7 @@ export function Field({ label, value, onChange, type = "text", placeholder, min 
       </label>
       <div className="relative">
         <input
+          id={inputId}
           type={isPassword && showPassword ? "text" : type}
           value={value}
           min={isNumber ? (min ?? 0) : undefined}

@@ -4,6 +4,7 @@ import {
   EmailAuthProvider,
   createUserWithEmailAndPassword,
   getAuth,
+  onAuthStateChanged,
   reauthenticateWithCredential,
   signInWithEmailAndPassword,
   signOut,
@@ -36,6 +37,18 @@ export const firebaseApp = initializeApp(firebaseConfig);
 export const firebaseAuth = getAuth(firebaseApp);
 export const firestore = getFirestore(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
+
+export function subscribeToAuthState(callback) {
+  return onAuthStateChanged(firebaseAuth, callback);
+}
+
+export async function loginAdminAuth(email, password) {
+  return signInWithEmailAndPassword(firebaseAuth, email, password);
+}
+
+export async function logoutCurrentUser() {
+  return signOut(firebaseAuth);
+}
 
 function getSecondaryFirebaseApp() {
   const appName = "palugada-secondary-auth";
