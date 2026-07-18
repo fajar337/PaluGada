@@ -1192,7 +1192,7 @@ function OrdersTab({ orders, onChangeStatus, onSaveServicePeriod, onDelete }) {
                   key={order.id}
                   href={createRenewalWhatsappUrl(order, running)}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="px-4 py-2 rounded-full text-xs font-semibold"
                   style={{ background: "var(--accent)", color: "white" }}
                 >
@@ -1277,7 +1277,7 @@ function OrdersTab({ orders, onChangeStatus, onSaveServicePeriod, onDelete }) {
                 <a
                   href={createRenewalWhatsappUrl(order, running)}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="px-4 py-2 rounded-full text-xs font-semibold text-center"
                   style={{ background: "var(--accent)", color: "white" }}
                 >
@@ -1484,7 +1484,7 @@ function FulfillmentSender({ order, onClose, onSent }) {
           <a
             href={canSend ? whatsappUrl : undefined}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             onClick={(event) => {
               if (!canSend) {
                 event.preventDefault();
@@ -1563,7 +1563,7 @@ function RequestsTab({ productRequests, onChangeStatus, onDelete }) {
                 <a
                   href={`https://wa.me/${normalizeWhatsapp(request.wa)}?text=${encodeURIComponent(`Halo ${request.name}, request ${request.appName} di Palugada mau kami follow up.`)}`}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="px-3 py-2 rounded-full text-xs border bg-white hover:bg-stone-50"
                   style={{ borderColor: "var(--line)" }}
                 >
@@ -2244,7 +2244,7 @@ function ResellerCreator({ resellerTiers = RESELLER_TIERS, onClose, onCreate }) 
             <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Reseller</div>
             <h2 className="serif text-3xl" style={{ fontWeight: 500 }}>Aktifkan Akun</h2>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100"><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100" aria-label="Tutup dialog"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-6 space-y-4">
@@ -2346,7 +2346,7 @@ function PromoEditor({ promo, products, onSave, onClose }) {
             <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Promo</div>
             <h2 className="serif text-3xl" style={{ fontWeight: 500 }}>{promo ? "Edit" : "Tambah"} Promo</h2>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100"><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100" aria-label="Tutup dialog"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4 scrollbar ios-scroll">
@@ -2455,7 +2455,7 @@ function CouponEditor({ coupon, onSave, onClose }) {
             <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Kupon</div>
             <h2 className="serif text-3xl" style={{ fontWeight: 500 }}>{coupon ? "Edit" : "Tambah"} Kupon</h2>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100"><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100" aria-label="Tutup dialog"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4 scrollbar ios-scroll">
@@ -2777,7 +2777,7 @@ function ProductEditor({ product, onSave, onClose }) {
             <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Editor</div>
             <h2 className="serif text-[2rem] sm:text-3xl leading-none" style={{ fontWeight: 500 }}>{product ? "Edit" : "Tambah"} Produk</h2>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100 shrink-0"><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-stone-100 shrink-0" aria-label="Tutup editor produk"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-4 sm:p-6 space-y-4">
