@@ -17,7 +17,7 @@ export const STORE_FAQS = [
     title: "Gimana Cara Garansi",
     question: "Bagaimana cara mengajukan garansi akun premium?",
     answer:
-      "Jika akun bermasalah selama masa garansi, kirim Order ID dan detail kendala melalui WhatsApp. Admin akan membantu pengecekan, penggantian, atau memandu akses ulang.",
+      "Garansi hanya berlaku untuk plan bertanda Garansi atau Fullgar selama dua pertiga durasi paket, dibulatkan ke bawah. Plan No Garansi atau Nogar tidak bergaransi. Klaim yang memenuhi ketentuan dapat menerima penggantian atau refund 50% dari nilai produk.",
   },
   {
     id: "cara-order",

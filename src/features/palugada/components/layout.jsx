@@ -112,7 +112,7 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
   const tickerItems = [
     ...activePromos,
     "Apa lu mau, gua ada",
-    "Garansi penuh selama berlangganan",
+    "Garansi sesuai plan yang dipilih",
     "Diskon hingga 80%",
     "Reseller program - diskon hingga 10%",
     "Pengiriman instan via WhatsApp",

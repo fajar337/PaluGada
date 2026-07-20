@@ -3,8 +3,8 @@ import {
   ADMIN_WHATSAPP_NUMBER,
   CONTACT_EMAIL,
   INSTAGRAM_URL,
-  getProductStartingPrice,
 } from "../constants";
+import { createProductStructuredData } from "../lib/product-schema";
 import {
   DEFAULT_OG_IMAGE,
   SITE_NAME,
@@ -129,31 +129,8 @@ function getReviewAggregate(reviews = []) {
 }
 
 function createProductSchema(product, promos, reviews) {
-  const path = `/produk/${slugifyProduct(product.name)}/`;
-  const price = getProductStartingPrice(product, promos);
   const aggregateRating = getReviewAggregate(reviews);
-
-  return {
-    "@type": "Product",
-    "@id": `${absoluteUrl(path)}#product`,
-    name: product.name,
-    description: product.description || product.tagline || `${product.name} dari ${SITE_NAME}`,
-    image: DEFAULT_OG_IMAGE,
-    url: absoluteUrl(path),
-    category: product.category,
-    sku: product.id,
-    brand: { "@id": `${SITE_ORIGIN}/#organization` },
-    offers: {
-      "@type": "Offer",
-      url: absoluteUrl(path),
-      priceCurrency: "IDR",
-      price: String(price),
-      availability:
-        Number(product.stock) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      seller: { "@id": `${SITE_ORIGIN}/#organization` },
-    },
-    ...(aggregateRating ? { aggregateRating } : {}),
-  };
+  return createProductStructuredData(product, promos, aggregateRating);
 }
 
 function createBaseGraph() {

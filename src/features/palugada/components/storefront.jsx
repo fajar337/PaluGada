@@ -531,9 +531,10 @@ function PolicySection() {
       id: "garansi",
       title: "Garansi & Refund",
       items: [
-        "Garansi mengikuti catatan produk dan plan yang dipilih.",
+        "Plan bertanda Garansi atau Fullgar mendapat garansi selama dua pertiga durasi paket, dibulatkan ke bawah (30 hari menjadi 20 hari; 7 hari menjadi 4 hari).",
+        "Plan bertanda No Garansi atau Nogar tidak mendapatkan garansi.",
         "Klaim garansi berlaku untuk kendala akun yang bukan akibat pelanggaran aturan pakai.",
-        "Refund diproses jika produk tidak tersedia dan pengganti tidak disetujui pembeli.",
+        "Klaim yang memenuhi ketentuan dapat menerima penggantian atau refund sebesar 50% dari nilai produk.",
       ],
     },
     {
