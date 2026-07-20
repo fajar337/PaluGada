@@ -2,7 +2,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { getProductStartingPrice } from "../src/features/palugada/constants.js";
-import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_ORIGIN, absoluteUrl, slugifyProduct } from "../src/features/palugada/lib/seo.js";
+import { createProductStructuredData } from "../src/features/palugada/lib/product-schema.js";
+import { SITE_NAME, SITE_ORIGIN, absoluteUrl, slugifyProduct } from "../src/features/palugada/lib/seo.js";
 import { loadPublicProducts } from "./product-source.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -84,25 +85,7 @@ for (const product of products) {
   const description = truncateDescription(
     `Beli ${product.name} murah dan terpercaya di Palugada Premium. ${product.description || product.tagline || "Akun premium bergaransi dengan proses mudah melalui WhatsApp."}`
   );
-  const productSchema = {
-    "@type": "Product",
-    "@id": `${canonical}#product`,
-    name: product.name,
-    description: product.description || product.tagline || description,
-    image: DEFAULT_OG_IMAGE,
-    url: canonical,
-    category: product.category || "Layanan digital premium",
-    sku: product.id || slug,
-    brand: { "@id": `${SITE_ORIGIN}/#organization` },
-    offers: {
-      "@type": "Offer",
-      url: canonical,
-      priceCurrency: "IDR",
-      price: String(getProductStartingPrice(product, [])),
-      availability: Number(product.stock) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      seller: { "@id": `${SITE_ORIGIN}/#organization` },
-    },
-  };
+  const productSchema = createProductStructuredData(product);
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
