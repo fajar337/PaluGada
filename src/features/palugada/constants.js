@@ -57,21 +57,11 @@ export const NETFLIX_PLANS = [
 
 export const CAPCUT_PLANS = [
   {
-    id: "private-fullgar",
-    name: "PRIVATE FULLGAR",
+    id: "private-reg-id",
+    name: "PRIVATE REG ID",
     options: [
-      { id: "30-day", duration: "30 Day", price: 18000 },
-      { id: "35-day", duration: "35 Day", price: 20000 },
-      { id: "42-day", duration: "42 Day", price: 25000 },
-      { id: "180-day", duration: "180 Day", price: 110000 },
-    ],
-  },
-  {
-    id: "sharing-2u",
-    name: "SHARING 2U",
-    options: [
-      { id: "35-day", duration: "35 Day", price: 9000 },
-      { id: "42-day", duration: "42 Day", price: 11000 },
+      { id: "30-hari", duration: "30 Hari", price: 30000, stock: 0 },
+      { id: "7-hari", duration: "7 Hari", price: 15000, stock: 0 },
     ],
   },
 ];
@@ -312,24 +302,73 @@ export const SEED_PRODUCTS = [
     ],
   },
   {
+    id: "p_hbo_max",
+    name: "HBO Max Standard",
+    category: "Streaming",
+    icon: "tv",
+    color: "#5822B4",
+    price: 35000,
+    oldPrice: 35000,
+    stock: 252,
+    duration: "Pilih Durasi",
+    tagline: "Private • Sharing 1P1U • Full Garansi",
+    description:
+      "HBO Max Standard untuk 1 bulan dengan pilihan Private Account atau Sharing 1 Profile 1 User. Akun siap digunakan dan mendapat full garansi.",
+    features: [
+      "Plan Standard dengan maksimal 2 layar",
+      "Kualitas Full HD 1080p",
+      "Akun siap digunakan",
+      "Akses email untuk paket Private",
+      "Dapat login hingga 10 perangkat",
+      "Full garansi selama 1 bulan",
+      "Bisa diperpanjang pada akun yang sama selama akun masih aktif",
+    ],
+    pricingPlans: [
+      {
+        id: "private-account",
+        name: "PRIVATE ACCOUNT",
+        options: [
+          {
+            id: "1-bulan-full-garansi",
+            duration: "1 Bulan - Full Garansi",
+            price: 35000,
+            stock: 252,
+          },
+        ],
+      },
+      {
+        id: "sharing-1p1u",
+        name: "SHARING 1 PROFILE 1 USER",
+        options: [
+          {
+            id: "1-bulan-full-garansi",
+            duration: "1 Bulan - Full Garansi",
+            price: 20000,
+            stock: 252,
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: "p_capcut",
     name: "CapCut Pro",
     category: "Editor",
     icon: "video",
     color: "#00C2FF",
-    price: 9000,
-    oldPrice: 55000,
-    stock: 40,
+    price: 15000,
+    oldPrice: 30000,
+    stock: 0,
     duration: "Pilih Durasi",
-    tagline: "Private Fullgar, Sharing 2U",
+    tagline: "Private REG ID • 7 Hari & 30 Hari",
     description:
-      "CapCut Pro dengan email sudah disediakan seller, tinggal pakai. Pilih plan Private Fullgar atau Sharing 2U sesuai kebutuhan.",
+      "CapCut Pro Private region Indonesia dengan pilihan akses 7 hari atau 30 hari. Pilih durasi sesuai kebutuhan editing.",
     features: [
-      "Email sudah disediakan seller",
-      "Login only 1 device",
-      "Garansi apabila account error atau backfree",
-      "Maksimum number of attempts reset password agar bisa login",
-      "Semua fitur PRO terbuka",
+      "Akun private region Indonesia",
+      "Login hanya di 1 perangkat",
+      "Semua fitur Pro terbuka",
+      "Ekspor video tanpa watermark",
+      "Akses template, filter, dan efek premium",
     ],
     pricingPlans: CAPCUT_PLANS,
   },
@@ -432,7 +471,7 @@ export const SEED_PRODUCTS = [
   },
 ];
 
-export const AUTO_SYNC_SEED_PRODUCT_IDS = ["p_disney", "p_prime_video"];
+export const AUTO_SYNC_SEED_PRODUCT_IDS = ["p_disney", "p_prime_video", "p_hbo_max"];
 
 export const ICONS = {
   tv: Tv,

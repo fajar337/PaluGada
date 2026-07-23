@@ -63,6 +63,23 @@ function normalizeLegacyProduct(product, seedProduct) {
     };
   }
 
+  if (
+    product.id === "p_capcut" &&
+    (product.pricingPlans || []).some((plan) => ["private-fullgar", "sharing-2u"].includes(plan.id))
+  ) {
+    return {
+      ...product,
+      price: seedProduct.price,
+      oldPrice: seedProduct.oldPrice,
+      stock: seedProduct.stock,
+      duration: seedProduct.duration,
+      tagline: seedProduct.tagline,
+      description: seedProduct.description,
+      features: seedProduct.features,
+      pricingPlans: seedProduct.pricingPlans,
+    };
+  }
+
   return product;
 }
 
