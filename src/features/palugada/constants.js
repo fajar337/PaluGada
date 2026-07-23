@@ -262,6 +262,56 @@ export const SEED_PRODUCTS = [
     ],
   },
   {
+    id: "p_prime_video",
+    name: "Prime Video Premium",
+    category: "Streaming",
+    icon: "tv",
+    color: "#00A8E1",
+    price: 25000,
+    oldPrice: 25000,
+    stock: 22,
+    duration: "Pilih Durasi",
+    tagline: "Private Account • Sharing 1P1U • Full Garansi",
+    description:
+      "Prime Video untuk 1 bulan dengan pilihan Private Account atau Sharing 1 Profile 1 User. Tersedia full garansi selama durasi.",
+    features: [
+      "Akses email gratis",
+      "Private account",
+      "Fresh bill 25-30 hari",
+      "Full garansi selama durasi",
+      "Tayangan hingga 4K HDR pada perangkat kompatibel",
+      "Fitur X-Ray untuk melihat informasi pemeran dan lagu",
+      "Bebas iklan",
+      "Mendukung download untuk ditonton offline",
+    ],
+    pricingPlans: [
+      {
+        id: "private-account",
+        name: "PRIVATE ACCOUNT",
+        options: [
+          {
+            id: "1-bulan-full-garansi",
+            duration: "1 Bulan - Full Garansi",
+            price: 25000,
+            stock: 22,
+          },
+        ],
+      },
+      {
+        id: "sharing-1p1u",
+        name: "SHARING 1 PROFILE 1 USER",
+        options: [
+          {
+            id: "1-bulan-full-garansi",
+            duration: "1 Bulan - Full Garansi",
+            price: 12000,
+            stock: 22,
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: "p_capcut",
     name: "CapCut Pro",
     category: "Editor",
@@ -382,7 +432,7 @@ export const SEED_PRODUCTS = [
   },
 ];
 
-export const AUTO_SYNC_SEED_PRODUCT_IDS = ["p_disney"];
+export const AUTO_SYNC_SEED_PRODUCT_IDS = ["p_disney", "p_prime_video"];
 
 export const ICONS = {
   tv: Tv,
