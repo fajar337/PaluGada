@@ -1,4 +1,4 @@
-import { AUTO_SYNC_SEED_PRODUCT_IDS, SEED_PRODUCTS } from "../constants";
+import { AUTO_SYNC_SEED_PRODUCT_IDS, SEED_PRODUCTS, getProductTotalStock } from "../constants";
 import { firestore } from "./firebase";
 import { collection, doc, getDoc, getDocs, setDoc, writeBatch } from "firebase/firestore";
 
@@ -81,6 +81,13 @@ function normalizeLegacyProduct(product, seedProduct) {
   }
 
   return product;
+}
+
+function normalizeProductStock(product) {
+  return {
+    ...product,
+    stock: getProductTotalStock(product),
+  };
 }
 
 async function getRemote(key, fallback) {
@@ -225,29 +232,30 @@ export async function loadProducts() {
   if (products) {
     const normalizedProducts = products.map((product) => {
       if (!["p_netflix", "p_capcut", "p_yt", "p_spotify", "p_chatgpt", "p_canva"].includes(product.id)) {
-        return product;
+        return normalizeProductStock(product);
       }
 
       const seedProduct = SEED_PRODUCTS.find((item) => item.id === product.id);
       const normalizedProduct = normalizeLegacyProduct(product, seedProduct);
-      return {
+      return normalizeProductStock({
         ...seedProduct,
         ...normalizedProduct,
         stock: normalizedProduct.stock ?? seedProduct.stock,
-      };
+      });
     });
     const existingProductIds = new Set(normalizedProducts.map((product) => product.id));
     const missingSeedProducts = SEED_PRODUCTS.filter(
       (product) => AUTO_SYNC_SEED_PRODUCT_IDS.includes(product.id) && !existingProductIds.has(product.id)
-    );
+    ).map(normalizeProductStock);
     const nextProducts = [...normalizedProducts, ...missingSeedProducts];
 
     await storage.set("pa_products", nextProducts);
     return nextProducts;
   }
 
-  await storage.set("pa_products", SEED_PRODUCTS);
-  return SEED_PRODUCTS;
+  const normalizedSeedProducts = SEED_PRODUCTS.map(normalizeProductStock);
+  await storage.set("pa_products", normalizedSeedProducts);
+  return normalizedSeedProducts;
 }
 
 export async function loadAdmin() {

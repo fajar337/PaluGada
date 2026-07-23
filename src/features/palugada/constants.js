@@ -259,7 +259,7 @@ export const SEED_PRODUCTS = [
     color: "#00A8E1",
     price: 25000,
     oldPrice: 25000,
-    stock: 22,
+    stock: 44,
     duration: "Pilih Durasi",
     tagline: "Private Account • Sharing 1P1U • Full Garansi",
     description:
@@ -309,7 +309,7 @@ export const SEED_PRODUCTS = [
     color: "#5822B4",
     price: 35000,
     oldPrice: 35000,
-    stock: 252,
+    stock: 504,
     duration: "Pilih Durasi",
     tagline: "Private • Sharing 1P1U • Full Garansi",
     description:
@@ -483,6 +483,22 @@ export const ICONS = {
 };
 
 export const fmtIDR = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
+
+export function hasOptionLevelStock(product) {
+  return (product?.pricingPlans || [])
+    .flatMap((plan) => plan.options || [])
+    .some((option) => option.stock !== undefined && option.stock !== null);
+}
+
+export function getProductTotalStock(product) {
+  if (!hasOptionLevelStock(product)) {
+    return Math.max(0, Number(product?.stock) || 0);
+  }
+
+  return (product?.pricingPlans || [])
+    .flatMap((plan) => plan.options || [])
+    .reduce((total, option) => total + Math.max(0, Number(option.stock) || 0), 0);
+}
 
 export function getDefaultPlanSelection(product) {
   const plan = product?.pricingPlans?.[0];

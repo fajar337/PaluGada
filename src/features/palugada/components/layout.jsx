@@ -84,6 +84,133 @@ export function StyleBlock() {
       .hover-lift { transition: transform 0.3s cubic-bezier(.2,.8,.2,1), box-shadow 0.3s; }
       .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 30px 60px -20px rgba(20,21,31,0.15); }
 
+      .motion-back-button {
+        display: inline-flex;
+        align-items: center;
+        transition: transform 0.24s cubic-bezier(.2,.8,.2,1), opacity 0.24s ease;
+        transform-origin: left center;
+      }
+      .motion-back-button svg { transition: transform 0.24s cubic-bezier(.2,.8,.2,1); }
+      .motion-back-button:hover { transform: translateX(-4px); opacity: 1; }
+      .motion-back-button:hover svg { transform: translateX(-4px); }
+      .motion-back-button:active { transform: translateX(-2px) scale(0.97); }
+
+      .auth-submit-button {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        transform: translateY(0) scale(1);
+        box-shadow: 0 0 0 rgba(20,17,13,0);
+        transition: transform 0.24s cubic-bezier(.2,.8,.2,1), box-shadow 0.24s ease, opacity 0.2s ease;
+      }
+      .auth-submit-button::before {
+        content: "";
+        position: absolute;
+        z-index: 1;
+        inset: -40% -25%;
+        background: linear-gradient(110deg, transparent 32%, rgba(255,255,255,0.2) 48%, transparent 64%);
+        transform: translateX(-80%) skewX(-12deg);
+        transition: transform 0.58s cubic-bezier(.2,.8,.2,1);
+      }
+      .auth-submit-button:hover:not(:disabled) {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 0 16px 28px -18px rgba(20,17,13,0.75);
+      }
+      .auth-submit-button:hover:not(:disabled)::before { transform: translateX(80%) skewX(-12deg); }
+      .auth-submit-button:active:not(:disabled) { transform: translateY(1px) scale(0.975); }
+      .auth-submit-content {
+        position: relative;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
+        min-width: 8.5rem;
+      }
+      .auth-submit-arrow { transition: transform 0.24s cubic-bezier(.2,.8,.2,1); }
+      .auth-submit-button:hover:not(:disabled) .auth-submit-arrow { transform: translateX(5px); }
+      .auth-submit-button.is-checking { cursor: wait; }
+      .auth-submit-button.is-checking::before { animation: authButtonSweep 1.15s linear infinite; }
+      .auth-submit-spinner {
+        width: 0.95rem;
+        height: 0.95rem;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 999px;
+        animation: authButtonSpin 0.7s linear infinite;
+      }
+      @keyframes authButtonSpin { to { transform: rotate(360deg); } }
+      @keyframes authButtonSweep {
+        from { transform: translateX(-80%) skewX(-12deg); }
+        to { transform: translateX(80%) skewX(-12deg); }
+      }
+
+      .motion-logout-button {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        transition: color 0.22s ease, transform 0.22s cubic-bezier(.2,.8,.2,1);
+      }
+      .motion-logout-button::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        inset: 0;
+        border-radius: inherit;
+        background: rgba(220,38,38,0.09);
+        transform: scaleX(0);
+        transform-origin: right center;
+        transition: transform 0.28s cubic-bezier(.2,.8,.2,1);
+      }
+      .motion-logout-button svg { transition: transform 0.22s cubic-bezier(.2,.8,.2,1); }
+      .motion-logout-button:hover { color: #dc2626 !important; transform: translateX(2px); }
+      .motion-logout-button:hover::before { transform: scaleX(1); transform-origin: left center; }
+      .motion-logout-button:hover svg { transform: translateX(4px) rotate(-6deg); }
+      .motion-logout-button:active { transform: scale(0.97); }
+      .motion-logout-button.is-leaving { animation: logoutButtonLeave 0.26s cubic-bezier(.4,0,1,1) both; pointer-events: none; }
+      @keyframes logoutButtonLeave {
+        0% { opacity: 1; transform: translateX(0); }
+        100% { opacity: 0; transform: translateX(18px); }
+      }
+
+      .reseller-join-link {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding-bottom: 0.2rem;
+        color: var(--ink);
+        transition: color 0.22s ease, transform 0.22s cubic-bezier(.2,.8,.2,1);
+      }
+      .reseller-join-link::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: var(--accent);
+        transform: scaleX(0);
+        transform-origin: right center;
+        transition: transform 0.3s cubic-bezier(.2,.8,.2,1);
+      }
+      .reseller-join-link svg { transition: transform 0.24s cubic-bezier(.2,.8,.2,1); }
+      .reseller-join-link:hover { color: var(--accent); transform: translateX(2px); }
+      .reseller-join-link:hover::after { transform: scaleX(1); transform-origin: left center; }
+      .reseller-join-link:hover svg { transform: translateX(5px); }
+      .reseller-join-link:active { transform: scale(0.97); }
+
+      .catalog-cta { isolation: isolate; overflow: hidden; }
+      .catalog-cta-label {
+        display: inline-block;
+        transition: transform 0.32s cubic-bezier(.2,.8,.2,1);
+      }
+      .catalog-cta-arrow { transition: transform 0.32s cubic-bezier(.2,.8,.2,1); }
+      .catalog-cta:hover .catalog-cta-label { transform: translateX(4px); }
+      .catalog-cta:hover .catalog-cta-arrow { transform: translateX(6px); }
+      .catalog-cta:active .catalog-cta-label { transform: translateX(2px); }
+      .catalog-cta:active .catalog-cta-arrow { transform: translateX(2px); }
+
       .ticker-dot::before { content: "●"; color: var(--accent); margin-right: 0.5rem; }
       .safe-x { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
       .safe-y { padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom)); }

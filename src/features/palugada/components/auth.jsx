@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Crown, Eye, EyeOff, Lock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Crown, Eye, EyeOff, Lock } from "lucide-react";
 import { ADMIN_WHATSAPP_NUMBER, RESELLER_TIERS, fmtIDR } from "../constants";
 import { Field } from "./shared";
 
@@ -20,8 +20,16 @@ export function ResellerLogin({ onBack, onLogin, onRegister }) {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const submit = async () => {
+    if (loading) {
+      return;
+    }
+
+    setErr("");
+    setLoading(true);
+
     try {
       const result = await onLogin(email, pass);
       if (result?.error) {
@@ -29,6 +37,8 @@ export function ResellerLogin({ onBack, onLogin, onRegister }) {
       }
     } catch {
       setErr("Email atau password salah, atau akun reseller belum diaktifkan admin");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,10 +66,16 @@ export function ResellerLogin({ onBack, onLogin, onRegister }) {
         )}
         <button
           onClick={submit}
-          className="w-full py-4 rounded-full font-semibold text-sm hover:scale-[1.02] transition"
+          disabled={loading}
+          aria-busy={loading}
+          className={`auth-submit-button w-full py-4 rounded-full font-semibold text-sm disabled:opacity-60 ${loading ? "is-checking" : ""}`}
           style={{ background: "var(--accent)", color: "white" }}
         >
-          Masuk {"->"}
+          <span className="auth-submit-content">
+            {loading ? <span className="auth-submit-spinner" aria-hidden="true" /> : null}
+            <span>{loading ? "Memeriksa..." : "Masuk"}</span>
+            {!loading ? <ArrowRight className="auth-submit-arrow w-4 h-4" aria-hidden="true" /> : null}
+          </span>
         </button>
         <a
           href={getResellerJoinUrl()}
@@ -141,7 +157,7 @@ export function AuthLayout({ children, onBack, title, subtitle, badge }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-6 py-16 grain relative">
       <div className="w-full max-w-md">
-        <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
+        <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
           <ArrowLeft className="w-4 h-4" /> Kembali ke beranda
         </button>
         <div className="paper-card p-8 lg:p-10 relative">
@@ -193,7 +209,7 @@ export function AdminLogin({ onBack, onLogin }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-6 grain">
       <div className="w-full max-w-md">
-        <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
+        <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
           <ArrowLeft className="w-4 h-4" /> Kembali
         </button>
         <div className="paper-card p-10">
@@ -237,10 +253,15 @@ export function AdminLogin({ onBack, onLogin }) {
             <button
               onClick={submit}
               disabled={loading}
-              className="w-full py-4 rounded-full font-semibold text-sm hover:scale-[1.02] transition disabled:opacity-50"
+              aria-busy={loading}
+              className={`auth-submit-button w-full py-4 rounded-full font-semibold text-sm disabled:opacity-60 ${loading ? "is-checking" : ""}`}
               style={{ background: "var(--ink)", color: "var(--bg)" }}
             >
-              {loading ? "Memeriksa..." : "Masuk ->"}
+              <span className="auth-submit-content">
+                {loading ? <span className="auth-submit-spinner" aria-hidden="true" /> : null}
+                <span>{loading ? "Memeriksa..." : "Masuk"}</span>
+                {!loading ? <ArrowRight className="auth-submit-arrow w-4 h-4" aria-hidden="true" /> : null}
+              </span>
             </button>
           </div>
         </div>

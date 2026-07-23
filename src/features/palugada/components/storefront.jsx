@@ -111,12 +111,14 @@ export function Home({
                   Toko serba ada untuk aplikasi premium. Dari Netflix sampai ChatGPT, dari Spotify sampai CapCut Pro — semua ada, semua murah, semua bergaransi.
                 </p>
                 <div className="space-y-3">
-                  <a href="#katalog" className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-sm hover-lift" style={{ background: "var(--ink)", color: "var(--bg)" }}>
-                    Lihat Semua Barang <ArrowRight className="w-4 h-4" />
+                  <a href="#katalog" className="catalog-cta inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-sm hover-lift" style={{ background: "var(--ink)", color: "var(--bg)" }}>
+                    <span className="catalog-cta-label">Lihat Semua Barang</span>
+                    <ArrowRight className="catalog-cta-arrow w-4 h-4" />
                   </a>
                   {!reseller && (
-                    <button onClick={onJoinReseller} className="block underline-link text-sm font-medium">
-                      Atau bergabung sebagai reseller →
+                    <button onClick={onJoinReseller} className="reseller-join-link text-sm font-medium">
+                      <span>Atau bergabung sebagai reseller</span>
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
                     </button>
                   )}
                 </div>
@@ -909,7 +911,7 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
-      <button onClick={onBack} className="flex items-center gap-2 text-sm mb-10 hover:opacity-60 transition" style={{ color: "var(--ink-dim)" }}>
+      <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm mb-10" style={{ color: "var(--ink-dim)" }}>
         <ArrowLeft className="w-4 h-4" /> Kembali
       </button>
 
@@ -1168,7 +1170,7 @@ export function TrackOrder({ onFindOrder, onBack }) {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
-      <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
+      <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
         <ArrowLeft className="w-4 h-4" /> Kembali ke toko
       </button>
       <div className="grid lg:grid-cols-12 gap-8 items-start">
@@ -1263,7 +1265,7 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
   const isStoreOpen = storeStatus?.isOpen !== false;
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-      <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
+      <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
         <ArrowLeft className="w-4 h-4" /> Lanjut belanja
       </button>
       <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Keranjang Belanja</div>
@@ -1379,7 +1381,7 @@ export function Checkout({
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
-      <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
+      <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
         <ArrowLeft className="w-4 h-4" /> Kembali ke keranjang
       </button>
       <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Selesaikan Pesanan</div>
