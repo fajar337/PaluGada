@@ -20,7 +20,7 @@ export function ProductIcon({ icon, color, size = 48 }) {
   );
 }
 
-export function Field({ label, value, onChange, type = "text", placeholder, min }) {
+export function Field({ label, value, onChange, type = "text", placeholder, min, disabled = false }) {
   const generatedId = useId();
   const inputId = `field-${generatedId.replace(/:/g, "")}`;
   const isPassword = type === "password";
@@ -41,6 +41,7 @@ export function Field({ label, value, onChange, type = "text", placeholder, min 
           id={inputId}
           type={isPassword && showPassword ? "text" : type}
           value={value}
+          disabled={disabled}
           min={isNumber ? (min ?? 0) : undefined}
           inputMode={isNumber ? "numeric" : undefined}
           onKeyDown={(event) => {
@@ -64,7 +65,7 @@ export function Field({ label, value, onChange, type = "text", placeholder, min 
             onChange(Number.isNaN(nextValue) ? 0 : Math.max(min ?? 0, nextValue));
           }}
           placeholder={placeholder}
-          className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 transition"
+          className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 transition disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-500"
           style={{ borderColor: "var(--line)", paddingRight: isPassword ? 48 : 16 }}
         />
         {isPassword && (

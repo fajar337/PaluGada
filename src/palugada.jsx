@@ -5,7 +5,7 @@ import { FloatingWhatsApp, Footer, Header, StyleBlock } from "./features/palugad
 import { ResellerDashboard } from "./features/palugada/components/reseller";
 import { SeoHead } from "./features/palugada/components/seo";
 import { CartView, Checkout, Detail, Home, OrderSuccess, TrackOrder } from "./features/palugada/components/storefront";
-import { CONTACT_EMAIL, RESELLER_TIERS, SEED_PRODUCTS, fmtIDR, getDefaultPlanSelection, getPlanSelection, getPricingForSelection } from "./features/palugada/constants";
+import { CONTACT_EMAIL, RESELLER_TIERS, SEED_PRODUCTS, fmtIDR, getDefaultPlanSelection, getPlanSelection, getPricingForSelection, getProductTotalStock } from "./features/palugada/constants";
 import { getRouteState, getViewPath, slugifyProduct } from "./features/palugada/lib/seo";
 
 const AdminPanel = lazy(() =>
@@ -793,10 +793,14 @@ export default function App() {
         }),
       }));
 
-      return {
+      const nextProduct = {
         ...product,
         stock: Math.max(0, product.stock - soldQty),
         pricingPlans,
+      };
+      return {
+        ...nextProduct,
+        stock: getProductTotalStock(nextProduct),
       };
     });
     setProducts(nextProducts);

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Award, ArrowLeft, Crown, LogOut, Receipt, TrendingUp, Wallet } from "lucide-react";
 import { RESELLER_TIERS, fmtIDR } from "../constants";
 
@@ -8,15 +9,37 @@ export function ResellerDashboard({ reseller, resellerTiers = RESELLER_TIERS, or
   const nextName = reseller.tier === "Bronze" ? "Silver" : reseller.tier === "Silver" ? "Gold" : null;
   const progress = nextTier ? Math.min(100, (reseller.totalSpent / nextTier.min) * 100) : 100;
   const totalProfit = orders.reduce((sum, order) => sum + (order.profit || 0), 0);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (loggingOut) {
+      return;
+    }
+
+    setLoggingOut(true);
+    await new Promise((resolve) => setTimeout(resolve, 260));
+
+    try {
+      await onLogout();
+    } catch {
+      setLoggingOut(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
       <div className="flex items-center justify-between mb-8">
-        <button onClick={onBack} className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-dim)" }}>
+        <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm" style={{ color: "var(--ink-dim)" }}>
           <ArrowLeft className="w-4 h-4" /> Beranda
         </button>
-        <button onClick={onLogout} className="flex items-center gap-2 text-sm hover:text-red-500 transition" style={{ color: "var(--ink-dim)" }}>
-          <LogOut className="w-4 h-4" /> Keluar
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut}
+          aria-busy={loggingOut}
+          className={`motion-logout-button flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${loggingOut ? "is-leaving" : ""}`}
+          style={{ color: "var(--ink-dim)" }}
+        >
+          <LogOut className="w-4 h-4" /> {loggingOut ? "Keluar..." : "Keluar"}
         </button>
       </div>
 

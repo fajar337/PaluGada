@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, BadgePercent, Bell, Check, CheckCheck, ChevronDown, Crown, Edit3, Inbox, KeyRound, LogOut, Menu, MessageSquareQuote, Package, Plus, Power, PowerOff, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
-import { ICONS, RESELLER_TIERS, fmtIDR } from "../constants";
+import { ICONS, RESELLER_TIERS, fmtIDR, getProductTotalStock, hasOptionLevelStock } from "../constants";
 import { Field, ProductIcon } from "./shared";
 
 const ADMIN_TAB_KEY = "pa_admin_tab";
@@ -48,7 +48,7 @@ const ADMIN_TABS = [
   { key: "resellers", label: "Reseller", icon: Users },
 ];
 
-function MobileSidebar({ open, tab, onSelect, onLogout, onClose }) {
+function MobileSidebar({ open, tab, onSelect, onLogout, onClose, loggingOut = false }) {
   const panelRef = useRef(null);
   const touchRef = useRef(null);
 
@@ -112,8 +112,14 @@ function MobileSidebar({ open, tab, onSelect, onLogout, onClose }) {
           {ADMIN_TABS.map(({ key, label, icon }) => (
             <NavBtn key={key} active={tab === key} onClick={() => { onSelect(key); onClose(); }} icon={icon}>{label}</NavBtn>
           ))}
-          <button onClick={() => { onLogout(); onClose(); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition hover:text-red-500" style={{ color: "var(--ink-dim)", fontWeight: 500 }}>
-            <LogOut className="w-4 h-4" /> Keluar
+          <button
+            onClick={onLogout}
+            disabled={loggingOut}
+            aria-busy={loggingOut}
+            className={`motion-logout-button w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm ${loggingOut ? "is-leaving" : ""}`}
+            style={{ color: "var(--ink-dim)", fontWeight: 500 }}
+          >
+            <LogOut className="w-4 h-4" /> {loggingOut ? "Keluar..." : "Keluar"}
           </button>
         </nav>
       </aside>
@@ -167,6 +173,7 @@ export function AdminPanel({
   const [showStoreStatusEditor, setShowStoreStatusEditor] = useState(false);
   const [showAdminPasswordEditor, setShowAdminPasswordEditor] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
+  const [loggingOut, setLoggingOut] = useState(false);
   const stats = {
     products: products.length,
     promos: promos.filter((promo) => promo.active).length,
@@ -205,6 +212,7 @@ export function AdminPanel({
   };
 
   const saveProduct = (data) => {
+    const optionLevelStock = hasOptionLevelStock(data);
     const pricingPlans = (data.pricingPlans || [])
       .map((plan, planIndex) => ({
         id: plan.id || createStableId(plan.name, `plan-${planIndex + 1}`),
@@ -214,17 +222,22 @@ export function AdminPanel({
             id: option.id || createStableId(option.duration, `option-${optionIndex + 1}`),
             duration: String(option.duration || "").trim(),
             price: Math.max(0, Number(option.price) || 0),
-            stock: Math.max(0, Number(option.stock) || 0),
+            ...(optionLevelStock ? { stock: Math.max(0, Number(option.stock) || 0) } : {}),
           }))
           .filter((option) => option.duration),
       }))
       .filter((plan) => plan.name && plan.options.length);
-    const payload = {
+    const normalizedProduct = {
       ...data,
       price: Math.max(0, Number(data.price) || 0),
       oldPrice: Math.max(0, Number(data.oldPrice) || 0),
-      stock: Math.max(0, Number(data.stock) || 0),
       pricingPlans,
+    };
+    const payload = {
+      ...normalizedProduct,
+      stock: optionLevelStock
+        ? getProductTotalStock(normalizedProduct)
+        : Math.max(0, Number(data.stock) || 0),
     };
     if (data.id && products.find((product) => product.id === data.id)) {
       setProducts(products.map((product) => (product.id === data.id ? payload : product)));
@@ -361,6 +374,21 @@ export function AdminPanel({
 
   const clearNotifications = () => setNotifications?.([]);
 
+  const handleLogout = async () => {
+    if (loggingOut) {
+      return;
+    }
+
+    setLoggingOut(true);
+    await new Promise((resolve) => setTimeout(resolve, 260));
+
+    try {
+      await onLogout();
+    } catch {
+      setLoggingOut(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex" style={{ background: "var(--bg)" }}>
       <aside className="w-64 border-r p-6 hidden md:flex flex-col" style={{ borderColor: "var(--line)", background: "var(--bg-2)" }}>
@@ -383,13 +411,26 @@ export function AdminPanel({
           <NavBtn active={tab === "reviews"} onClick={() => setPersistedTab("reviews")} icon={Star}>Review</NavBtn>
           <NavBtn active={tab === "requests"} onClick={() => setPersistedTab("requests")} icon={Inbox}>Request</NavBtn>
           <NavBtn active={tab === "resellers"} onClick={() => setPersistedTab("resellers")} icon={Users}>Reseller</NavBtn>
-          <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition hover:text-red-500" style={{ color: "var(--ink-dim)", fontWeight: 500 }}>
-            <LogOut className="w-4 h-4" /> Keluar
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            aria-busy={loggingOut}
+            className={`motion-logout-button w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm ${loggingOut ? "is-leaving" : ""}`}
+            style={{ color: "var(--ink-dim)", fontWeight: 500 }}
+          >
+            <LogOut className="w-4 h-4" /> {loggingOut ? "Keluar..." : "Keluar"}
           </button>
         </nav>
       </aside>
 
-      <MobileSidebar open={mobileSidebarOpen} tab={tab} onSelect={setPersistedTab} onLogout={onLogout} onClose={() => setMobileSidebarOpen(false)} />
+      <MobileSidebar
+        open={mobileSidebarOpen}
+        tab={tab}
+        onSelect={setPersistedTab}
+        onLogout={handleLogout}
+        onClose={() => setMobileSidebarOpen(false)}
+        loggingOut={loggingOut}
+      />
 
       <div className="flex-1 safe-x py-6 md:p-12 overflow-x-hidden">
         <div className="flex items-center justify-between md:hidden mb-6">
@@ -1333,7 +1374,7 @@ function RevenueHistory({ orders, onBack }) {
 
   return (
     <div>
-      <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
+      <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
         <ArrowLeft className="w-4 h-4" /> Kembali ke dashboard
       </button>
       <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Revenue</div>
@@ -2687,6 +2728,8 @@ function ProductEditor({ product, onSave, onClose }) {
   const [featInput, setFeatInput] = useState("");
   const set = (key, value) => setData((current) => ({ ...current, [key]: value }));
   const pricingPlans = data.pricingPlans || [];
+  const optionLevelStock = hasOptionLevelStock(data);
+  const totalStock = getProductTotalStock(data);
 
   const addFeature = () => {
     const nextFeature = featInput.trim();
@@ -2796,7 +2839,20 @@ function ProductEditor({ product, onSave, onClose }) {
           <div className="grid sm:grid-cols-3 gap-3">
             <Field label="Harga" value={data.price} onChange={(value) => set("price", Number(value) || 0)} type="number" />
             <Field label="Harga Lama" value={data.oldPrice} onChange={(value) => set("oldPrice", Number(value) || 0)} type="number" />
-            <Field label="Stok" value={data.stock} onChange={(value) => set("stock", Number(value) || 0)} type="number" />
+            <div>
+              <Field
+                label={optionLevelStock ? "Stok (Total Opsi)" : "Stok"}
+                value={optionLevelStock ? totalStock : data.stock}
+                onChange={(value) => set("stock", Number(value) || 0)}
+                type="number"
+                disabled={optionLevelStock}
+              />
+              {optionLevelStock && (
+                <p className="mt-1.5 text-[10px] leading-relaxed" style={{ color: "var(--ink-dim)" }}>
+                  Otomatis dari jumlah stok seluruh opsi.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
@@ -2804,7 +2860,7 @@ function ProductEditor({ product, onSave, onClose }) {
               <div>
                 <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--accent)" }}>Plan & Durasi</label>
                 <p className="text-xs leading-relaxed" style={{ color: "var(--ink-dim)" }}>
-                  Harga di sini yang tampil sebagai pilihan di toko. Harga utama di atas tetap dipakai sebagai fallback atau harga mulai dari.
+                  Harga di sini yang tampil sebagai pilihan di toko. Harga utama tetap menjadi fallback, sedangkan stok utama otomatis dijumlahkan dari stok setiap opsi.
                 </p>
               </div>
               <button type="button" onClick={addPlan} className="px-4 py-2 rounded-full text-xs font-semibold flex items-center justify-center gap-2 shrink-0" style={{ background: "var(--ink)", color: "var(--bg)" }}>
