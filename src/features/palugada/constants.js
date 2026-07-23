@@ -224,6 +224,44 @@ export const SEED_PRODUCTS = [
     pricingPlans: NETFLIX_PLANS,
   },
   {
+    id: "p_disney",
+    name: "Disney+ Premium",
+    category: "Streaming",
+    icon: "tv",
+    color: "#113CCF",
+    price: 22000,
+    oldPrice: 22000,
+    stock: 0,
+    duration: "Pilih Durasi",
+    tagline: "Sharing 6 User • 1 User 1 Device",
+    description:
+      "Disney+ Premium Sharing 6 User untuk 1 bulan. Setiap user memakai 1 perangkat agar terhindar dari screen limit, dengan OTP manual dan full garansi.",
+    features: [
+      "Kualitas gambar hingga 4K Ultra HD",
+      "Mendukung HDR dan Dolby Vision pada perangkat kompatibel",
+      "Bebas iklan",
+      "Mendukung download untuk ditonton offline",
+      "1 user hanya untuk 1 perangkat",
+      "Full garansi selama durasi",
+      "Bisa diperpanjang",
+      "OTP manual, mohon tidak terburu-buru",
+    ],
+    pricingPlans: [
+      {
+        id: "sharing-6-user",
+        name: "SHARING 6 USER",
+        options: [
+          {
+            id: "1-bulan-full-garansi",
+            duration: "1 Bulan - Full Garansi",
+            price: 22000,
+            stock: 0,
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: "p_capcut",
     name: "CapCut Pro",
     category: "Editor",
@@ -343,6 +381,8 @@ export const SEED_PRODUCTS = [
     pricingPlans: CANVA_PLANS,
   },
 ];
+
+export const AUTO_SYNC_SEED_PRODUCT_IDS = ["p_disney"];
 
 export const ICONS = {
   tv: Tv,

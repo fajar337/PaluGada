@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { loadEnv } from "vite";
-import { SEED_PRODUCTS } from "../src/features/palugada/constants.js";
+import { AUTO_SYNC_SEED_PRODUCT_IDS, SEED_PRODUCTS } from "../src/features/palugada/constants.js";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(scriptDirectory, "..");
@@ -50,7 +50,15 @@ export async function loadPublicProducts() {
       }))
       .filter((product) => product.name);
 
-    return remoteProducts.length ? remoteProducts : SEED_PRODUCTS;
+    if (!remoteProducts.length) {
+      return SEED_PRODUCTS;
+    }
+
+    const remoteProductIds = new Set(remoteProducts.map((product) => product.id));
+    const missingSeedProducts = SEED_PRODUCTS.filter(
+      (product) => AUTO_SYNC_SEED_PRODUCT_IDS.includes(product.id) && !remoteProductIds.has(product.id)
+    );
+    return [...remoteProducts, ...missingSeedProducts];
   } catch (error) {
     console.warn(
       `Remote build products unavailable; using ${SEED_PRODUCTS.length} seed products.`,
