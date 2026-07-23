@@ -1,4 +1,4 @@
-import { SEED_PRODUCTS } from "../constants";
+import { AUTO_SYNC_SEED_PRODUCT_IDS, SEED_PRODUCTS } from "../constants";
 import { firestore } from "./firebase";
 import { collection, doc, getDoc, getDocs, setDoc, writeBatch } from "firebase/firestore";
 
@@ -206,7 +206,7 @@ export async function getItem(key, id, fallback = null) {
 export async function loadProducts() {
   const products = await storage.get("pa_products", null);
   if (products) {
-    const nextProducts = products.map((product) => {
+    const normalizedProducts = products.map((product) => {
       if (!["p_netflix", "p_capcut", "p_yt", "p_spotify", "p_chatgpt", "p_canva"].includes(product.id)) {
         return product;
       }
@@ -219,6 +219,11 @@ export async function loadProducts() {
         stock: normalizedProduct.stock ?? seedProduct.stock,
       };
     });
+    const existingProductIds = new Set(normalizedProducts.map((product) => product.id));
+    const missingSeedProducts = SEED_PRODUCTS.filter(
+      (product) => AUTO_SYNC_SEED_PRODUCT_IDS.includes(product.id) && !existingProductIds.has(product.id)
+    );
+    const nextProducts = [...normalizedProducts, ...missingSeedProducts];
 
     await storage.set("pa_products", nextProducts);
     return nextProducts;
