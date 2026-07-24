@@ -59,6 +59,7 @@ export function Home({
   const categories = ["Semua", ...Array.from(new Set(products.map((product) => product.category)))];
   const sortOptions = [
     { value: "featured", label: "Urutan rekomendasi" },
+    { value: "name-az", label: "Nama A–Z" },
     { value: "price-low", label: "Harga termurah" },
     { value: "price-high", label: "Harga termahal" },
     { value: "stock", label: "Stok terbanyak" },
@@ -73,6 +74,9 @@ export function Home({
       (!guaranteeOnly || productHasGuarantee(product))
     )
     .sort((first, second) => {
+      if (sortBy === "name-az") {
+        return first.name.localeCompare(second.name, "id", { sensitivity: "base" });
+      }
       if (sortBy === "price-low") {
         return getPrice(first, getProductStartingPrice(first, promos)) - getPrice(second, getProductStartingPrice(second, promos));
       }
