@@ -4,6 +4,8 @@ import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_ORIGIN, absoluteUrl, slugifyProduct }
 const NO_WARRANTY_PATTERN = /\b(?:no[\s_-]*gar(?:ansi)?r*|nogar(?:ansi)?r*)\b/i;
 const WARRANTY_PATTERN = /\b(?:full[\s_-]*gar(?:ansi)?r*|garansi)\b/i;
 const RETURN_POLICY_URL = absoluteUrl("/#garansi");
+const REMOTE_RETURN_METHOD = "https://schema.org/ReturnByMail";
+const FREE_RETURN_FEES = "https://schema.org/FreeReturn";
 
 function parseDurationDays(value = "") {
   const normalized = String(value).toLowerCase().replace(/,/g, ".");
@@ -78,6 +80,10 @@ function createMerchantReturnPolicy(warrantyDays) {
     returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
     merchantReturnDays: warrantyDays,
     merchantReturnLink: RETURN_POLICY_URL,
+    // Google belum menyediakan metode khusus klaim produk digital.
+    // ReturnByMail adalah metode jarak jauh yang didukung untuk merchant listing.
+    returnMethod: REMOTE_RETURN_METHOD,
+    returnFees: FREE_RETURN_FEES,
     restockingFee: 0.5,
   };
 }
