@@ -200,6 +200,64 @@ export function StyleBlock() {
       .reseller-join-link:hover svg { transform: translateX(5px); }
       .reseller-join-link:active { transform: scale(0.97); }
 
+      .reseller-motion-button,
+      .reseller-admin-link {
+        position: relative;
+        isolation: isolate;
+        transition: transform 220ms cubic-bezier(.23,1,.32,1);
+      }
+      .reseller-motion-button::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        inset: 0;
+        border-radius: inherit;
+        box-shadow: 0 10px 20px -12px rgba(20,17,13,.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 220ms ease;
+      }
+      .reseller-motion-button svg,
+      .reseller-admin-arrow {
+        display: inline-block;
+        transition: transform 220ms cubic-bezier(.23,1,.32,1);
+      }
+      .reseller-admin-link::after {
+        content: "";
+        position: absolute;
+        inset: auto 0 0;
+        height: 1px;
+        background: var(--accent);
+        transform: scaleX(.35);
+        transform-origin: center;
+        transition: transform 220ms cubic-bezier(.23,1,.32,1);
+      }
+      .reseller-motion-button:focus-visible,
+      .reseller-admin-link:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 4px;
+      }
+      @media (hover: hover) and (pointer: fine) {
+        .reseller-motion-button:hover { transform: translateY(-2px); }
+        .reseller-motion-button:hover::before { opacity: 1; }
+        .reseller-motion-button:hover svg { transform: rotate(-8deg) scale(1.08); }
+        .reseller-admin-link:hover::after { transform: scaleX(1); }
+        .reseller-admin-link:hover .reseller-admin-arrow { transform: translateX(4px); }
+      }
+      .reseller-motion-button:active,
+      .reseller-admin-link:active {
+        transform: scale(.97);
+        transition-duration: 120ms;
+      }
+      .reseller-motion-button:active::before { opacity: 0; }
+      @media (prefers-reduced-motion: reduce) {
+        .reseller-motion-button,
+        .reseller-motion-button svg,
+        .reseller-admin-link,
+        .reseller-admin-arrow { transform: none !important; }
+        .reseller-admin-link::after { transform: none; }
+      }
+
       .catalog-cta { isolation: isolate; overflow: hidden; }
       .catalog-cta-label {
         display: inline-block;
@@ -471,7 +529,7 @@ export function Footer() {
           style={{ borderColor: "#2a2c3a", color: "#a3a4b3" }}
         >
           <div>© 2026 Palugada — Toko Serba Ada</div>
-          <div>Crafted By Fajar Mustofa</div>
+          <div>Crafted By PaluGada</div>
         </div>
       </div>
     </footer>

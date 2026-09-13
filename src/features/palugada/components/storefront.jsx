@@ -187,7 +187,7 @@ export function Home({
                 </div>
               </div>
             </div>
-            <button onClick={onJoinReseller} className="px-6 py-3 rounded-full font-semibold text-sm flex items-center gap-2 whitespace-nowrap" style={{ background: "var(--accent)", color: "white" }}>
+            <button onClick={onJoinReseller} className="reseller-motion-button px-6 py-3 rounded-full font-semibold text-sm flex items-center gap-2 whitespace-nowrap" style={{ background: "var(--accent)", color: "white" }}>
               <UserPlus className="w-4 h-4" /> Daftar Sekarang
             </button>
           </div>

@@ -81,13 +81,13 @@ export function ResellerLogin({ onBack, onLogin, onRegister }) {
           href={getResellerJoinUrl()}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full text-center py-4 rounded-full font-semibold text-sm border"
+          className="reseller-motion-button block w-full text-center py-4 rounded-full font-semibold text-sm border"
           style={{ borderColor: "var(--line)", color: "var(--ink)" }}
         >
           Bayar daftar reseller {fmtIDR(RESELLER_FEE)}
         </a>
-        <button onClick={onRegister} className="w-full text-sm underline-link" style={{ color: "var(--ink-dim)" }}>
-          Belum punya akun reseller? Hubungi admin {"->"}
+        <button onClick={onRegister} className="reseller-admin-link w-full text-sm" style={{ color: "var(--ink-dim)" }}>
+          Belum punya akun reseller? Hubungi admin <span className="reseller-admin-arrow" aria-hidden="true">{"->"}</span>
         </button>
       </div>
     </AuthLayout>
