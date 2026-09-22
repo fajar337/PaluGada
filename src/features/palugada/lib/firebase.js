@@ -18,6 +18,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  onSnapshot,
   query,
   serverTimestamp,
   setDoc,
@@ -40,6 +41,14 @@ const googleProvider = new GoogleAuthProvider();
 
 export function subscribeToAuthState(callback) {
   return onAuthStateChanged(firebaseAuth, callback);
+}
+
+export function subscribeToStoreStatus(callback) {
+  return onSnapshot(doc(firestore, "appConfig", "storeStatus"), (snapshot) => {
+    if (snapshot.exists()) {
+      callback(snapshot.data());
+    }
+  });
 }
 
 export async function loginAdminAuth(email, password) {

@@ -166,6 +166,28 @@ export default function App() {
   const historyKeyRef = useRef("");
   const restoringHistoryRef = useRef(false);
   const initialViewRef = useRef(view);
+  useEffect(() => {
+    let cancelled = false;
+    let unsubscribe = () => {};
+
+    void loadFirebaseModule()
+      .then((firebaseModule) => {
+        if (cancelled) {
+          return;
+        }
+
+        unsubscribe = firebaseModule.subscribeToStoreStatus((nextStoreStatus) => {
+          setStoreStatus(nextStoreStatus);
+          window.localStorage.setItem("pa_store_status", JSON.stringify(nextStoreStatus));
+        });
+      })
+      .catch((error) => console.warn("Store status sync failed; using local fallback.", error));
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -238,13 +260,12 @@ export default function App() {
           setAuthResolved(true);
         });
 
-        const [nextProducts, savedTiers, nextPromos, nextCoupons, nextStoreStatus, nextReviews, nextNotifications, nextActivityLogs] =
+        const [nextProducts, savedTiers, nextPromos, nextCoupons, nextReviews, nextNotifications, nextActivityLogs] =
           await Promise.all([
             loadProducts(),
             storage.get("pa_reseller_tiers", RESELLER_TIERS),
             storage.get("pa_promos", []),
             storage.get("pa_coupons", []),
-            storage.get("pa_store_status", DEFAULT_STORE_STATUS),
             storage.get("pa_reviews", []),
             storage.get("pa_notifications", []),
             storage.get("pa_activity_logs", []),
@@ -259,7 +280,6 @@ export default function App() {
         setResellerTiers(savedTiers);
         setPromos(nextPromos);
         setCoupons(nextCoupons);
-        setStoreStatus(nextStoreStatus);
         setReviews(nextReviews);
         setNotifications(nextNotifications);
         setActivityLogs(nextActivityLogs);
