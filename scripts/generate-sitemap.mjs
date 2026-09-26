@@ -14,15 +14,15 @@ const lastModified = new Intl.DateTimeFormat("en-CA", {
 }).format(new Date());
 const sitemapProducts = await loadPublicProducts();
 
-const entries = [
-  { path: "/", changefreq: "daily", priority: "1.0" },
-  { path: "/reseller/daftar/", changefreq: "monthly", priority: "0.6" },
+const entries = ["id", "jp"].flatMap((locale) => [
+  { path: `/${locale}/`, changefreq: "daily", priority: "1.0" },
+  { path: `/${locale}/reseller/daftar/`, changefreq: "monthly", priority: "0.6" },
   ...sitemapProducts.map((product) => ({
-    path: `/produk/${slugifyProduct(product.name)}/`,
+    path: `/${locale}/produk/${slugifyProduct(product.name)}/`,
     changefreq: "weekly",
     priority: "0.8",
   })),
-];
+]);
 
 const urls = entries
   .map(

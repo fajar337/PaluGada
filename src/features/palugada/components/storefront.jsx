@@ -24,7 +24,7 @@ import {
   ICONS,
   PAYMENT_METHODS,
   RESELLER_TIERS,
-  fmtIDR,
+  fmtCurrency,
   getDefaultPlanSelection,
   getPricingForSelection,
   getPaymentDetail,
@@ -34,9 +34,11 @@ import {
   getWhatsAppConfirmationUrl,
 } from "../constants";
 import { STORE_FAQS } from "../lib/seo";
+import { useI18n } from "../lib/i18n";
 import { Field, ProductIcon } from "./shared";
 
 export function Home({
+  locale = "id",
   products,
   promos = [],
   reviews = [],
@@ -51,18 +53,20 @@ export function Home({
   onAdd,
   onRequestProduct,
   onJoinReseller,
+  onOpenRegionPicker,
 }) {
+  const { t, isJapanese, product: localizeProduct, catalogText, money } = useI18n();
   const [quickProduct, setQuickProduct] = useState(null);
   const [sortBy, setSortBy] = useState("featured");
   const [guaranteeOnly, setGuaranteeOnly] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const categories = ["Semua", ...Array.from(new Set(products.map((product) => product.category)))];
   const sortOptions = [
-    { value: "featured", label: "Urutan rekomendasi" },
-    { value: "name-az", label: "Nama A–Z" },
-    { value: "price-low", label: "Harga termurah" },
-    { value: "price-high", label: "Harga termahal" },
-    { value: "stock", label: "Stok terbanyak" },
+    { value: "featured", label: t("Urutan rekomendasi") },
+    { value: "name-az", label: t("Nama A–Z") },
+    { value: "price-low", label: t("Harga termurah") },
+    { value: "price-high", label: t("Harga termahal") },
+    { value: "stock", label: t("Stok terbanyak") },
   ];
   const activeSort = sortOptions.find((item) => item.value === sortBy) || sortOptions[0];
   const isStoreOpen = storeStatus?.isOpen !== false;
@@ -78,10 +82,10 @@ export function Home({
         return first.name.localeCompare(second.name, "id", { sensitivity: "base" });
       }
       if (sortBy === "price-low") {
-        return getPrice(first, getProductStartingPrice(first, promos)) - getPrice(second, getProductStartingPrice(second, promos));
+        return getPrice(first, getProductStartingPrice(first, promos, locale)) - getPrice(second, getProductStartingPrice(second, promos, locale));
       }
       if (sortBy === "price-high") {
-        return getPrice(second, getProductStartingPrice(second, promos)) - getPrice(first, getProductStartingPrice(first, promos));
+        return getPrice(second, getProductStartingPrice(second, promos, locale)) - getPrice(first, getProductStartingPrice(first, promos, locale));
       }
       if (sortBy === "stock") {
         return second.stock - first.stock;
@@ -94,8 +98,14 @@ export function Home({
       <section className="relative grain overflow-hidden border-b" style={{ borderColor: "var(--line)" }}>
         <div className="max-w-7xl mx-auto px-6 pt-16 pb-20 relative">
           <div className="flex items-center justify-between mb-12 mono text-[10px] uppercase tracking-[0.25em]" style={{ color: "var(--ink-dim)" }}>
-            <div>EST. 2024 — Indonesia</div>
-            <div className="hidden sm:block">Toko Serba Ada</div>
+            <div className="flex items-center gap-1">
+              <span>EST. 2024 —</span>
+              <button type="button" onClick={onOpenRegionPicker} className="region-trigger inline-flex items-center gap-1" aria-label="Pilih wilayah">
+                {locale === "jp" ? "日本" : "Indonesia"}
+                <ChevronDown className="w-3 h-3" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="hidden sm:block">{t("Toko Serba Ada")}</div>
             <div>№ 0001</div>
           </div>
 
@@ -103,25 +113,27 @@ export function Home({
             <div className="lg:col-span-8">
               <div className="text-xs mono uppercase tracking-widest mb-6 flex items-center gap-3" style={{ color: "var(--accent)" }}>
                 <span className="w-8 h-px" style={{ background: "var(--accent)" }}></span>
-                Selamat datang di PaluGada
+                {t("Selamat datang di PaluGada")}
               </div>
               <h1 className="serif leading-[0.85] tracking-tight mb-8 uppercase" style={{ fontSize: "clamp(3.5rem, 9vw, 8.5rem)", fontWeight: 800 }}>
-                Apa <span style={{ color: "var(--accent)" }}>lu mau</span>,
-                <br />
-                <span className="serif-italic normal-case" style={{ fontWeight: 500 }}>gua</span> ada.
+                {isJapanese ? (
+                  <>欲しいもの、<br /><span className="serif-italic normal-case" style={{ fontWeight: 500 }}>ここに</span>あります。</>
+                ) : (
+                  <>Apa <span style={{ color: "var(--accent)" }}>lu mau</span>,<br /><span className="serif-italic normal-case" style={{ fontWeight: 500 }}>gua</span> ada.</>
+                )}
               </h1>
               <div className="grid sm:grid-cols-2 gap-6 max-w-2xl">
                 <p className="text-base leading-relaxed" style={{ color: "var(--ink-dim)" }}>
-                  Toko serba ada untuk aplikasi premium. Dari Netflix sampai ChatGPT, dari Spotify sampai CapCut Pro — semua ada, semua murah, semua bergaransi.
+                  {t("Toko serba ada untuk aplikasi premium. Dari Netflix sampai ChatGPT, dari Spotify sampai CapCut Pro — semua ada, semua murah, semua bergaransi.")}
                 </p>
                 <div className="space-y-3">
                   <a href="#katalog" className="catalog-cta inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-sm hover-lift" style={{ background: "var(--ink)", color: "var(--bg)" }}>
-                    <span className="catalog-cta-label">Lihat Semua Barang</span>
+                    <span className="catalog-cta-label">{t("Lihat Semua Barang")}</span>
                     <ArrowRight className="catalog-cta-arrow w-4 h-4" />
                   </a>
                   {!reseller && (
                     <button onClick={onJoinReseller} className="reseller-join-link text-sm font-medium">
-                      <span>Atau bergabung sebagai reseller</span>
+                      <span>{t("Atau bergabung sebagai reseller")}</span>
                       <ArrowRight className="w-4 h-4" aria-hidden="true" />
                     </button>
                   )}
@@ -132,7 +144,7 @@ export function Home({
             <div className="lg:col-span-4 hidden lg:block">
               <div className="hover-lift relative" style={{ "--r": "2deg", transform: "rotate(2deg)", background: "var(--bg-2)", border: "1.5px solid var(--ink)" }}>
                 <div className="flex items-center justify-between px-5 py-2.5 border-b mono text-[10px] uppercase tracking-[0.15em]" style={{ borderColor: "var(--ink)", background: "var(--bg-3)" }}>
-                  <span style={{ fontWeight: 600 }}>BEST SELLER</span>
+                  <span style={{ fontWeight: 600 }}>{t("BEST SELLER")}</span>
                   <span style={{ color: "var(--accent)" }}>★ 4.9</span>
                 </div>
                 <div className="p-6 relative">
@@ -144,22 +156,22 @@ export function Home({
                       })()}
                     </div>
                   </div>
-                  <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>{featuredProduct?.category}</div>
+                  <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>{catalogText(featuredProduct?.category)}</div>
                   {featuredProduct?.id === "__promo_disabled__" && (
                     <div className="inline-flex mb-3 px-2.5 py-1 rounded-full text-[9px] mono uppercase tracking-widest font-bold" style={{ background: "var(--accent)", color: "white" }}>
                       Grand Opening • 1 Hari
                     </div>
                   )}
                   <h2 className="serif text-3xl uppercase pr-16 mb-2" style={{ fontWeight: 700 }}>{featuredProduct?.name}</h2>
-                  <p className="text-xs mb-4" style={{ color: "var(--ink-dim)" }}>{featuredProduct?.tagline}</p>
+                  <p className="text-xs mb-4" style={{ color: "var(--ink-dim)" }}>{localizeProduct(featuredProduct)?.tagline}</p>
                 </div>
                 <div className="px-5 py-4 flex items-end justify-between" style={{ background: "var(--ink)", color: "var(--bg)" }}>
                   <div>
-                    {getProductStartingCompareAt(featuredProduct || {}, promos) > getProductStartingPrice(featuredProduct || {}, promos) && (
-                      <div className="text-[10px] line-through opacity-50">{fmtIDR(getProductStartingCompareAt(featuredProduct || {}, promos))}</div>
+                    {getProductStartingCompareAt(featuredProduct || {}, promos, locale) > getProductStartingPrice(featuredProduct || {}, promos, locale) && (
+                      <div className="text-[10px] line-through opacity-50">{money(getProductStartingCompareAt(featuredProduct || {}, promos, locale))}</div>
                     )}
                     <div className="serif" style={{ color: "var(--gold)", fontSize: "1.7rem", fontWeight: 800, lineHeight: 1 }}>
-                      {fmtIDR(getPrice(featuredProduct || {}, getProductStartingPrice(featuredProduct || {}, promos)))}
+                      {money(getPrice(featuredProduct || {}, getProductStartingPrice(featuredProduct || {}, promos, locale)))}
                     </div>
                   </div>
                 </div>
@@ -180,15 +192,15 @@ export function Home({
               </div>
               <div>
                 <div className="serif text-2xl sm:text-3xl" style={{ fontWeight: 500 }}>
-                  Jadi <span className="serif-italic" style={{ color: "var(--accent)" }}>reseller</span> & dapatkan diskon hingga 10%
+                  {isJapanese ? <>リセラー登録で<span className="serif-italic" style={{ color: "var(--accent)" }}>最大10%オフ</span></> : <>Jadi <span className="serif-italic" style={{ color: "var(--accent)" }}>reseller</span> & dapatkan diskon hingga 10%</>}
                 </div>
                 <div className="text-sm mt-1" style={{ color: "var(--ink-dim)" }}>
-                  Tier Bronze • Silver • Gold — semakin sering belanja, semakin besar margin
+                  {t("Tier Bronze • Silver • Gold — semakin sering belanja, semakin besar margin")}
                 </div>
               </div>
             </div>
             <button onClick={onJoinReseller} className="reseller-motion-button px-6 py-3 rounded-full font-semibold text-sm flex items-center gap-2 whitespace-nowrap" style={{ background: "var(--accent)", color: "white" }}>
-              <UserPlus className="w-4 h-4" /> Daftar Sekarang
+              <UserPlus className="w-4 h-4" /> {t("Daftar Sekarang")}
             </button>
           </div>
         </section>
@@ -214,17 +226,17 @@ export function Home({
           <div className="lg:col-span-6">
             <div className="text-xs mono uppercase tracking-widest mb-3 flex items-center gap-3" style={{ color: "var(--accent)" }}>
               <span className="w-8 h-px" style={{ background: "var(--accent)" }}></span>
-              Katalog Pilihan
+              {t("Katalog Pilihan")}
             </div>
             <h2 className="serif leading-none tracking-tight" style={{ fontSize: "clamp(3rem, 6vw, 5rem)", fontWeight: 500 }}>
-              Daftar <span className="serif-italic">isi.</span>
+              {isJapanese ? <>商品<span className="serif-italic">一覧。</span></> : <>Daftar <span className="serif-italic">isi.</span></>}
             </h2>
           </div>
           <div className="lg:col-span-6 lg:text-right">
             <div className="relative max-w-md lg:ml-auto">
-              <label htmlFor="catalog-search" className="sr-only">Cari aplikasi premium</label>
+              <label htmlFor="catalog-search" className="sr-only">{t("Cari aplikasi premium")}</label>
               <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "var(--ink-dim)" }} />
-              <input id="catalog-search" name="q" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari aplikasi…" className="w-full pl-11 pr-4 py-3 rounded-full text-sm border bg-white focus:outline-none focus:border-zinc-800" style={{ borderColor: "var(--line)" }} />
+              <input id="catalog-search" name="q" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("Cari aplikasi…")} className="w-full pl-11 pr-4 py-3 rounded-full text-sm border bg-white focus:outline-none focus:border-zinc-800" style={{ borderColor: "var(--line)" }} />
             </div>
           </div>
         </div>
@@ -236,7 +248,7 @@ export function Home({
         >
           {categories.map((item) => (
             <button key={item} type="button" aria-pressed={category === item} onClick={() => setCategory(item)} className="px-4 py-2 rounded-full text-sm whitespace-nowrap border transition" style={{ borderColor: category === item ? "var(--ink)" : "var(--line)", background: category === item ? "var(--ink)" : "transparent", color: category === item ? "var(--bg)" : "var(--ink)", fontWeight: category === item ? 600 : 500 }}>
-              {item}
+              {catalogText(item)}
             </button>
           ))}
         </nav>
@@ -249,7 +261,7 @@ export function Home({
             className="px-4 py-2 rounded-full text-sm border transition w-fit"
             style={{ borderColor: guaranteeOnly ? "var(--ink)" : "var(--line)", background: guaranteeOnly ? "var(--ink)" : "transparent", color: guaranteeOnly ? "var(--bg)" : "var(--ink)" }}
           >
-            Full Garansi
+            {t("Full Garansi")}
           </button>
           <div className="relative w-full sm:w-auto">
             <button
@@ -306,12 +318,12 @@ export function Home({
             <ProductCard
               key={product.id}
               className="min-w-[84vw] max-w-[84vw] snap-center sm:min-w-0 sm:max-w-none"
-              product={product}
+              product={localizeProduct(product)}
               promos={promos}
               reviews={reviews.filter((review) => review.productId === product.id)}
               reseller={reseller}
-              effectivePrice={getPrice(product, getProductStartingPrice(product, promos))}
-              compareAtPrice={getProductStartingCompareAt(product, promos)}
+              effectivePrice={getPrice(product, getProductStartingPrice(product, promos, locale))}
+              compareAtPrice={getProductStartingCompareAt(product, promos, locale)}
               onOpen={() => onOpen(product)}
               onPickPlan={() => setQuickProduct(product)}
               onAdd={() => onAdd(product)}
@@ -322,7 +334,7 @@ export function Home({
           ))}
           {filtered.length === 0 && (
             <div className="min-w-full sm:col-span-full text-center py-20 serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>
-              Tidak ada hasil yang ditemukan…
+              {t("Tidak ada hasil yang ditemukan…")}
             </div>
           )}
         </div>
@@ -331,7 +343,7 @@ export function Home({
       {quickProduct && (
         <QuickPlanModal
           key={quickProduct.id}
-          product={quickProduct}
+          product={localizeProduct(quickProduct)}
           promos={promos}
           getPrice={getPrice}
           storeClosed={!isStoreOpen}
@@ -356,7 +368,8 @@ export function Home({
 }
 
 function ClosedStoreNotice({ reason }) {
-  const message = reason?.trim() || "Toko sedang tutup sementara. Silakan cek lagi nanti.";
+  const { t, isJapanese } = useI18n();
+  const message = (isJapanese ? null : reason?.trim()) || t("Toko sedang tutup sementara. Silakan cek lagi nanti.");
 
   return (
     <section className="border-b" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
@@ -364,8 +377,8 @@ function ClosedStoreNotice({ reason }) {
         <div className="rounded-[1.5rem] border p-5" style={{ borderColor: "var(--accent)", background: "var(--bg-2)" }}>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Website Tutup</div>
-              <div className="serif text-2xl leading-none" style={{ fontWeight: 600 }}>Order sedang dinonaktifkan.</div>
+              <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>{t("Website Tutup")}</div>
+              <div className="serif text-2xl leading-none" style={{ fontWeight: 600 }}>{t("Order sedang dinonaktifkan.")}</div>
             </div>
             <div className="serif text-2xl sm:text-3xl leading-tight max-w-2xl" style={{ color: "var(--ink)" }}>{message}</div>
           </div>
@@ -376,6 +389,7 @@ function ClosedStoreNotice({ reason }) {
 }
 
 function ProductRequestSection({ onRequestProduct }) {
+  const { isJapanese } = useI18n();
   const [name, setName] = useState("");
   const [wa, setWa] = useState("");
   const [appName, setAppName] = useState("");
@@ -398,12 +412,12 @@ function ProductRequestSection({ onRequestProduct }) {
     <section id="request-produk" className="max-w-7xl mx-auto px-6 pb-20">
       <div className="paper-card overflow-hidden grid lg:grid-cols-12">
         <div className="lg:col-span-5 p-8 lg:p-10" style={{ background: "var(--ink)", color: "var(--bg)" }}>
-          <div className="text-[10px] mono uppercase tracking-widest mb-4 opacity-70">Request Produk</div>
+          <div className="text-[10px] mono uppercase tracking-widest mb-4 opacity-70">{isJapanese ? "商品リクエスト" : "Request Produk"}</div>
           <h2 className="serif leading-none mb-5" style={{ fontSize: "clamp(2.5rem, 5vw, 4.5rem)", fontWeight: 500 }}>
-            App yang dicari <span className="serif-italic">belum ada?</span>
+            {isJapanese ? <>お探しのサービスが<span className="serif-italic">ありませんか？</span></> : <>App yang dicari <span className="serif-italic">belum ada?</span></>}
           </h2>
           <p className="text-sm leading-relaxed opacity-75">
-            Isi request di sini. Admin bakal cek ketersediaan, harga, dan kabarin kamu lewat WhatsApp kalau produknya bisa disediakan.
+            {isJapanese ? "こちらからリクエストしてください。在庫と価格を確認し、提供可能な場合はWhatsAppでご連絡します。" : "Isi request di sini. Admin bakal cek ketersediaan, harga, dan kabarin kamu lewat WhatsApp kalau produknya bisa disediakan."}
           </p>
         </div>
 
@@ -425,7 +439,7 @@ function ProductRequestSection({ onRequestProduct }) {
             />
           </div>
           <button type="submit" disabled={!name.trim() || !wa.trim() || !appName.trim()} className="px-6 py-3 rounded-full font-semibold text-sm disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>
-            Kirim Request
+            {isJapanese ? "リクエストを送信" : "Kirim Request"}
           </button>
         </form>
       </div>
@@ -434,6 +448,7 @@ function ProductRequestSection({ onRequestProduct }) {
 }
 
 function CombinedReviewsSection({ reviews, products }) {
+  const { isJapanese, locale } = useI18n();
   const allReviews = [...reviews]
     .sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
     .map((review) => ({
@@ -447,14 +462,14 @@ function CombinedReviewsSection({ reviews, products }) {
         <div>
           <div className="text-xs mono uppercase tracking-widest mb-3 flex items-center gap-3" style={{ color: "var(--accent)" }}>
             <span className="w-8 h-px" style={{ background: "var(--accent)" }}></span>
-            Semua Review
+            {isJapanese ? "すべてのレビュー" : "Semua Review"}
           </div>
           <h2 className="serif leading-none" style={{ fontSize: "clamp(2.7rem, 5vw, 4.5rem)", fontWeight: 500 }}>
-            Suara <span className="serif-italic">pembeli.</span>
+            {isJapanese ? <>お客様の<span className="serif-italic">声。</span></> : <>Suara <span className="serif-italic">pembeli.</span></>}
           </h2>
         </div>
         <div className="text-sm" style={{ color: "var(--ink-dim)" }}>
-          {allReviews.length} ulasan gabungan
+          {allReviews.length} {isJapanese ? "件" : "ulasan gabungan"}
         </div>
       </div>
 
@@ -479,7 +494,7 @@ function CombinedReviewsSection({ reviews, products }) {
                   </div>
                   <h3 className="serif text-2xl leading-none mb-2" style={{ fontWeight: 500 }}>{review.name}</h3>
                   <div className="text-xs mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>
-                    {new Date(review.createdAt).toLocaleString("id-ID", {
+                    {new Date(review.createdAt).toLocaleString(locale === "jp" ? "ja-JP" : "id-ID", {
                       day: "2-digit",
                       month: "short",
                       year: "numeric",
@@ -523,7 +538,13 @@ function CombinedReviewsSection({ reviews, products }) {
 }
 
 function PolicySection() {
-  const policies = [
+  const { isJapanese } = useI18n();
+  const policies = isJapanese ? [
+    { id: "cara-order", title: "注文方法", items: ["商品、プラン、期間を選び、購入手続きへ進みます。", "選択した方法で支払い、WhatsAppでご連絡ください。", "入金確認後、アカウントまたはアクセス情報をお送りします。"] },
+    { id: "garansi", title: "保証・返金", items: ["保証付きプランは、利用期間の3分の2まで保証します。", "保証なしと表示されたプランは保証対象外です。", "利用規約違反によらないアカウント不具合が保証対象です。", "条件を満たす場合、交換または商品代金の50%を返金します。"] },
+    { id: "aturan-pakai", title: "利用規約", items: ["許可なくメール、パスワード、PIN、地域、アカウント情報を変更しないでください。", "プランの条件を超えて第三者と共有しないでください。", "利用規約違反は保証対象外となる場合があります。"] },
+    { id: "privasi", title: "プライバシー", items: ["氏名、メール、WhatsApp番号は注文処理とサポートに使用します。", "支払い明細は取引確認にのみ使用します。", "顧客情報を第三者の広告目的で販売・共有しません。"] },
+  ] : [
     {
       id: "cara-order",
       title: "Cara Order",
@@ -567,10 +588,10 @@ function PolicySection() {
     <section className="max-w-7xl mx-auto px-6 pb-20">
       <div className="text-xs mono uppercase tracking-widest mb-3 flex items-center gap-3" style={{ color: "var(--accent)" }}>
         <span className="w-8 h-px" style={{ background: "var(--accent)" }}></span>
-        Kebijakan Toko
+        {isJapanese ? "ストアポリシー" : "Kebijakan Toko"}
       </div>
       <h2 className="serif leading-none mb-8" style={{ fontSize: "clamp(2.75rem, 5vw, 4.75rem)", fontWeight: 500 }}>
-        Biar sama-sama <span className="serif-italic">jelas.</span>
+        {isJapanese ? <>安心して<span className="serif-italic">ご利用いただくために。</span></> : <>Biar sama-sama <span className="serif-italic">jelas.</span></>}
       </h2>
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         {policies.map((policy) => (
@@ -592,16 +613,17 @@ function PolicySection() {
 }
 
 function WebAppPromoSection() {
+  const { isJapanese } = useI18n();
   return (
     <section className="max-w-7xl mx-auto px-6 pt-12 pb-6">
       <div className="paper-card p-8 sm:p-10 lg:p-14">
         <div className="grid lg:grid-cols-12 gap-10 items-start">
           <div className="lg:col-span-7">
             <p className="text-sm sm:text-base leading-relaxed max-w-3xl mb-6" style={{ color: "var(--ink-dim)" }}>
-              Akses PaluGada lebih cepat langsung dari HP kamu. Buka katalog aplikasi premium, cek stok, pilih plan, buat pesanan, dan lacak order dalam satu web app yang ringan. Simpan ke home screen biar terasa seperti aplikasi sendiri dan lebih praktis buat belanja kapan saja.
+              {isJapanese ? "PaluGadaをホーム画面に追加すれば、カタログ、在庫、プラン選択、注文、追跡にすぐアクセスできます。" : "Akses PaluGada lebih cepat langsung dari HP kamu. Buka katalog aplikasi premium, cek stok, pilih plan, buat pesanan, dan lacak order dalam satu web app yang ringan. Simpan ke home screen biar terasa seperti aplikasi sendiri dan lebih praktis buat belanja kapan saja."}
             </p>
             <h2 className="serif text-3xl sm:text-4xl leading-none uppercase mb-6" style={{ fontWeight: 700 }}>
-              Buka PaluGada lebih cepat!
+              {isJapanese ? "PaluGadaをもっと手軽に！" : "Buka PaluGada lebih cepat!"}
             </h2>
             <a
               href="https://www.mediafire.com/file/rmlsttad7a27m6g/PaluGada_Premium_v1.0.0.APK/file"
@@ -639,11 +661,18 @@ function WebAppPromoSection() {
 }
 
 function FAQAccordion() {
+  const { isJapanese } = useI18n();
   const [open, setOpen] = useState("faq");
+  const japaneseFaqs = [
+    { id: "faq", eyebrow: "よくある質問", title: "商品はどのように届きますか？", answer: "入金確認後、アカウントまたはアクセス情報をWhatsAppでお送りします。" },
+    { id: "cara-order", eyebrow: "注文方法", title: "注文の流れを教えてください", answer: "商品、プラン、期間を選び、購入者情報と支払い方法を入力してください。その後WhatsAppで支払い明細を送信します。" },
+    { id: "garansi", eyebrow: "保証", title: "保証はありますか？", answer: "保証内容はプランごとに異なります。商品ページのプラン名とストアポリシーをご確認ください。" },
+  ];
+  const faqItems = isJapanese ? japaneseFaqs : STORE_FAQS;
 
   return (
     <div className="paper-card divide-y" style={{ borderColor: "var(--line)" }}>
-      {STORE_FAQS.map((item) => {
+      {faqItems.map((item) => {
         const active = open === item.id;
         const panelId = `${item.id}-panel`;
 
@@ -667,6 +696,7 @@ function FAQAccordion() {
 }
 
 export function ProductCard({ product, promos = [], reviews = [], reseller, effectivePrice, compareAtPrice = 0, onOpen, onPickPlan, onAdd, storeClosed = false, delay = 0, index = 0, className = "" }) {
+  const { t, money } = useI18n();
   const Icon = ICONS[product.icon] || Sparkles;
   const num = String(index + 1).padStart(3, "0");
   const reviewSummary = getReviewSummary(reviews);
@@ -693,7 +723,7 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
         <span style={{ color: "var(--ink)", fontWeight: 600 }}>SKU/{num}</span>
         <span className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: product.stock > 5 ? "#16a34a" : "var(--accent)" }}></span>
-          <span style={{ color: "var(--ink-dim)" }}>{product.stock > 0 ? "READY" : "HABIS"}</span>
+          <span style={{ color: "var(--ink-dim)" }}>{t(product.stock > 0 ? "READY" : "HABIS")}</span>
         </span>
       </div>
 
@@ -715,11 +745,11 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
 
         <div className="grid grid-cols-3 gap-1 mt-5 py-3 border-y-2 border-dashed" style={{ borderColor: "var(--line)" }}>
           <div>
-            <div className="text-[9px] mono uppercase tracking-widest mb-0.5" style={{ color: "var(--ink-dim)" }}>Durasi</div>
+            <div className="text-[9px] mono uppercase tracking-widest mb-0.5" style={{ color: "var(--ink-dim)" }}>{t("Durasi")}</div>
             <div className="text-xs font-bold">{product.duration}</div>
           </div>
           <div className="text-center border-x border-dashed px-1" style={{ borderColor: "var(--line)" }}>
-            <div className="text-[9px] mono uppercase tracking-widest mb-0.5" style={{ color: "var(--ink-dim)" }}>Stok</div>
+            <div className="text-[9px] mono uppercase tracking-widest mb-0.5" style={{ color: "var(--ink-dim)" }}>{t("Stok")}</div>
             <div className="text-xs font-bold">{product.stock > 0 ? product.stock : "—"}</div>
           </div>
           <div className="text-right">
@@ -732,12 +762,12 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
       <div className="px-5 py-4 flex items-center justify-between gap-3" style={{ background: "var(--ink)", color: "var(--bg)" }}>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-            {product.pricingPlans?.length && <span className="text-[10px] opacity-60">Mulai dari</span>}
+            {product.pricingPlans?.length && <span className="text-[10px] opacity-60">{t("Mulai dari")}</span>}
             {reseller && <span className="text-[9px] mono px-1.5 py-0.5 font-bold" style={{ background: "var(--gold)", color: "white" }}>RSL</span>}
           </div>
-          {compareAtPrice > effectivePrice && <div className="text-[10px] line-through opacity-50 mb-1">{fmtIDR(compareAtPrice)}</div>}
+          {compareAtPrice > effectivePrice && <div className="text-[10px] line-through opacity-50 mb-1">{money(compareAtPrice)}</div>}
           <div className="serif leading-none truncate" style={{ color: "var(--gold)", fontSize: "1.7rem", fontWeight: 800 }}>
-            {fmtIDR(effectivePrice)}
+            {money(effectivePrice)}
           </div>
         </div>
         <button onClick={(event) => { event.stopPropagation(); product.pricingPlans?.length ? onPickPlan() : onAdd(); }} disabled={storeClosed || product.stock === 0} className="w-12 h-12 rounded-full flex items-center justify-center transition disabled:opacity-30 hover:scale-110 active:scale-95 shrink-0" style={{ background: "var(--accent)", color: "white" }} aria-label={storeClosed ? "Website sedang tutup" : "Tambah ke keranjang"}>
@@ -749,9 +779,10 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
 }
 
 function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, onClose, onAdd }) {
+  const { t, locale, money } = useI18n();
   const [selection, setSelection] = useState(getDefaultPlanSelection(product));
   const selectedPlan = getPlanSelection(product, selection?.planId, selection?.optionId);
-  const pricing = getPricingForSelection(product, promos, selectedPlan || selection);
+  const pricing = getPricingForSelection(product, promos, selectedPlan || selection, locale);
   const effectivePrice = getPrice(product, pricing.displayPrice);
   const compareAtPrice = pricing.compareAt;
   const discount = compareAtPrice > effectivePrice ? Math.round((1 - effectivePrice / compareAtPrice) * 100) : 0;
@@ -798,11 +829,11 @@ function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, o
                       {option.stock !== undefined && option.stock !== null && (
                         <div className="text-[10px] mono uppercase mt-1 opacity-60">{outOfStock ? "Stok habis" : `Stok ${option.stock}`}</div>
                       )}
-                      {getPricingForSelection(product, promos, { plan, option }).compareAt > getPrice(product, getPricingForSelection(product, promos, { plan, option }).displayPrice) && (
-                        <div className="text-[10px] line-through opacity-50 mt-1">{fmtIDR(getPricingForSelection(product, promos, { plan, option }).compareAt)}</div>
+                      {getPricingForSelection(product, promos, { plan, option }, locale).compareAt > getPrice(product, getPricingForSelection(product, promos, { plan, option }, locale).displayPrice) && (
+                        <div className="text-[10px] line-through opacity-50 mt-1">{money(getPricingForSelection(product, promos, { plan, option }, locale).compareAt)}</div>
                       )}
 	                      <div className="serif text-2xl leading-none mt-1" style={{ color: active ? "var(--accent)" : "var(--accent)" }}>
-	                        {fmtIDR(getPrice(product, getPricingForSelection(product, promos, { plan, option }).displayPrice))}
+	                        {money(getPrice(product, getPricingForSelection(product, promos, { plan, option }, locale).displayPrice))}
 	                      </div>
 	                    </button>
                   );
@@ -814,16 +845,16 @@ function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, o
 
         <div className="rounded-[1.5rem] p-5 flex flex-col sm:flex-row sm:items-end justify-between gap-4" style={{ background: "var(--ink)", color: "var(--bg)" }}>
           <div>
-            <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-2">Pilihan kamu</div>
+            <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-2">{t("Pilihan kamu")}</div>
             <div className="font-semibold">{selectedPlan?.plan.name} - {selectedPlan?.option.duration}</div>
             <div className="flex items-center gap-2 mt-2">
-              {compareAtPrice > effectivePrice && <span className="text-xs line-through opacity-50">{fmtIDR(compareAtPrice)}</span>}
+              {compareAtPrice > effectivePrice && <span className="text-xs line-through opacity-50">{money(compareAtPrice)}</span>}
               {discount > 0 && <span className="text-[9px] mono px-1.5 py-0.5 font-bold" style={{ background: "var(--accent)", color: "white" }}>-{discount}%</span>}
             </div>
-            <div className="serif mt-1" style={{ color: "var(--accent)", fontSize: "2.25rem", fontWeight: 800, lineHeight: 1 }}>{fmtIDR(effectivePrice)}</div>
+            <div className="serif mt-1" style={{ color: "var(--accent)", fontSize: "2.25rem", fontWeight: 800, lineHeight: 1 }}>{money(effectivePrice)}</div>
           </div>
           <button onClick={() => onAdd(selection)} disabled={storeClosed} className="px-6 py-4 rounded-full font-semibold text-sm whitespace-nowrap transition hover:scale-[1.02] disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>
-            {storeClosed ? "Website Tutup" : "Tambah ke Keranjang"}
+            {t(storeClosed ? "Website Tutup" : "Tambah ke Keranjang")}
           </button>
         </div>
       </div>
@@ -898,10 +929,11 @@ function ReviewStars({ rating, onChange, size = "md" }) {
 }
 
 export function Detail({ product, promos = [], reviews = [], storeStatus = { isOpen: true, closedReason: "" }, reseller, getPrice, onBack, onAdd, onReview, onBuy }) {
+  const { t, isJapanese, locale, money } = useI18n();
   const [qty, setQty] = useState(1);
   const [selection, setSelection] = useState(getDefaultPlanSelection(product));
   const selectedPlan = getPlanSelection(product, selection?.planId, selection?.optionId);
-  const pricing = getPricingForSelection(product, promos, selectedPlan || selection);
+  const pricing = getPricingForSelection(product, promos, selectedPlan || selection, locale);
   const effectivePrice = getPrice(product, pricing.displayPrice);
   const discount = pricing.compareAt > effectivePrice ? Math.round((1 - effectivePrice / pricing.compareAt) * 100) : 0;
   const selectedCartOption = selectedPlan
@@ -916,7 +948,7 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
       <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm mb-10" style={{ color: "var(--ink-dim)" }}>
-        <ArrowLeft className="w-4 h-4" /> Kembali
+        <ArrowLeft className="w-4 h-4" /> {isJapanese ? "戻る" : "Kembali"}
       </button>
 
       {!isStoreOpen && (
@@ -936,9 +968,9 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
             <ProductIcon icon={product.icon} color={product.color} size={220} />
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-            <div className="paper-card p-3"><Shield className="w-4 h-4 mx-auto mb-1" style={{ color: "var(--accent)" }} /><div className="text-[10px] mono uppercase tracking-wider">Garansi</div></div>
-            <div className="paper-card p-3"><Zap className="w-4 h-4 mx-auto mb-1" style={{ color: "var(--accent)" }} /><div className="text-[10px] mono uppercase tracking-wider">Instan</div></div>
-            <div className="paper-card p-3"><Award className="w-4 h-4 mx-auto mb-1" style={{ color: "var(--accent)" }} /><div className="text-[10px] mono uppercase tracking-wider">Original</div></div>
+            <div className="paper-card p-3"><Shield className="w-4 h-4 mx-auto mb-1" style={{ color: "var(--accent)" }} /><div className="text-[10px] mono uppercase tracking-wider">{isJapanese ? "保証" : "Garansi"}</div></div>
+            <div className="paper-card p-3"><Zap className="w-4 h-4 mx-auto mb-1" style={{ color: "var(--accent)" }} /><div className="text-[10px] mono uppercase tracking-wider">{isJapanese ? "即時" : "Instan"}</div></div>
+            <div className="paper-card p-3"><Award className="w-4 h-4 mx-auto mb-1" style={{ color: "var(--accent)" }} /><div className="text-[10px] mono uppercase tracking-wider">{isJapanese ? "正規品" : "Original"}</div></div>
           </div>
         </div>
 
@@ -949,7 +981,7 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
           <div className="text-lg serif-italic mb-6" style={{ color: "var(--ink-dim)" }}>"{product.tagline}"</div>
           {product.pricingPlans?.length && (
             <div className="paper-card p-5 mb-8">
-              <div className="text-xs mono uppercase tracking-widest mb-4" style={{ color: "var(--accent)" }}>Pilih Plan & Durasi</div>
+              <div className="text-xs mono uppercase tracking-widest mb-4" style={{ color: "var(--accent)" }}>{t("Pilih Plan & Durasi")}</div>
               <div className="space-y-4">
                 {product.pricingPlans.map((plan) => (
                   <div key={plan.id}>
@@ -974,10 +1006,10 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
                             {option.stock !== undefined && option.stock !== null && (
                               <div className="text-[10px] mono uppercase mt-1 opacity-60">{outOfStock ? "Stok habis" : `Stok ${option.stock}`}</div>
                             )}
-                            {getPricingForSelection(product, promos, { plan, option }).compareAt > getPrice(product, getPricingForSelection(product, promos, { plan, option }).displayPrice) && (
-                              <div className="text-[10px] line-through opacity-50 mt-1">{fmtIDR(getPricingForSelection(product, promos, { plan, option }).compareAt)}</div>
+                            {getPricingForSelection(product, promos, { plan, option }, locale).compareAt > getPrice(product, getPricingForSelection(product, promos, { plan, option }, locale).displayPrice) && (
+                              <div className="text-[10px] line-through opacity-50 mt-1">{money(getPricingForSelection(product, promos, { plan, option }, locale).compareAt)}</div>
                             )}
-                            <div className="serif text-2xl leading-none mt-1" style={{ color: active ? "var(--gold)" : "var(--accent)", fontWeight: 600 }}>{fmtIDR(getPrice(product, getPricingForSelection(product, promos, { plan, option }).displayPrice))}</div>
+                            <div className="serif text-2xl leading-none mt-1" style={{ color: active ? "var(--gold)" : "var(--accent)", fontWeight: 600 }}>{money(getPrice(product, getPricingForSelection(product, promos, { plan, option }, locale).displayPrice))}</div>
                           </button>
                         );
                       })}
@@ -994,10 +1026,10 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
             </span>
           </div>
           <div className="flex items-baseline gap-4 mb-8 pb-8 border-b" style={{ borderColor: "var(--line)" }}>
-            <div className="serif leading-none" style={{ color: "var(--accent)", fontSize: "clamp(3rem, 5vw, 4.5rem)", fontWeight: 600 }}>{fmtIDR(effectivePrice)}</div>
+            <div className="serif leading-none" style={{ color: "var(--accent)", fontSize: "clamp(3rem, 5vw, 4.5rem)", fontWeight: 600 }}>{money(effectivePrice)}</div>
             {pricing.compareAt > effectivePrice && (
               <div>
-                <div className="text-xl line-through" style={{ color: "var(--ink-dim)" }}>{fmtIDR(pricing.compareAt)}</div>
+                <div className="text-xl line-through" style={{ color: "var(--ink-dim)" }}>{money(pricing.compareAt)}</div>
                 <div className="text-xs mono mt-1" style={{ color: "var(--accent)" }}>HEMAT {discount}%</div>
               </div>
             )}
@@ -1015,7 +1047,7 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
           )}
           <p className="leading-relaxed mb-8 text-base" style={{ color: "var(--ink-dim)" }}>{product.description}</p>
           <div className="mb-10">
-            <div className="text-xs mono uppercase tracking-widest mb-4" style={{ color: "var(--accent)" }}>Yang Termasuk</div>
+            <div className="text-xs mono uppercase tracking-widest mb-4" style={{ color: "var(--accent)" }}>{t("Yang Termasuk")}</div>
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
               {product.features.map((feature) => (
                 <div key={feature} className="flex items-start gap-3 text-sm border-b pb-3" style={{ borderColor: "var(--line)" }}>
@@ -1158,6 +1190,7 @@ function ReviewsSection({ reviews, onReview }) {
 }
 
 export function TrackOrder({ onFindOrder, onBack }) {
+  const { t, isJapanese } = useI18n();
   const [orderId, setOrderId] = useState("");
   const [wa, setWa] = useState("");
   const [searched, setSearched] = useState(false);
@@ -1175,22 +1208,22 @@ export function TrackOrder({ onFindOrder, onBack }) {
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
       <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
-        <ArrowLeft className="w-4 h-4" /> Kembali ke toko
+        <ArrowLeft className="w-4 h-4" /> {isJapanese ? "ストアへ戻る" : "Kembali ke toko"}
       </button>
       <div className="grid lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-5 paper-card p-7">
-          <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Cek Pesanan</div>
+          <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>{t("Lacak Pesanan")}</div>
           <h1 className="serif leading-none mb-4" style={{ fontSize: "clamp(3rem, 6vw, 5rem)", fontWeight: 500 }}>
-            Lacak <span className="serif-italic">order.</span>
+            {isJapanese ? <>注文<span className="serif-italic">確認。</span></> : <>Lacak <span className="serif-italic">order.</span></>}
           </h1>
           <p className="text-sm leading-relaxed mb-6" style={{ color: "var(--ink-dim)" }}>
-            Masukkan Order ID dan nomor WhatsApp yang dipakai checkout untuk melihat status pesanan.
+            {isJapanese ? "注文IDと購入時に入力したWhatsApp番号を入力してください。" : "Masukkan Order ID dan nomor WhatsApp yang dipakai checkout untuk melihat status pesanan."}
           </p>
           <form onSubmit={submit} className="space-y-4">
-            <Field label="Order ID" value={orderId} onChange={setOrderId} placeholder="ORD-XXXX" />
-            <Field label="Nomor WhatsApp" value={wa} onChange={setWa} placeholder="08xxxxxxxxxx" />
+            <Field label={t("Order ID")} value={orderId} onChange={setOrderId} placeholder="ORD-XXXX" />
+            <Field label={t("Nomor WhatsApp")} value={wa} onChange={setWa} placeholder="08xxxxxxxxxx" />
             <button type="submit" disabled={loading || !orderId.trim() || !wa.trim()} className="w-full py-4 rounded-full font-semibold text-sm disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>
-              {loading ? "Mengecek..." : "Cek Status"}
+              {loading ? (isJapanese ? "確認中…" : "Mengecek...") : (isJapanese ? "状況を確認" : "Cek Status")}
             </button>
           </form>
         </div>
@@ -1219,6 +1252,8 @@ export function TrackOrder({ onFindOrder, onBack }) {
 }
 
 function OrderTrackingCard({ order }) {
+  const { t, locale, catalogText } = useI18n();
+  const orderCurrency = order.currency || "IDR";
   const steps = ["Menunggu Pembayaran", "Menunggu Verifikasi", "Diproses", "Selesai"];
   const activeIndex = Math.max(0, steps.indexOf(order.status));
   const payment = getPaymentDetail(order.buyer.method);
@@ -1229,9 +1264,9 @@ function OrderTrackingCard({ order }) {
         <div>
           <div className="mono text-xs mb-2" style={{ color: "var(--accent)" }}>{order.id}</div>
           <h2 className="serif text-4xl leading-none" style={{ fontWeight: 500 }}>{order.buyer.name}</h2>
-          <p className="text-sm mt-2" style={{ color: "var(--ink-dim)" }}>{new Date(order.createdAt).toLocaleString("id-ID")}</p>
+          <p className="text-sm mt-2" style={{ color: "var(--ink-dim)" }}>{new Date(order.createdAt).toLocaleString(locale === "jp" ? "ja-JP" : "id-ID")}</p>
         </div>
-        <span className="px-3 py-1 rounded-full text-xs mono uppercase w-fit" style={{ background: "var(--ink)", color: "var(--bg)" }}>{order.status}</span>
+        <span className="px-3 py-1 rounded-full text-xs mono uppercase w-fit" style={{ background: "var(--ink)", color: "var(--bg)" }}>{t(order.status)}</span>
       </div>
 
       <div className="grid sm:grid-cols-4 gap-2 mb-7">
@@ -1240,7 +1275,7 @@ function OrderTrackingCard({ order }) {
           return (
             <div key={step} className="rounded-2xl border p-3 text-xs" style={{ borderColor: active ? "var(--ink)" : "var(--line)", background: active ? "var(--bg-3)" : "transparent" }}>
               <div className="mono text-[9px] uppercase tracking-widest mb-1" style={{ color: active ? "var(--accent)" : "var(--ink-dim)" }}>Step {index + 1}</div>
-              <div className="font-semibold">{step}</div>
+              <div className="font-semibold">{t(step)}</div>
             </div>
           );
         })}
@@ -1249,8 +1284,8 @@ function OrderTrackingCard({ order }) {
       <div className="space-y-2 border-t pt-5 mb-5" style={{ borderColor: "var(--line)" }}>
         {order.items.map((item) => (
           <div key={item.id} className="flex justify-between gap-4 text-sm">
-            <span>{item.qty}x {item.name}{item.plan ? ` - ${item.plan} (${item.duration})` : ""}</span>
-            <span className="mono" style={{ color: "var(--ink-dim)" }}>{fmtIDR(item.price * item.qty)}</span>
+            <span>{item.qty}x {item.name}{item.plan ? ` - ${catalogText(item.plan)} (${catalogText(item.duration)})` : ""}</span>
+            <span className="mono" style={{ color: "var(--ink-dim)" }}>{fmtCurrency(item.price * item.qty, orderCurrency)}</span>
           </div>
         ))}
       </div>
@@ -1258,23 +1293,24 @@ function OrderTrackingCard({ order }) {
       <div className="rounded-2xl p-4 text-sm" style={{ background: "var(--bg-3)" }}>
         <div className="flex justify-between gap-4 mb-2"><span style={{ color: "var(--ink-dim)" }}>Metode</span><strong>{payment.label}</strong></div>
         <div className="flex justify-between gap-4 mb-2"><span style={{ color: "var(--ink-dim)" }}>Tujuan</span><span className="mono text-right">{payment.accountNumber}</span></div>
-        <div className="flex justify-between gap-4"><span style={{ color: "var(--ink-dim)" }}>Total</span><strong style={{ color: "var(--accent)" }}>{fmtIDR(order.total)}</strong></div>
+        <div className="flex justify-between gap-4"><span style={{ color: "var(--ink-dim)" }}>Total</span><strong style={{ color: "var(--accent)" }}>{fmtCurrency(order.total, orderCurrency)}</strong></div>
       </div>
     </div>
   );
 }
 
 export function CartView({ items, total, originalTotal, updateQty, remove, onBack, onCheckout, storeStatus = { isOpen: true, closedReason: "" } }) {
+  const { t, isJapanese, catalogText, money } = useI18n();
   const savings = originalTotal - total;
   const isStoreOpen = storeStatus?.isOpen !== false;
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
       <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
-        <ArrowLeft className="w-4 h-4" /> Lanjut belanja
+        <ArrowLeft className="w-4 h-4" /> {isJapanese ? "買い物を続ける" : "Lanjut belanja"}
       </button>
-      <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Keranjang Belanja</div>
+      <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>{t("Keranjang")}</div>
       <h1 className="serif leading-none mb-3" style={{ fontSize: "clamp(3rem, 6vw, 5.5rem)", fontWeight: 500 }}>
-        Keranjang<span className="serif-italic">.</span>
+        {t("Keranjang")}<span className="serif-italic">.</span>
       </h1>
       <div className="text-sm mb-12" style={{ color: "var(--ink-dim)" }}>{items.length} produk</div>
       {!isStoreOpen && (
@@ -1300,12 +1336,12 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
                 <div className="min-w-0 sm:flex-1">
                   <div className="serif text-xl" style={{ fontWeight: 500 }}>{item.name}</div>
                   <div className="text-xs serif-italic" style={{ color: "var(--ink-dim)" }}>
-                    {item.selectedPlanName ? `${item.selectedPlanName} - ${item.selectedDuration}` : `${item.duration} · ${item.tagline}`}
+                    {item.selectedPlanName ? `${catalogText(item.selectedPlanName)} - ${catalogText(item.selectedDuration)}` : `${catalogText(item.duration)} · ${catalogText(item.tagline)}`}
                   </div>
                   <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                    <span className="font-bold" style={{ color: "var(--accent)" }}>{fmtIDR(item.effectivePrice)}</span>
+                    <span className="font-bold" style={{ color: "var(--accent)" }}>{money(item.effectivePrice)}</span>
                     {Math.max(item.compareAtPrice || item.price, item.price) > item.effectivePrice && (
-                      <span className="text-xs line-through" style={{ color: "var(--ink-dim)" }}>{fmtIDR(Math.max(item.compareAtPrice || item.price, item.price))}</span>
+                      <span className="text-xs line-through" style={{ color: "var(--ink-dim)" }}>{money(Math.max(item.compareAtPrice || item.price, item.price))}</span>
                     )}
                   </div>
                 </div>
@@ -1326,16 +1362,16 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
           <div className="paper-card min-w-0 p-5 sm:p-7 h-fit lg:sticky lg:top-32">
             <div className="text-xs mono uppercase tracking-widest mb-5" style={{ color: "var(--accent)" }}>Ringkasan</div>
             <div className="space-y-3 text-sm mb-5">
-              <div className="flex justify-between"><span style={{ color: "var(--ink-dim)" }}>Subtotal</span><span>{fmtIDR(originalTotal)}</span></div>
-              {savings > 0 && <div className="flex justify-between"><span style={{ color: "var(--ink-dim)" }}>Diskon Reseller</span><span style={{ color: "var(--accent)" }}>−{fmtIDR(savings)}</span></div>}
+              <div className="flex justify-between"><span style={{ color: "var(--ink-dim)" }}>{t("Subtotal")}</span><span>{money(originalTotal)}</span></div>
+              {savings > 0 && <div className="flex justify-between"><span style={{ color: "var(--ink-dim)" }}>Diskon Reseller</span><span style={{ color: "var(--accent)" }}>−{money(savings)}</span></div>}
               <div className="flex justify-between"><span style={{ color: "var(--ink-dim)" }}>Biaya admin</span><span>Gratis</span></div>
             </div>
             <div className="border-t pt-5 mb-6" style={{ borderColor: "var(--line)" }}>
-              <div className="text-xs mono uppercase mb-1" style={{ color: "var(--ink-dim)" }}>Total</div>
-              <div className="serif" style={{ color: "var(--accent)", fontSize: "clamp(2.25rem, 13vw, 2.5rem)", fontWeight: 600, lineHeight: 1 }}>{fmtIDR(total)}</div>
+              <div className="text-xs mono uppercase mb-1" style={{ color: "var(--ink-dim)" }}>{t("Total")}</div>
+              <div className="serif" style={{ color: "var(--accent)", fontSize: "clamp(2.25rem, 13vw, 2.5rem)", fontWeight: 600, lineHeight: 1 }}>{money(total)}</div>
             </div>
             <button onClick={onCheckout} disabled={!isStoreOpen} className="w-full py-4 rounded-full font-semibold text-sm transition hover:scale-[1.02] flex items-center justify-center gap-2 disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>
-              {isStoreOpen ? "Lanjut ke Checkout" : "Website Tutup"} <ArrowRight className="w-4 h-4" />
+              {isStoreOpen ? (isJapanese ? "購入手続きへ" : "Lanjut ke Checkout") : t("Website Tutup")} <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -1357,6 +1393,7 @@ export function Checkout({
   onRemoveCoupon,
   onPlace,
 }) {
+  const { t, isJapanese, catalogText, money } = useI18n();
   const [name, setName] = useState(reseller?.name || "");
   const [email, setEmail] = useState(reseller?.email || "");
   const [wa, setWa] = useState(reseller?.wa || "");
@@ -1386,11 +1423,11 @@ export function Checkout({
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
       <button onClick={onBack} className="motion-back-button flex items-center gap-2 text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
-        <ArrowLeft className="w-4 h-4" /> Kembali ke keranjang
+        <ArrowLeft className="w-4 h-4" /> {isJapanese ? "カートへ戻る" : "Kembali ke keranjang"}
       </button>
-      <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Selesaikan Pesanan</div>
+      <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>{isJapanese ? "注文手続き" : "Selesaikan Pesanan"}</div>
       <h1 className="serif leading-none mb-12" style={{ fontSize: "clamp(3rem, 6vw, 5.5rem)", fontWeight: 500 }}>
-        Selesaikan<span className="serif-italic"> pesanan.</span>
+        {isJapanese ? <>注文を<span className="serif-italic">確定。</span></> : <>Selesaikan<span className="serif-italic"> pesanan.</span></>}
       </h1>
       {!isStoreOpen && (
         <div className="mb-8">
@@ -1403,19 +1440,19 @@ export function Checkout({
           <div className="paper-card p-7">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-8 h-8 rounded-full flex items-center justify-center serif text-sm" style={{ background: "var(--ink)", color: "var(--bg)" }}>1</div>
-              <div className="text-xs mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Data Pembeli</div>
+              <div className="text-xs mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>{t("Data Pembeli")}</div>
             </div>
             <div className="space-y-4">
-              <Field label="Nama Lengkap" value={name} onChange={setName} placeholder="John Doe" />
+              <Field label={t("Nama Lengkap")} value={name} onChange={setName} placeholder="John Doe" />
               <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="kamu@email.com" />
-              <Field label="Nomor WhatsApp" value={wa} onChange={setWa} placeholder="08xxxxxxxxxx" />
+              <Field label={t("Nomor WhatsApp")} value={wa} onChange={setWa} placeholder="08xxxxxxxxxx" />
             </div>
           </div>
 
           <div className="paper-card p-7">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-8 h-8 rounded-full flex items-center justify-center serif text-sm" style={{ background: "var(--ink)", color: "var(--bg)" }}>2</div>
-              <div className="text-xs mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Metode Pembayaran</div>
+              <div className="text-xs mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>{t("Metode Pembayaran")}</div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {PAYMENT_METHODS.map((item) => (
@@ -1425,13 +1462,13 @@ export function Checkout({
               ))}
             </div>
             <div className="mt-5 rounded-2xl border p-4 text-sm leading-relaxed" style={{ borderColor: "var(--line)", background: "var(--bg-3)", color: "var(--ink-dim)" }}>
-              Setelah order dibuat, lakukan pembayaran sesuai metode yang dipilih lalu konfirmasi via WhatsApp. Akun akan dikirim admin setelah pembayaran diverifikasi.
+              {isJapanese ? "注文後、選択した方法でお支払いのうえWhatsAppでご連絡ください。入金確認後、アカウント情報をお送りします。" : "Setelah order dibuat, lakukan pembayaran sesuai metode yang dipilih lalu konfirmasi via WhatsApp. Akun akan dikirim admin setelah pembayaran diverifikasi."}
             </div>
           </div>
         </div>
 
         <div className="paper-card p-7 h-fit">
-          <div className="text-xs mono uppercase tracking-widest mb-4" style={{ color: "var(--accent)" }}>Pesananmu</div>
+          <div className="text-xs mono uppercase tracking-widest mb-4" style={{ color: "var(--accent)" }}>{t("Pesananmu")}</div>
           <div className="space-y-3 mb-5 max-h-60 overflow-y-auto scrollbar">
             {items.map((item) => (
               <div key={item.cartKey} className="flex items-center gap-3 text-sm pb-3 border-b" style={{ borderColor: "var(--line)" }}>
@@ -1439,24 +1476,24 @@ export function Checkout({
                 <div className="flex-1 min-w-0">
                   <div className="truncate font-medium">{item.name}</div>
                   <div className="text-xs" style={{ color: "var(--ink-dim)" }}>
-                    {item.selectedPlanName ? `${item.selectedPlanName} - ${item.selectedDuration}` : item.duration}
+                    {item.selectedPlanName ? `${catalogText(item.selectedPlanName)} - ${catalogText(item.selectedDuration)}` : catalogText(item.duration)}
                   </div>
-                  <div className="text-xs" style={{ color: "var(--ink-dim)" }}>{item.qty}× {fmtIDR(item.effectivePrice)}</div>
+                  <div className="text-xs" style={{ color: "var(--ink-dim)" }}>{item.qty}× {money(item.effectivePrice)}</div>
                 </div>
-                <div className="font-bold text-sm">{fmtIDR(item.effectivePrice * item.qty)}</div>
+                <div className="font-bold text-sm">{money(item.effectivePrice * item.qty)}</div>
               </div>
             ))}
           </div>
           <div className="border-t pt-5 mb-6" style={{ borderColor: "var(--line)" }}>
             <div className="space-y-2 text-sm mb-5">
               <div className="flex justify-between gap-4">
-                <span style={{ color: "var(--ink-dim)" }}>Subtotal</span>
-                <span>{fmtIDR(subtotal)}</span>
+                <span style={{ color: "var(--ink-dim)" }}>{t("Subtotal")}</span>
+                <span>{money(subtotal)}</span>
               </div>
               {couponDiscount > 0 && (
                 <div className="flex justify-between gap-4">
                   <span style={{ color: "var(--ink-dim)" }}>Kupon {appliedCoupon?.code}</span>
-                  <span style={{ color: "var(--accent)" }}>-{fmtIDR(couponDiscount)}</span>
+                  <span style={{ color: "var(--accent)" }}>-{money(couponDiscount)}</span>
                 </div>
               )}
             </div>
@@ -1472,11 +1509,11 @@ export function Checkout({
             />
           </div>
           <div className="border-t pt-5 mb-6" style={{ borderColor: "var(--line)" }}>
-            <div className="text-xs mono uppercase mb-1" style={{ color: "var(--ink-dim)" }}>Total</div>
-            <div className="serif" style={{ color: "var(--accent)", fontSize: "2.5rem", fontWeight: 600, lineHeight: 1 }}>{fmtIDR(total)}</div>
+            <div className="text-xs mono uppercase mb-1" style={{ color: "var(--ink-dim)" }}>{t("Total")}</div>
+            <div className="serif" style={{ color: "var(--accent)", fontSize: "2.5rem", fontWeight: 600, lineHeight: 1 }}>{money(total)}</div>
           </div>
           <button onClick={submit} disabled={!isStoreOpen || submitting || !name || !email || !wa} className="w-full py-4 rounded-full font-semibold text-sm disabled:opacity-40 transition hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>
-            {!isStoreOpen ? "Website Tutup" : submitting ? "Membuat booking..." : "Buat Booking Pesanan"}
+            {t(!isStoreOpen ? "Website Tutup" : submitting ? "Membuat booking..." : "Buat Booking Pesanan")}
           </button>
           <p className="text-[10px] mono uppercase mt-4 text-center" style={{ color: "var(--ink-dim)" }}>Pengiriman akun via WhatsApp setelah valid</p>
         </div>
@@ -1486,10 +1523,11 @@ export function Checkout({
 }
 
 function CouponBox({ code, setCode, appliedCoupon, onApply, onRemove }) {
+  const { t } = useI18n();
   return (
     <div className="mb-5 rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
       <div className="text-[10px] mono uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: "var(--accent)" }}>
-        <BadgePercent className="w-3.5 h-3.5" /> Kode Kupon
+        <BadgePercent className="w-3.5 h-3.5" /> {t("Kode Kupon")}
       </div>
       {appliedCoupon ? (
         <div className="flex items-center justify-between gap-3">
@@ -1498,7 +1536,7 @@ function CouponBox({ code, setCode, appliedCoupon, onApply, onRemove }) {
             <div className="text-xs" style={{ color: "var(--ink-dim)" }}>{appliedCoupon.title}</div>
           </div>
           <button type="button" onClick={onRemove} className="px-3 py-2 rounded-full border text-xs font-semibold" style={{ borderColor: "var(--line-2)" }}>
-            Hapus
+            {t("Hapus")}
           </button>
         </div>
       ) : (
@@ -1511,7 +1549,7 @@ function CouponBox({ code, setCode, appliedCoupon, onApply, onRemove }) {
             style={{ borderColor: "var(--line)" }}
           />
           <button type="button" onClick={onApply} disabled={!code.trim()} className="px-4 rounded-xl text-sm font-semibold disabled:opacity-40" style={{ background: "var(--ink)", color: "var(--bg)" }}>
-            Pakai
+            {t("Pakai")}
           </button>
         </div>
       )}
@@ -1520,16 +1558,18 @@ function CouponBox({ code, setCode, appliedCoupon, onApply, onRemove }) {
 }
 
 export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
+  const { t, isJapanese, catalogText } = useI18n();
   if (!order) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-20 text-center">
         <div className="serif text-3xl serif-italic mb-4" style={{ color: "var(--ink-dim)" }}>order tidak ditemukan...</div>
-        <button onClick={onHome} className="px-6 py-3 rounded-full font-semibold text-sm" style={{ background: "var(--ink)", color: "var(--bg)" }}>Kembali ke beranda</button>
+        <button onClick={onHome} className="px-6 py-3 rounded-full font-semibold text-sm" style={{ background: "var(--ink)", color: "var(--bg)" }}>{t("Kembali ke beranda")}</button>
       </div>
     );
   }
 
   const whatsappUrl = getWhatsAppConfirmationUrl(order);
+  const orderCurrency = order.currency || "IDR";
   const payment = getPaymentDetail(order.buyer.method);
   const invoiceText = createInvoiceText(order, payment);
   const invoiceHref = createTextDownloadHref(invoiceText);
@@ -1539,15 +1579,15 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
       <div className="paper-card p-8 lg:p-10 relative overflow-hidden grain receipt-rise">
         <div className="text-xs mono uppercase tracking-widest mb-3 flex items-center gap-3" style={{ color: "var(--accent)" }}>
           <span className="w-8 h-px" style={{ background: "var(--accent)" }}></span>
-          Booking berhasil dibuat
+          {t("Booking berhasil dibuat")}
         </div>
         <div className="grid lg:grid-cols-12 gap-10">
           <div className="lg:col-span-7">
             <h1 className="serif leading-none mb-4" style={{ fontSize: "clamp(3rem, 6vw, 5rem)", fontWeight: 500 }}>
-              Pesanan <span className="serif-italic">menunggu pembayaran.</span>
+              {isJapanese ? <>お支払いを<span className="serif-italic">お待ちしています。</span></> : <>Pesanan <span className="serif-italic">menunggu pembayaran.</span></>}
             </h1>
             <p className="text-sm leading-relaxed mb-8" style={{ color: "var(--ink-dim)" }}>
-              Silakan lakukan pembayaran sesuai metode yang kamu pilih, lalu klik tombol WhatsApp untuk kirim bukti transfer. Admin akan cek pembayaran dan mengirim akun ke WhatsApp pembeli.
+              {isJapanese ? "選択した方法でお支払い後、WhatsAppから振込明細をお送りください。確認後、アカウント情報をお送りします。" : "Silakan lakukan pembayaran sesuai metode yang kamu pilih, lalu klik tombol WhatsApp untuk kirim bukti transfer. Admin akan cek pembayaran dan mengirim akun ke WhatsApp pembeli."}
             </p>
 
             <div className="grid sm:grid-cols-3 gap-3 mb-8">
@@ -1558,10 +1598,10 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
 
             <div className="flex flex-col sm:flex-row gap-3">
               <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={onConfirmPayment} className="flex-1 py-4 rounded-full font-semibold text-sm text-center transition hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>
-                Konfirmasi Pembayaran via WhatsApp
+                {t("Konfirmasi Pembayaran via WhatsApp")}
               </a>
               <button onClick={onHome} className="flex-1 py-4 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>
-                Kembali Belanja
+                {t("Kembali Belanja")}
               </button>
             </div>
             <a
@@ -1570,7 +1610,7 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
               className="mt-3 w-full py-4 rounded-full border font-semibold text-sm flex items-center justify-center gap-2"
               style={{ borderColor: "var(--line-2)" }}
             >
-              <Download className="w-4 h-4" /> Download Invoice
+              <Download className="w-4 h-4" /> {t("Download Invoice")}
             </a>
             <WhatsAppProofNotice whatsappUrl={whatsappUrl} onConfirmPayment={onConfirmPayment} />
             {onAdmin && (
@@ -1585,27 +1625,27 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
               <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-2">Order ID</div>
               <div className="serif text-3xl mb-6" style={{ fontWeight: 600 }}>{order.id}</div>
               <div className="space-y-3 text-sm mb-6">
-                <div className="flex justify-between gap-4"><span className="opacity-60">Nama</span><span className="text-right">{order.buyer.name}</span></div>
+                <div className="flex justify-between gap-4"><span className="opacity-60">{t("Nama")}</span><span className="text-right">{order.buyer.name}</span></div>
                 <div className="flex justify-between gap-4"><span className="opacity-60">WhatsApp</span><span className="text-right">{order.buyer.wa}</span></div>
                 <div className="flex justify-between gap-4"><span className="opacity-60">Metode</span><span className="text-right">{order.buyer.method}</span></div>
-                <div className="flex justify-between gap-4"><span className="opacity-60">Status</span><span className="text-right">{order.status}</span></div>
+                <div className="flex justify-between gap-4"><span className="opacity-60">Status</span><span className="text-right">{t(order.status)}</span></div>
               </div>
               <div className="border-t pt-5 mb-5" style={{ borderColor: "rgba(255,255,255,0.15)" }}>
                 {order.items.map((item) => (
                   <div key={item.id} className="flex justify-between gap-4 text-sm mb-2">
-                    <span>{item.qty}x {item.name}{item.plan ? ` - ${item.plan} (${item.duration})` : ""}</span>
-                    <span className="mono opacity-70">{fmtIDR(item.price * item.qty)}</span>
+                    <span>{item.qty}x {item.name}{item.plan ? ` - ${catalogText(item.plan)} (${catalogText(item.duration)})` : ""}</span>
+                    <span className="mono opacity-70">{fmtCurrency(item.price * item.qty, orderCurrency)}</span>
                   </div>
                 ))}
                 {order.coupon && Number(order.discount || 0) > 0 && (
                   <div className="flex justify-between gap-4 text-sm mt-4 pt-4 border-t" style={{ borderColor: "rgba(255,255,255,0.15)" }}>
                     <span>Kupon {order.coupon.code}</span>
-                    <span className="mono" style={{ color: "var(--gold)" }}>-{fmtIDR(order.discount)}</span>
+                    <span className="mono" style={{ color: "var(--gold)" }}>-{fmtCurrency(order.discount, orderCurrency)}</span>
                   </div>
                 )}
               </div>
               <div className="border-t pt-5 mb-5" style={{ borderColor: "rgba(255,255,255,0.15)" }}>
-                <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-3">Detail Pembayaran</div>
+                <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-3">{t("Detail Pembayaran")}</div>
                 <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.08)" }}>
                   <div className="text-xs opacity-70 mb-3">{payment.instruction}</div>
                   <div className="space-y-2 text-sm">
@@ -1614,11 +1654,11 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
                       <span className="text-right font-semibold">{payment.label}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="opacity-60">Atas Nama</span>
+                      <span className="opacity-60">{t("Atas Nama")}</span>
                       <span className="text-right font-semibold">{payment.accountName}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="opacity-60">Tujuan</span>
+                      <span className="opacity-60">{t("Tujuan")}</span>
                       <span className="text-right mono">{payment.accountNumber}</span>
                     </div>
                   </div>
@@ -1640,8 +1680,8 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
                 </div>
               </div>
               <div className="border-t pt-5" style={{ borderColor: "rgba(255,255,255,0.15)" }}>
-                <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-1">Total Bayar</div>
-                <div className="serif" style={{ color: "var(--gold)", fontSize: "2.5rem", fontWeight: 600, lineHeight: 1 }}>{fmtIDR(order.total)}</div>
+                <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-1">{t("Total Bayar")}</div>
+                <div className="serif" style={{ color: "var(--gold)", fontSize: "2.5rem", fontWeight: 600, lineHeight: 1 }}>{fmtCurrency(order.total, orderCurrency)}</div>
               </div>
             </div>
           </div>
@@ -1652,11 +1692,12 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
 }
 
 function WhatsAppProofNotice({ whatsappUrl, onConfirmPayment }) {
+  const { t, isJapanese } = useI18n();
   return (
     <div className="mt-3 rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
-      <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Bukti Pembayaran</div>
+      <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>{t("Bukti Pembayaran")}</div>
       <p className="text-xs leading-relaxed mb-3" style={{ color: "var(--ink-dim)" }}>
-        Kirim screenshot bukti transfer lewat WhatsApp admin. Setelah tombol diklik, status pesanan akan berubah menjadi Menunggu Verifikasi.
+        {isJapanese ? "振込明細のスクリーンショットをWhatsAppでお送りください。送信後、注文状況は確認待ちになります。" : "Kirim screenshot bukti transfer lewat WhatsApp admin. Setelah tombol diklik, status pesanan akan berubah menjadi Menunggu Verifikasi."}
       </p>
       <a
         href={whatsappUrl}
@@ -1666,7 +1707,7 @@ function WhatsAppProofNotice({ whatsappUrl, onConfirmPayment }) {
         className="inline-flex px-4 py-2 rounded-full text-xs font-semibold"
         style={{ background: "var(--accent)", color: "white" }}
       >
-        Kirim Bukti via WhatsApp
+        {t("Kirim Bukti via WhatsApp")}
       </a>
     </div>
   );
@@ -1690,7 +1731,7 @@ function createInvoiceText(order, payment) {
   const items = order.items
     .map((item) => {
       const variant = item.plan ? ` - ${item.plan} (${item.duration})` : "";
-      return `${item.qty}x ${item.name}${variant} = ${fmtIDR(item.price * item.qty)}`;
+      return `${item.qty}x ${item.name}${variant} = ${fmtCurrency(item.price * item.qty, order.currency || "IDR")}`;
     })
     .join("\n");
 
@@ -1714,8 +1755,8 @@ function createInvoiceText(order, payment) {
     `Metode        : ${payment.label}`,
     `Atas Nama     : ${payment.accountName}`,
     `Tujuan        : ${payment.accountNumber}`,
-    order.coupon ? `Kupon         : ${order.coupon.code} (-${fmtIDR(order.discount)})` : null,
-    `Total Bayar   : ${fmtIDR(order.total)}`,
+    order.coupon ? `Kupon         : ${order.coupon.code} (-${fmtCurrency(order.discount, order.currency || "IDR")})` : null,
+    `Total Bayar   : ${fmtCurrency(order.total, order.currency || "IDR")}`,
     "",
     "Catatan:",
     "Akun dikirim admin via WhatsApp setelah pembayaran diverifikasi.",

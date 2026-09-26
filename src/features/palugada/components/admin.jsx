@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, BadgePercent, Bell, Check, CheckCheck, ChevronDown, Crown, Edit3, Inbox, KeyRound, LogOut, Menu, MessageSquareQuote, Package, Plus, Power, PowerOff, Receipt, Sparkles, Star, Trash2, TrendingUp, Users, X } from "lucide-react";
-import { ICONS, RESELLER_TIERS, fmtIDR, getProductTotalStock, hasOptionLevelStock } from "../constants";
+import { ICONS, RESELLER_TIERS, fmtCurrency, fmtIDR, getFallbackJpyPrice, getProductTotalStock, hasOptionLevelStock } from "../constants";
 import { Field, ProductIcon } from "./shared";
 
 const ADMIN_TAB_KEY = "pa_admin_tab";
@@ -182,8 +182,8 @@ export function AdminPanel({
     orders: orders.length,
     requests: productRequests.length,
     unreadNotifications: notifications.filter((notification) => !notification.read).length,
-    revenue: orders.reduce((sum, order) => sum + order.total, 0),
-    revenueThisMonth: getMonthRevenue(orders, 0),
+    revenueThisMonth: getMonthRevenue(orders, 0, "IDR"),
+    revenueThisMonthJpy: getMonthRevenue(orders, 0, "JPY"),
   };
 
   const askDelete = (title, description, onConfirm) => {
@@ -222,6 +222,7 @@ export function AdminPanel({
             id: option.id || createStableId(option.duration, `option-${optionIndex + 1}`),
             duration: String(option.duration || "").trim(),
             price: Math.max(0, Number(option.price) || 0),
+            priceJpy: Math.max(0, Number(option.priceJpy) || 0),
             ...(optionLevelStock ? { stock: Math.max(0, Number(option.stock) || 0) } : {}),
           }))
           .filter((option) => option.duration),
@@ -231,6 +232,8 @@ export function AdminPanel({
       ...data,
       price: Math.max(0, Number(data.price) || 0),
       oldPrice: Math.max(0, Number(data.oldPrice) || 0),
+      priceJpy: Math.max(0, Number(data.priceJpy) || 0),
+      oldPriceJpy: Math.max(0, Number(data.oldPriceJpy) || 0),
       pricingPlans,
     };
     const payload = {
@@ -295,6 +298,8 @@ export function AdminPanel({
       optionId: data.optionId || "",
       promoPrice: Math.max(0, Number(data.promoPrice) || 0),
       compareAtPrice: Math.max(0, Number(data.compareAtPrice) || 0),
+      promoPriceJpy: Math.max(0, Number(data.promoPriceJpy) || 0),
+      compareAtPriceJpy: Math.max(0, Number(data.compareAtPriceJpy) || 0),
     };
 
     if (payload.id && promos.find((promo) => promo.id === payload.id)) {
@@ -329,6 +334,9 @@ export function AdminPanel({
       value: Math.max(0, Number(data.value) || 0),
       minTotal: Math.max(0, Number(data.minTotal) || 0),
       maxDiscount: Math.max(0, Number(data.maxDiscount) || 0),
+      valueJpy: Math.max(0, Number(data.valueJpy) || 0),
+      minTotalJpy: Math.max(0, Number(data.minTotalJpy) || 0),
+      maxDiscountJpy: Math.max(0, Number(data.maxDiscountJpy) || 0),
     };
 
     if (payload.id && coupons.find((coupon) => coupon.id === payload.id)) {
@@ -623,7 +631,8 @@ function DashboardTab({
         <StatCard label="Pesanan" value={stats.orders} icon={Receipt} />
         <StatCard label="Request" value={stats.requests} icon={Inbox} />
         <StatCard label="Notif Baru" value={stats.unreadNotifications} icon={Bell} />
-        <StatCard label="Pendapatan Bulan Ini" value={fmtIDR(stats.revenueThisMonth)} icon={TrendingUp} accent onClick={() => setView("revenue")} />
+        <StatCard label="Pendapatan IDR Bulan Ini" value={fmtIDR(stats.revenueThisMonth)} icon={TrendingUp} accent onClick={() => setView("revenue")} />
+        <StatCard label="Pendapatan JPY Bulan Ini" value={fmtCurrency(stats.revenueThisMonthJpy, "JPY")} icon={TrendingUp} accent onClick={() => setView("revenue")} />
       </div>
       <NotificationCenter
         notifications={notifications}
@@ -644,7 +653,7 @@ function DashboardTab({
                 <div className="mono text-xs" style={{ color: "var(--accent)" }}>{order.id}</div>
                 <div className="text-sm font-medium">{order.buyer.name}</div>
               </div>
-              <div className="font-bold text-sm">{fmtIDR(order.total)}</div>
+              <div className="font-bold text-sm">{fmtCurrency(order.total, order.currency || "IDR")}</div>
             </div>
           ))}
           {orders.length === 0 && <div className="text-sm text-center py-8 serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada pesanan</div>}
@@ -923,6 +932,8 @@ function mapOrderExport(order) {
     diskon: order.discount || 0,
     kupon: order.coupon?.code || "",
     total: order.total,
+    currency: order.currency || "IDR",
+    locale: order.locale || "id",
     resellerId: order.resellerId || "",
     produk: (order.items || []).map((item) => `${item.qty}x ${item.name}${item.plan ? ` ${item.plan}` : ""}`).join("; "),
   };
@@ -935,6 +946,8 @@ function mapProductExport(product) {
     kategori: product.category,
     harga: product.price,
     hargaLama: product.oldPrice,
+    hargaJpy: product.priceJpy || 0,
+    hargaLamaJpy: product.oldPriceJpy || 0,
     stok: product.stock,
     durasi: product.duration,
   };
@@ -966,14 +979,17 @@ function mapRequestExport(request) {
 }
 
 function getRevenueExportRows(orders = []) {
-  return [-2, -1, 0].map((offset) => {
-    const summary = getMonthRevenueSummary(orders, offset);
-    return {
-      bulan: summary.label,
-      pesanan: summary.count,
-      pendapatan: summary.total,
-    };
-  });
+  return [-2, -1, 0].flatMap((offset) =>
+    ["IDR", "JPY"].map((currency) => {
+      const summary = getMonthRevenueSummary(orders, offset, currency);
+      return {
+        bulan: summary.label,
+        mataUang: currency,
+        pesanan: summary.orders.length,
+        pendapatan: summary.total,
+      };
+    })
+  );
 }
 
 function ProductsTab({ products, onEdit, onDelete }) {
@@ -1028,7 +1044,11 @@ function ProductsTab({ products, onEdit, onDelete }) {
               </div>
             </div>
             <div className="md:col-span-2 text-xs"><span className="md:hidden mono uppercase tracking-widest opacity-50 mr-2">Kategori</span>{product.category}</div>
-            <div className="md:col-span-2 text-sm font-bold" style={{ color: "var(--accent)" }}><span className="md:hidden mono uppercase tracking-widest opacity-50 mr-2">Harga</span>{fmtIDR(product.price)}</div>
+            <div className="md:col-span-2 text-sm font-bold" style={{ color: "var(--accent)" }}>
+              <span className="md:hidden mono uppercase tracking-widest opacity-50 mr-2">Harga</span>
+              {fmtIDR(product.price)}
+              <span className="block text-[10px] font-normal" style={{ color: "var(--ink-dim)" }}>{fmtCurrency(product.priceJpy || getFallbackJpyPrice(product.price), "JPY")}</span>
+            </div>
             <div className="md:col-span-1 mono text-xs"><span className="md:hidden uppercase tracking-widest opacity-50 mr-2">Stok</span>{product.stock}</div>
             <div className="md:col-span-2 flex justify-start md:justify-end gap-1">
               <button onClick={() => onEdit(product)} className="p-2 rounded-lg hover:bg-stone-100"><Edit3 className="w-4 h-4" /></button>
@@ -1265,7 +1285,7 @@ function OrdersTab({ orders, onChangeStatus, onSaveServicePeriod, onDelete }) {
                 <div className="text-[10px] mono mt-1" style={{ color: "var(--ink-dim)" }}>{new Date(order.createdAt).toLocaleString("id-ID")}</div>
               </div>
               <div className="text-right">
-                <div className="serif text-3xl" style={{ color: "var(--accent)", fontWeight: 600 }}>{fmtIDR(order.total)}</div>
+                <div className="serif text-3xl" style={{ color: "var(--accent)", fontWeight: 600 }}>{fmtCurrency(order.total, order.currency || "IDR")}</div>
                 <div className="mt-2 flex justify-end gap-2">
                   <StatusDropdown
                     value={order.status}
@@ -1330,7 +1350,7 @@ function OrdersTab({ orders, onChangeStatus, onSaveServicePeriod, onDelete }) {
               {order.items.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm">
                   <span>{item.qty}× {item.name}{item.plan ? ` - ${item.plan} (${item.duration})` : ""}</span>
-                  <span className="mono" style={{ color: "var(--ink-dim)" }}>{fmtIDR(item.price * item.qty)}</span>
+                  <span className="mono" style={{ color: "var(--ink-dim)" }}>{fmtCurrency(item.price * item.qty, order.currency || "IDR")}</span>
                 </div>
               ))}
             </div>
@@ -1364,7 +1384,8 @@ function OrdersTab({ orders, onChangeStatus, onSaveServicePeriod, onDelete }) {
 }
 
 function RevenueHistory({ orders, onBack }) {
-  const summaries = [-1, 0, 1].map((offset) => getMonthRevenueSummary(orders, offset));
+  const [currency, setCurrency] = useState("IDR");
+  const summaries = [-1, 0, 1].map((offset) => getMonthRevenueSummary(orders, offset, currency));
   const previous = summaries[0];
   const current = summaries[1];
   const difference = current.total - previous.total;
@@ -1380,6 +1401,11 @@ function RevenueHistory({ orders, onBack }) {
       <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Revenue</div>
       <h1 className="serif leading-none mb-2" style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 500 }}>Riwayat Pendapatan<span className="serif-italic">.</span></h1>
       <p className="text-sm mb-8" style={{ color: "var(--ink-dim)" }}>Pendapatan bulanan berdasarkan tanggal order dibuat</p>
+      <div className="flex gap-2 mb-6">
+        {["IDR", "JPY"].map((item) => (
+          <button key={item} type="button" onClick={() => setCurrency(item)} className="px-4 py-2 rounded-full border text-sm font-semibold" style={{ borderColor: currency === item ? "var(--ink)" : "var(--line)", background: currency === item ? "var(--ink)" : "var(--bg-2)", color: currency === item ? "var(--bg)" : "var(--ink)" }}>{item}</button>
+        ))}
+      </div>
 
       <div className="paper-card p-6 sm:p-7 mb-6" style={{ borderColor: "var(--accent)" }}>
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -1390,9 +1416,9 @@ function RevenueHistory({ orders, onBack }) {
             </div>
           </div>
           <div className="text-sm sm:text-right" style={{ color: "var(--ink-dim)" }}>
-            <div>Bulan lalu: <strong style={{ color: "var(--ink)" }}>{fmtIDR(previous.total)}</strong></div>
-            <div>Bulan ini: <strong style={{ color: "var(--ink)" }}>{fmtIDR(current.total)}</strong></div>
-            <div>Selisih: <strong style={{ color: trendColor }}>{difference >= 0 ? "+" : "-"}{fmtIDR(Math.abs(difference))}</strong></div>
+            <div>Bulan lalu: <strong style={{ color: "var(--ink)" }}>{fmtCurrency(previous.total, currency)}</strong></div>
+            <div>Bulan ini: <strong style={{ color: "var(--ink)" }}>{fmtCurrency(current.total, currency)}</strong></div>
+            <div>Selisih: <strong style={{ color: trendColor }}>{difference >= 0 ? "+" : "-"}{fmtCurrency(Math.abs(difference), currency)}</strong></div>
           </div>
         </div>
       </div>
@@ -1404,7 +1430,7 @@ function RevenueHistory({ orders, onBack }) {
               {summary.offset === -1 ? "Bulan Lalu" : summary.offset === 0 ? "Bulan Ini" : "Bulan Depan"}
             </div>
             <div className="serif text-3xl leading-none mb-3" style={{ color: summary.offset === 0 ? "var(--accent)" : "var(--ink)", fontWeight: 600 }}>
-              {fmtIDR(summary.total)}
+              {fmtCurrency(summary.total, currency)}
             </div>
             <div className="text-sm" style={{ color: "var(--ink-dim)" }}>{summary.label} - {summary.orders.length} order</div>
           </div>
@@ -1420,7 +1446,7 @@ function RevenueHistory({ orders, onBack }) {
               <div className="font-semibold">{order.buyer?.name || "Pembeli"}</div>
               <div className="text-xs" style={{ color: "var(--ink-dim)" }}>{new Date(order.createdAt).toLocaleString("id-ID")}</div>
             </div>
-            <div className="serif text-2xl sm:text-right" style={{ color: "var(--accent)", fontWeight: 600 }}>{fmtIDR(order.total || 0)}</div>
+            <div className="serif text-2xl sm:text-right" style={{ color: "var(--accent)", fontWeight: 600 }}>{fmtCurrency(order.total || 0, currency)}</div>
           </div>
         ))}
         {current.orders.length === 0 && <div className="text-sm text-center py-12 serif-italic" style={{ color: "var(--ink-dim)" }}>belum ada pendapatan bulan ini</div>}
@@ -1996,11 +2022,11 @@ function parseDurationDays(duration = "") {
   return 0;
 }
 
-function getMonthRevenue(orders = [], monthOffset = 0) {
-  return getMonthRevenueSummary(orders, monthOffset).total;
+function getMonthRevenue(orders = [], monthOffset = 0, currency = "IDR") {
+  return getMonthRevenueSummary(orders, monthOffset, currency).total;
 }
 
-function getMonthRevenueSummary(orders = [], monthOffset = 0) {
+function getMonthRevenueSummary(orders = [], monthOffset = 0, currency = "IDR") {
   const target = new Date();
   target.setMonth(target.getMonth() + monthOffset, 1);
   target.setHours(0, 0, 0, 0);
@@ -2009,7 +2035,10 @@ function getMonthRevenueSummary(orders = [], monthOffset = 0) {
   const month = target.getMonth();
   const monthOrders = orders.filter((order) => {
     const createdAt = new Date(order.createdAt);
-    return !Number.isNaN(createdAt.getTime()) && createdAt.getFullYear() === year && createdAt.getMonth() === month;
+    return !Number.isNaN(createdAt.getTime())
+      && createdAt.getFullYear() === year
+      && createdAt.getMonth() === month
+      && (order.currency || "IDR") === currency;
   });
 
   return {
@@ -2336,6 +2365,8 @@ function PromoEditor({ promo, products, onSave, onClose }) {
     optionId: defaultOption?.id || "",
     promoPrice: defaultOption?.price || defaultProduct?.price || 0,
     compareAtPrice: defaultProduct?.oldPrice || defaultOption?.price || defaultProduct?.price || 0,
+    promoPriceJpy: defaultOption?.priceJpy || defaultProduct?.priceJpy || 0,
+    compareAtPriceJpy: defaultProduct?.oldPriceJpy || defaultOption?.priceJpy || defaultProduct?.priceJpy || 0,
   };
   const [data, setData] = useState(promo || blank);
 
@@ -2354,6 +2385,8 @@ function PromoEditor({ promo, products, onSave, onClose }) {
       optionId: nextOption?.id || "",
       compareAtPrice: nextProduct?.oldPrice || nextOption?.price || nextProduct?.price || 0,
       promoPrice: nextOption?.price || nextProduct?.price || 0,
+      promoPriceJpy: nextOption?.priceJpy || nextProduct?.priceJpy || 0,
+      compareAtPriceJpy: nextProduct?.oldPriceJpy || nextOption?.priceJpy || nextProduct?.priceJpy || 0,
     }));
   };
 
@@ -2366,6 +2399,8 @@ function PromoEditor({ promo, products, onSave, onClose }) {
       optionId: nextOption?.id || "",
       promoPrice: nextOption?.price || selectedProduct?.price || 0,
       compareAtPrice: selectedProduct?.oldPrice || nextOption?.price || selectedProduct?.price || 0,
+      promoPriceJpy: nextOption?.priceJpy || selectedProduct?.priceJpy || 0,
+      compareAtPriceJpy: selectedProduct?.oldPriceJpy || nextOption?.priceJpy || selectedProduct?.priceJpy || 0,
     }));
   };
 
@@ -2376,6 +2411,8 @@ function PromoEditor({ promo, products, onSave, onClose }) {
       optionId,
       promoPrice: nextOption?.price || selectedProduct?.price || 0,
       compareAtPrice: selectedProduct?.oldPrice || nextOption?.price || selectedProduct?.price || 0,
+      promoPriceJpy: nextOption?.priceJpy || selectedProduct?.priceJpy || 0,
+      compareAtPriceJpy: selectedProduct?.oldPriceJpy || nextOption?.priceJpy || selectedProduct?.priceJpy || 0,
     }));
   };
 
@@ -2426,6 +2463,10 @@ function PromoEditor({ promo, products, onSave, onClose }) {
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Harga Promo" value={data.promoPrice} onChange={(value) => set("promoPrice", Number(value) || 0)} type="number" />
             <Field label="Harga Coret" value={data.compareAtPrice} onChange={(value) => set("compareAtPrice", Number(value) || 0)} type="number" />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Harga Promo JPY" value={data.promoPriceJpy ?? 0} onChange={(value) => set("promoPriceJpy", Number(value) || 0)} type="number" />
+            <Field label="Harga Coret JPY" value={data.compareAtPriceJpy ?? 0} onChange={(value) => set("compareAtPriceJpy", Number(value) || 0)} type="number" />
           </div>
           <div>
             <label className="text-[10px] mono uppercase tracking-widest block mb-1.5" style={{ color: "var(--ink-dim)" }}>Deskripsi Promo</label>
@@ -2483,6 +2524,9 @@ function CouponEditor({ coupon, onSave, onClose }) {
     value: 10,
     minTotal: 0,
     maxDiscount: 0,
+    valueJpy: 0,
+    minTotalJpy: 0,
+    maxDiscountJpy: 0,
   };
   const [data, setData] = useState(coupon || blank);
   const set = (key, value) => setData((current) => ({ ...current, [key]: value }));
@@ -2522,6 +2566,14 @@ function CouponEditor({ coupon, onSave, onClose }) {
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Minimal Belanja" value={data.minTotal} onChange={(value) => set("minTotal", Number(value) || 0)} type="number" />
             <Field label="Maksimal Diskon" value={data.maxDiscount} onChange={(value) => set("maxDiscount", Number(value) || 0)} type="number" />
+          </div>
+          <div className="rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
+            <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Nominal Jepang (JPY)</div>
+            <div className="grid sm:grid-cols-3 gap-3">
+              <Field label={data.type === "percent" ? "Nilai tetap (abaikan)" : "Diskon JPY"} value={data.valueJpy ?? 0} onChange={(value) => set("valueJpy", Number(value) || 0)} type="number" disabled={data.type === "percent"} />
+              <Field label="Minimal Belanja JPY" value={data.minTotalJpy ?? 0} onChange={(value) => set("minTotalJpy", Number(value) || 0)} type="number" />
+              <Field label="Maks. Diskon JPY" value={data.maxDiscountJpy ?? 0} onChange={(value) => set("maxDiscountJpy", Number(value) || 0)} type="number" />
+            </div>
           </div>
           <label className="flex items-center gap-3 rounded-2xl border p-4 text-sm" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
             <input type="checkbox" checked={data.active} onChange={(event) => set("active", event.target.checked)} className="w-4 h-4" />
@@ -2718,12 +2770,13 @@ function createBlankOption(index = 0) {
     id: `option-${Date.now().toString(36)}-${index}`,
     duration: "",
     price: 0,
+    priceJpy: 0,
     stock: 0,
   };
 }
 
 function ProductEditor({ product, onSave, onClose }) {
-  const blank = { id: null, name: "", category: "Streaming", icon: "tv", color: "#8b5e34", price: 0, oldPrice: 0, stock: 0, duration: "1 Bulan", tagline: "", description: "", features: [], pricingPlans: [] };
+  const blank = { id: null, name: "", category: "Streaming", icon: "tv", color: "#8b5e34", price: 0, oldPrice: 0, priceJpy: 0, oldPriceJpy: 0, stock: 0, duration: "1 Bulan", tagline: "", description: "", features: [], pricingPlans: [] };
   const [data, setData] = useState(product || blank);
   const [featInput, setFeatInput] = useState("");
   const set = (key, value) => setData((current) => ({ ...current, [key]: value }));
@@ -2854,6 +2907,14 @@ function ProductEditor({ product, onSave, onClose }) {
               )}
             </div>
           </div>
+          <div className="rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
+            <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Harga Jepang (JPY)</div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Field label="Harga Jepang" value={data.priceJpy ?? 0} onChange={(value) => set("priceJpy", Number(value) || 0)} type="number" placeholder={String(getFallbackJpyPrice(data.price))} />
+              <Field label="Harga Lama Jepang" value={data.oldPriceJpy ?? 0} onChange={(value) => set("oldPriceJpy", Number(value) || 0)} type="number" placeholder={String(getFallbackJpyPrice(data.oldPrice))} />
+            </div>
+            <p className="mt-2 text-[10px]" style={{ color: "var(--ink-dim)" }}>Nilai 0 memakai harga fallback. Isi angka manual untuk harga Jepang tetap.</p>
+          </div>
 
           <div className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
@@ -2887,9 +2948,10 @@ function ProductEditor({ product, onSave, onClose }) {
 
                     <div className="space-y-2">
                       {(plan.options || []).map((option, optionIndex) => (
-                        <div key={option.id || optionIndex} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_8rem_auto] sm:items-end">
+                        <div key={option.id || optionIndex} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_8rem_7rem_auto] sm:items-end">
                           <Field label={optionIndex === 0 ? "Durasi / Opsi" : " "} value={option.duration} onChange={(value) => updateOption(planIndex, optionIndex, "duration", value)} placeholder="1 Bulan" />
                           <Field label={optionIndex === 0 ? "Harga Opsi" : " "} value={option.price} onChange={(value) => updateOption(planIndex, optionIndex, "price", Number(value) || 0)} type="number" />
+                          <Field label={optionIndex === 0 ? "Harga JPY" : " "} value={option.priceJpy ?? 0} onChange={(value) => updateOption(planIndex, optionIndex, "priceJpy", Number(value) || 0)} type="number" />
                           <Field label={optionIndex === 0 ? "Stok" : " "} value={option.stock ?? 0} onChange={(value) => updateOption(planIndex, optionIndex, "stock", Number(value) || 0)} type="number" />
                           <button type="button" onClick={() => removeOption(planIndex, optionIndex)} className="h-12 px-4 rounded-xl border hover:bg-red-50" style={{ borderColor: "var(--line)", color: "#991b1b" }} aria-label="Hapus opsi">
                             <Trash2 className="w-4 h-4" />

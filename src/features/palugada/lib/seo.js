@@ -1,6 +1,8 @@
 export const SITE_NAME = "Palugada Premium";
 export const SITE_ORIGIN = "https://palugadapremium.my.id";
 export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-palugada-premium.jpg`;
+export const DEFAULT_LOCALE = "id";
+export const SUPPORTED_LOCALES = ["id", "jp"];
 
 export const STORE_FAQS = [
   {
@@ -39,9 +41,11 @@ export function slugifyProduct(value = "") {
     .replace(/^-+|-+$/g, "");
 }
 
-export function getViewPath(view, product = null, currentSearch = "") {
+export function getViewPath(view, product = null, currentSearch = "", locale = DEFAULT_LOCALE) {
+  const safeLocale = SUPPORTED_LOCALES.includes(locale) ? locale : DEFAULT_LOCALE;
+
   if (view === "detail" && product) {
-    return `/produk/${slugifyProduct(product.name)}/`;
+    return `/${safeLocale}/produk/${slugifyProduct(product.name)}/`;
   }
 
   const paths = {
@@ -58,16 +62,25 @@ export function getViewPath(view, product = null, currentSearch = "") {
   };
 
   const path = paths[view] || "/";
-  return view === "home" && currentSearch ? `/?q=${encodeURIComponent(currentSearch)}` : path;
+  if (view.startsWith("admin")) {
+    return path;
+  }
+
+  const localizedPath = `/${safeLocale}${path}`;
+  return view === "home" && currentSearch ? `${localizedPath}?q=${encodeURIComponent(currentSearch)}` : localizedPath;
 }
 
 export function getRouteState(pathname = "/") {
   const normalizedPath = `/${String(pathname).replace(/^\/+|\/+$/g, "")}`;
+  const localeMatch = normalizedPath.match(/^\/(id|jp)(?=\/|$)/);
+  const locale = localeMatch?.[1] || DEFAULT_LOCALE;
+  const routePath = localeMatch ? normalizedPath.slice(localeMatch[0].length) || "/" : normalizedPath;
 
-  if (normalizedPath.startsWith("/produk/")) {
+  if (routePath.startsWith("/produk/")) {
     return {
+      locale,
       view: "detail",
-      activeProductSlug: decodeURIComponent(normalizedPath.slice("/produk/".length)),
+      activeProductSlug: decodeURIComponent(routePath.slice("/produk/".length)),
     };
   }
 
@@ -84,7 +97,7 @@ export function getRouteState(pathname = "/") {
     "/admin": "admin",
   };
 
-  return { view: views[normalizedPath] || "home" };
+  return { locale, view: views[routePath] || "home" };
 }
 
 export function absoluteUrl(path = "/") {

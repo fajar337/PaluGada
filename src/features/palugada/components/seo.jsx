@@ -78,6 +78,17 @@ const VIEW_METADATA = {
   },
 };
 
+const VIEW_METADATA_JA = {
+  home: { title: "プレミアムアカウントをお手頃価格で | Palugada Premium", description: "Netflix、ChatGPT Plus、Spotify、YouTube Premium、Canva Proなどのプレミアムサービスを保証付きで購入できます。", indexable: true },
+  cart: { title: "ショッピングカート | Palugada Premium", description: "カートに追加したプレミアムサービスを確認できます。" },
+  "track-order": { title: "注文状況を確認 | Palugada Premium", description: "注文IDとWhatsApp番号で注文状況を確認できます。" },
+  checkout: { title: "注文手続き | Palugada Premium", description: "購入者情報とお支払い方法を入力して注文を確定します。" },
+  "order-success": { title: "注文を受け付けました | Palugada Premium", description: "ご注文を受け付けました。お支払いの確認をお待ちしています。" },
+  "reseller-login": { title: "リセラーログイン | Palugada Premium", description: "Palugada Premiumのリセラーポータルにログインします。" },
+  "reseller-register": { title: "リセラープログラム | Palugada Premium", description: "Palugada Premiumのリセラープログラムに登録できます。" },
+  "reseller-dashboard": { title: "リセラーダッシュボード | Palugada Premium", description: "リセラーの注文履歴とアカウント情報を確認できます。" },
+};
+
 function truncateMetadataDescription(value, maxLength = 158) {
   const normalized = String(value || "").replace(/\s+/g, " ").trim();
   if (normalized.length <= maxLength) {
@@ -128,12 +139,13 @@ function getReviewAggregate(reviews = []) {
   };
 }
 
-function createProductSchema(product, promos, reviews) {
+function createProductSchema(product, promos, reviews, locale) {
   const aggregateRating = getReviewAggregate(reviews);
-  return createProductStructuredData(product, promos, aggregateRating);
+  return createProductStructuredData(product, promos, aggregateRating, locale);
 }
 
-function createBaseGraph() {
+function createBaseGraph(locale = "id") {
+  const japan = locale === "jp";
   const telephone = `+${ADMIN_WHATSAPP_NUMBER}`;
   const organization = {
     "@type": "Organization",
@@ -150,8 +162,8 @@ function createBaseGraph() {
       contactType: "customer service",
       telephone,
       email: CONTACT_EMAIL,
-      areaServed: "ID",
-      availableLanguage: ["id"],
+      areaServed: japan ? "JP" : "ID",
+      availableLanguage: [japan ? "ja" : "id"],
     },
     sameAs: [INSTAGRAM_URL],
   };
@@ -161,7 +173,7 @@ function createBaseGraph() {
     "@id": `${SITE_ORIGIN}/#website`,
     url: `${SITE_ORIGIN}/`,
     name: SITE_NAME,
-    inLanguage: "id-ID",
+    inLanguage: japan ? "ja-JP" : "id-ID",
     publisher: { "@id": `${SITE_ORIGIN}/#organization` },
     potentialAction: {
       "@type": "SearchAction",
@@ -182,10 +194,10 @@ function createBaseGraph() {
     logo: `${SITE_ORIGIN}/icon.png`,
     email: CONTACT_EMAIL,
     telephone,
-    priceRange: "Rp5.000-Rp150.000",
-    currenciesAccepted: "IDR",
+    priceRange: japan ? "¥100-¥2,000" : "Rp5.000-Rp150.000",
+    currenciesAccepted: japan ? "JPY" : "IDR",
     paymentAccepted: "DANA, OVO, GoPay, ShopeePay, SeaBank, QRIS",
-    areaServed: { "@type": "Country", name: "Indonesia" },
+    areaServed: { "@type": "Country", name: japan ? "Japan" : "Indonesia" },
     parentOrganization: { "@id": `${SITE_ORIGIN}/#organization` },
     sameAs: [INSTAGRAM_URL],
   };
@@ -193,16 +205,17 @@ function createBaseGraph() {
   return [organization, website, store];
 }
 
-function createStructuredData(view, activeProduct, products, promos, reviews, canonicalUrl) {
-  const graph = createBaseGraph();
-  const breadcrumbItems = [{ "@type": "ListItem", position: 1, name: "Beranda", item: `${SITE_ORIGIN}/` }];
+function createStructuredData(view, activeProduct, products, promos, reviews, canonicalUrl, locale) {
+  const graph = createBaseGraph(locale);
+  const localizedHome = absoluteUrl(`/${locale}/`);
+  const breadcrumbItems = [{ "@type": "ListItem", position: 1, name: "Beranda", item: localizedHome }];
 
   if (view === "detail" && activeProduct) {
     breadcrumbItems.push(
-      { "@type": "ListItem", position: 2, name: "Katalog", item: `${SITE_ORIGIN}/#katalog` },
+      { "@type": "ListItem", position: 2, name: "Katalog", item: `${localizedHome}#katalog` },
       { "@type": "ListItem", position: 3, name: activeProduct.name, item: canonicalUrl }
     );
-    graph.push(createProductSchema(activeProduct, promos, reviews.filter((review) => review.productId === activeProduct.id)));
+    graph.push(createProductSchema(activeProduct, promos, reviews.filter((review) => review.productId === activeProduct.id), locale));
   } else if (view === "home") {
     graph.push({
       "@type": "FAQPage",
@@ -223,13 +236,13 @@ function createStructuredData(view, activeProduct, products, promos, reviews, ca
         itemListElement: products.map((product, index) => ({
           "@type": "ListItem",
           position: index + 1,
-          url: absoluteUrl(`/produk/${slugifyProduct(product.name)}/`),
-          item: { "@id": `${absoluteUrl(`/produk/${slugifyProduct(product.name)}/`)}#product` },
+          url: absoluteUrl(`/${locale}/produk/${slugifyProduct(product.name)}/`),
+          item: { "@id": `${absoluteUrl(`/${locale}/produk/${slugifyProduct(product.name)}/`)}#product` },
         })),
       });
       graph.push(
         ...products.map((product) =>
-          createProductSchema(product, promos, reviews.filter((review) => review.productId === product.id))
+          createProductSchema(product, promos, reviews.filter((review) => review.productId === product.id), locale)
         )
       );
     }
@@ -246,19 +259,26 @@ function createStructuredData(view, activeProduct, products, promos, reviews, ca
   return { "@context": "https://schema.org", "@graph": graph };
 }
 
-export function SeoHead({ view, activeProduct, products = [], promos = [], reviews = [] }) {
+export function SeoHead({ locale = "id", view, activeProduct, products = [], promos = [], reviews = [] }) {
   useEffect(() => {
-    const base = VIEW_METADATA[view] || VIEW_METADATA.home;
+    const metadata = locale === "jp" ? VIEW_METADATA_JA : VIEW_METADATA;
+    const base = metadata[view] || metadata.home || VIEW_METADATA[view] || VIEW_METADATA.home;
     const isProduct = view === "detail" && activeProduct;
     const title = isProduct
-      ? `${activeProduct.name} Murah & Bergaransi | ${SITE_NAME}`
+      ? locale === "jp"
+        ? `${activeProduct.name} 保証付き | ${SITE_NAME}`
+        : `${activeProduct.name} Murah & Bergaransi | ${SITE_NAME}`
       : base.title;
     const productDescription = activeProduct?.description || activeProduct?.tagline || "";
     const description = isProduct
-      ? truncateMetadataDescription(`Beli ${activeProduct.name} murah dan terpercaya di Palugada Premium. ${productDescription}`)
+      ? truncateMetadataDescription(locale === "jp"
+        ? `${activeProduct.name}をPaluGada Premiumで購入できます。保証付きで安心してご利用いただけます。`
+        : `Beli ${activeProduct.name} murah dan terpercaya di Palugada Premium. ${productDescription}`)
       : base.description;
     const currentSearch = view === "home" ? new URLSearchParams(window.location.search).get("q") || "" : "";
-    const path = getViewPath(view, activeProduct, currentSearch);
+    const path = getViewPath(view, activeProduct, currentSearch, locale);
+    const idPath = getViewPath(view, activeProduct, currentSearch, "id");
+    const jpPath = getViewPath(view, activeProduct, currentSearch, "jp");
     const canonicalUrl = absoluteUrl(path.split("?")[0]);
     const indexable = Boolean(base.indexable || isProduct);
     const robots = indexable
@@ -267,7 +287,7 @@ export function SeoHead({ view, activeProduct, products = [], promos = [], revie
     const keywords = [activeProduct?.name, activeProduct?.category, ...DEFAULT_KEYWORDS].filter(Boolean).join(", ");
 
     document.title = title;
-    document.documentElement.lang = "id";
+    document.documentElement.lang = locale === "jp" ? "ja" : "id";
 
     upsertMeta('meta[name="description"]', { name: "description", content: description });
     upsertMeta('meta[name="keywords"]', { name: "keywords", content: keywords });
@@ -294,12 +314,17 @@ export function SeoHead({ view, activeProduct, products = [], promos = [], revie
     upsertLink('link[rel="alternate"][hreflang="id-ID"]', {
       rel: "alternate",
       hreflang: "id-ID",
-      href: canonicalUrl,
+      href: absoluteUrl(idPath.split("?")[0]),
+    });
+    upsertLink('link[rel="alternate"][hreflang="ja-JP"]', {
+      rel: "alternate",
+      hreflang: "ja-JP",
+      href: absoluteUrl(jpPath.split("?")[0]),
     });
     upsertLink('link[rel="alternate"][hreflang="x-default"]', {
       rel: "alternate",
       hreflang: "x-default",
-      href: canonicalUrl,
+      href: absoluteUrl(idPath.split("?")[0]),
     });
 
     let structuredData = document.getElementById("palugada-structured-data");
@@ -310,9 +335,9 @@ export function SeoHead({ view, activeProduct, products = [], promos = [], revie
       document.head.appendChild(structuredData);
     }
     structuredData.textContent = JSON.stringify(
-      createStructuredData(view, activeProduct, products, promos, reviews, canonicalUrl)
+      createStructuredData(view, activeProduct, products, promos, reviews, canonicalUrl, locale)
     );
-  }, [activeProduct, products, promos, reviews, view]);
+  }, [activeProduct, locale, products, promos, reviews, view]);
 
   return null;
 }

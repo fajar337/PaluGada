@@ -484,6 +484,31 @@ export const ICONS = {
 
 export const fmtIDR = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
+export const getCurrency = (locale = "id") => locale === "jp" ? "JPY" : "IDR";
+
+export const fmtCurrency = (value, currencyOrLocale = "IDR") => {
+  const currency = currencyOrLocale === "jp" ? "JPY" : currencyOrLocale === "id" ? "IDR" : currencyOrLocale;
+  return new Intl.NumberFormat(currency === "JPY" ? "ja-JP" : "id-ID", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+};
+
+export function getFallbackJpyPrice(idrPrice) {
+  const converted = Math.ceil(Math.max(0, Number(idrPrice) || 0) / 100);
+  return converted > 0 ? Math.max(100, Math.ceil(converted / 10) * 10) : 0;
+}
+
+export function getLocalizedAmount(jpyAmount, idrAmount, locale = "id") {
+  if (locale !== "jp") {
+    return Math.max(0, Number(idrAmount) || 0);
+  }
+
+  const configured = Math.max(0, Number(jpyAmount) || 0);
+  return configured > 0 ? configured : getFallbackJpyPrice(idrAmount);
+}
+
 export function hasOptionLevelStock(product) {
   return (product?.pricingPlans || [])
     .flatMap((plan) => plan.options || [])
@@ -556,7 +581,7 @@ export function getMatchingPromo(promos = [], product, planId = null, optionId =
   return candidates.sort((first, second) => getScore(second) - getScore(first))[0] || null;
 }
 
-export function getPricingForSelection(product, promos = [], selection = null) {
+export function getPricingForSelection(product, promos = [], selection = null, locale = "id") {
   const resolvedSelection =
     selection?.plan && selection?.option
       ? selection
@@ -564,11 +589,12 @@ export function getPricingForSelection(product, promos = [], selection = null) {
 
   const planId = resolvedSelection?.plan?.id || selection?.planId || null;
   const optionId = resolvedSelection?.option?.id || selection?.optionId || null;
-  const basePrice = Number(resolvedSelection?.option?.price ?? product?.price ?? 0);
-  const defaultCompareAt = Number(product?.oldPrice ?? basePrice);
+  const optionPrice = resolvedSelection?.option?.price ?? product?.price ?? 0;
+  const basePrice = getLocalizedAmount(resolvedSelection?.option?.priceJpy ?? product?.priceJpy, optionPrice, locale);
+  const defaultCompareAt = getLocalizedAmount(product?.oldPriceJpy, product?.oldPrice ?? optionPrice, locale);
   const promo = getMatchingPromo(promos, product, planId, optionId);
-  const promoPrice = Number(promo?.promoPrice ?? 0);
-  const promoCompareAt = Number(promo?.compareAtPrice ?? 0);
+  const promoPrice = locale === "jp" ? Math.max(0, Number(promo?.promoPriceJpy) || 0) : Number(promo?.promoPrice ?? 0);
+  const promoCompareAt = locale === "jp" ? Math.max(0, Number(promo?.compareAtPriceJpy) || 0) : Number(promo?.compareAtPrice ?? 0);
   const displayPrice = promoPrice > 0 ? promoPrice : basePrice;
   const compareAt =
     promoCompareAt > 0
@@ -588,25 +614,25 @@ export function getPricingForSelection(product, promos = [], selection = null) {
   };
 }
 
-export function getProductStartingPrice(product, promos = []) {
+export function getProductStartingPrice(product, promos = [], locale = "id") {
   if (!product?.pricingPlans?.length) {
-    return getPricingForSelection(product, promos).displayPrice;
+    return getPricingForSelection(product, promos, null, locale).displayPrice;
   }
 
   return Math.min(
     ...product.pricingPlans.flatMap((plan) =>
-      plan.options.map((option) => getPricingForSelection(product, promos, { plan, option }).displayPrice)
+      plan.options.map((option) => getPricingForSelection(product, promos, { plan, option }, locale).displayPrice)
     )
   );
 }
 
-export function getProductStartingCompareAt(product, promos = []) {
+export function getProductStartingCompareAt(product, promos = [], locale = "id") {
   if (!product?.pricingPlans?.length) {
-    return getPricingForSelection(product, promos).compareAt;
+    return getPricingForSelection(product, promos, null, locale).compareAt;
   }
 
   const allPrices = product.pricingPlans.flatMap((plan) =>
-    plan.options.map((option) => getPricingForSelection(product, promos, { plan, option }))
+    plan.options.map((option) => getPricingForSelection(product, promos, { plan, option }, locale))
   );
   const best = allPrices.sort((first, second) => first.displayPrice - second.displayPrice)[0];
   return best?.compareAt || best?.displayPrice || 0;
@@ -674,8 +700,8 @@ export function getWhatsAppConfirmationUrl(order) {
     `Metode: ${order.buyer.method}`,
     `Atas Nama: ${payment.accountName}`,
     `Tujuan: ${payment.accountNumber}`,
-    order.coupon ? `Kupon: ${order.coupon.code} (-${fmtIDR(order.discount)})` : null,
-    `Total: ${fmtIDR(order.total)}`,
+    order.coupon ? `Kupon: ${order.coupon.code} (-${fmtCurrency(order.discount, order.currency || "IDR")})` : null,
+    `Total: ${fmtCurrency(order.total, order.currency || "IDR")}`,
     "",
     "Produk:",
     items,

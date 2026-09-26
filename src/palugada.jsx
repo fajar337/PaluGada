@@ -1,12 +1,13 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { AdminLogin, ResellerLogin, ResellerRegister } from "./features/palugada/components/auth";
-import { FloatingWhatsApp, Footer, Header, StyleBlock } from "./features/palugada/components/layout";
+import { FloatingWhatsApp, Footer, Header, RegionPicker, StyleBlock } from "./features/palugada/components/layout";
 import { ResellerDashboard } from "./features/palugada/components/reseller";
 import { SeoHead } from "./features/palugada/components/seo";
 import { CartView, Checkout, Detail, Home, OrderSuccess, TrackOrder } from "./features/palugada/components/storefront";
-import { CONTACT_EMAIL, RESELLER_TIERS, SEED_PRODUCTS, fmtIDR, getDefaultPlanSelection, getPlanSelection, getPricingForSelection, getProductTotalStock } from "./features/palugada/constants";
+import { CONTACT_EMAIL, RESELLER_TIERS, SEED_PRODUCTS, fmtCurrency, fmtIDR, getCurrency, getDefaultPlanSelection, getPlanSelection, getPricingForSelection, getProductTotalStock } from "./features/palugada/constants";
 import { getRouteState, getViewPath, slugifyProduct } from "./features/palugada/lib/seo";
+import { LocaleProvider, localizeProduct, useI18n } from "./features/palugada/lib/i18n";
 
 const AdminPanel = lazy(() =>
   import("./features/palugada/components/admin").then((module) => ({ default: module.AdminPanel }))
@@ -135,6 +136,7 @@ function scrollToPageTop() {
 
 export default function App() {
   const initialUiState = loadUiState();
+  const [locale, setLocale] = useState(initialUiState.locale || "id");
   const [view, setView] = useState(initialUiState.view || "home");
   const [products, setProducts] = useState(() => readCachedValue("pa_products", SEED_PRODUCTS));
   const [resellerTiers, setResellerTiers] = useState(() => readCachedValue("pa_reseller_tiers", RESELLER_TIERS));
@@ -161,6 +163,7 @@ export default function App() {
   const [category, setCategory] = useState(initialUiState.category || "Semua");
   const [toast, setToast] = useState(null);
   const [storeClosedNoticeVisible, setStoreClosedNoticeVisible] = useState(true);
+  const [regionPickerOpen, setRegionPickerOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const historyReadyRef = useRef(false);
   const historyKeyRef = useRef("");
@@ -396,6 +399,7 @@ export default function App() {
       UI_STATE_KEY,
       JSON.stringify({
         view,
+        locale,
         activeProductId: activeProduct?.id || null,
         activeOrderId: activeOrder?.id || null,
         search,
@@ -403,7 +407,7 @@ export default function App() {
         cart,
       })
     );
-  }, [activeOrder?.id, activeProduct?.id, cart, category, loaded, search, view]);
+  }, [activeOrder?.id, activeProduct?.id, cart, category, loaded, locale, search, view]);
 
   useEffect(() => {
     if (!loaded || typeof window === "undefined") {
@@ -417,12 +421,13 @@ export default function App() {
     const nextState = {
       palugada: true,
       view,
+      locale,
       activeProductId: activeProduct?.id || null,
       activeOrderId: activeOrder?.id || null,
     };
     const nextKey = JSON.stringify(nextState);
     const currentSearch = view === "home" ? new URLSearchParams(window.location.search).get("q") || "" : "";
-    const nextPath = getViewPath(view, activeProduct, currentSearch);
+    const nextPath = getViewPath(view, activeProduct, currentSearch, locale);
 
     if (restoringHistoryRef.current) {
       window.history.replaceState(nextState, "", nextPath);
@@ -443,7 +448,7 @@ export default function App() {
       window.history.pushState(nextState, "", nextPath);
       historyKeyRef.current = nextKey;
     }
-  }, [activeOrder?.id, activeProduct, loaded, view]);
+  }, [activeOrder?.id, activeProduct, loaded, locale, view]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -453,6 +458,7 @@ export default function App() {
     const restoreHistoryState = async (state) => {
       const nextView = state?.view || "home";
       restoringHistoryRef.current = true;
+      setLocale(state?.locale || "id");
       setView(nextView);
 
       if (state?.activeProductId || state?.activeProductSlug) {
@@ -582,7 +588,7 @@ export default function App() {
         return null;
       }
       const selectedPlan = getPlanSelection(product, cartItem.planId, cartItem.optionId);
-      const pricing = getPricingForSelection(product, promos, selectedPlan || { planId: cartItem.planId, optionId: cartItem.optionId });
+      const pricing = getPricingForSelection(product, promos, selectedPlan || { planId: cartItem.planId, optionId: cartItem.optionId }, locale);
       return {
         ...product,
         cartKey: cartItem.key || cartItem.id,
@@ -600,21 +606,21 @@ export default function App() {
 
   const cartTotal = cartItems.reduce((sum, item) => sum + item.effectivePrice * item.qty, 0);
   const cartOriginal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const couponDiscount = getCouponDiscount(appliedCoupon, cartTotal);
+  const couponDiscount = getCouponDiscount(appliedCoupon, cartTotal, locale);
   const cartPayableTotal = Math.max(0, cartTotal - couponDiscount);
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const isStoreOpen = storeStatus?.isOpen !== false;
   const closedReason = storeStatus?.closedReason?.trim() || "Toko sedang tutup sementara. Silakan cek lagi nanti.";
 
   useEffect(() => {
-    if (appliedCoupon && (!appliedCoupon.active || Number(appliedCoupon.minTotal || 0) > cartTotal || cartTotal <= 0)) {
+    if (appliedCoupon && (!appliedCoupon.active || getCouponAmount(appliedCoupon, "minTotal", locale) > cartTotal || cartTotal <= 0)) {
       setAppliedCoupon(null);
     }
-  }, [appliedCoupon, cartTotal]);
+  }, [appliedCoupon, cartTotal, locale]);
 
   const addToCart = (id, qty = 1, selection = null) => {
     if (!isStoreOpen) {
-      showToast("Toko sedang tutup: " + closedReason);
+      showToast(locale === "jp" ? "現在休業中です" : "Toko sedang tutup: " + closedReason);
       return false;
     }
 
@@ -622,7 +628,7 @@ export default function App() {
     const selectedPlan = getPlanSelection(product, selection?.planId, selection?.optionId);
     const optionStock = selectedPlan?.option?.stock;
     if (optionStock !== undefined && optionStock !== null && Number(optionStock) < qty) {
-      showToast("Stok pilihan ini habis");
+      showToast(locale === "jp" ? "選択したプランは売り切れです" : "Stok pilihan ini habis");
       return false;
     }
 
@@ -636,7 +642,7 @@ export default function App() {
     });
     setCartPulse(true);
     setTimeout(() => setCartPulse(false), 520);
-    showToast("Ditambahkan ke keranjang");
+    showToast(locale === "jp" ? "カートに追加しました" : "Ditambahkan ke keranjang");
     return true;
   };
 
@@ -656,31 +662,32 @@ export default function App() {
 
     if (!normalizedCode || !coupon) {
       setAppliedCoupon(null);
-      showToast("Kode kupon tidak ditemukan atau nonaktif");
+      showToast(locale === "jp" ? "クーポンコードが見つからないか、現在利用できません" : "Kode kupon tidak ditemukan atau nonaktif");
       return { ok: false };
     }
 
-    if (Number(coupon.minTotal || 0) > cartTotal) {
+    if (getCouponAmount(coupon, "minTotal", locale) > cartTotal) {
       setAppliedCoupon(null);
-      showToast(`Minimal belanja ${fmtIDR(coupon.minTotal)} untuk kupon ini`);
+      const minimum = getCouponAmount(coupon, "minTotal", locale);
+      showToast(locale === "jp" ? `このクーポンの最低購入額は${fmtCurrency(minimum, "JPY")}です` : `Minimal belanja ${fmtIDR(minimum)} untuk kupon ini`);
       return { ok: false };
     }
 
-    const discount = getCouponDiscount(coupon, cartTotal);
+    const discount = getCouponDiscount(coupon, cartTotal, locale);
     if (discount <= 0) {
       setAppliedCoupon(null);
-      showToast("Kupon belum punya nilai diskon");
+      showToast(locale === "jp" ? "このクーポンには割引が設定されていません" : "Kupon belum punya nilai diskon");
       return { ok: false };
     }
 
     setAppliedCoupon(coupon);
-    showToast(`Kupon ${coupon.code} berhasil dipakai`);
+    showToast(locale === "jp" ? `クーポン ${coupon.code} を適用しました` : `Kupon ${coupon.code} berhasil dipakai`);
     return { ok: true, coupon, discount };
   };
 
   const removeCoupon = () => {
     setAppliedCoupon(null);
-    showToast("Kupon dihapus");
+    showToast(locale === "jp" ? "クーポンを削除しました" : "Kupon dihapus");
   };
 
   const addReview = async (productId, data) => {
@@ -695,7 +702,7 @@ export default function App() {
     const nextReviews = [review, ...reviews];
     setReviews(nextReviews);
     await addItem("pa_reviews", review);
-    showToast("Ulasan berhasil ditambahkan");
+    showToast(locale === "jp" ? "レビューを投稿しました" : "Ulasan berhasil ditambahkan");
   };
 
   const addProductRequest = async (data) => {
@@ -717,7 +724,7 @@ export default function App() {
       body: `${request.name} mencari ${request.appName}.`,
       target: "requests",
     });
-    showToast("Request produk berhasil dikirim");
+    showToast(locale === "jp" ? "商品リクエストを送信しました" : "Request produk berhasil dikirim");
   };
 
   const placeOrder = async (buyer) => {
@@ -740,6 +747,8 @@ export default function App() {
         qty: item.qty,
       })),
       total: cartPayableTotal,
+      currency: getCurrency(locale),
+      locale,
       originalTotal: cartOriginal,
       subtotal: cartTotal,
       discount: couponDiscount,
@@ -764,7 +773,7 @@ export default function App() {
     pushAdminNotification({
       type: "order",
       title: "Order baru masuk",
-      body: `${order.buyer.name} membuat order ${order.id} senilai ${fmtIDR(order.total)}.`,
+      body: `${order.buyer.name} membuat order ${order.id} senilai ${fmtCurrency(order.total, order.currency)}.`,
       target: "orders",
     });
     if (reseller) {
@@ -773,7 +782,7 @@ export default function App() {
 
     if (reseller) {
       const nextTotalOrders = (reseller.totalOrders || 0) + 1;
-      const nextTotalSpent = (reseller.totalSpent || 0) + cartPayableTotal;
+      const nextTotalSpent = (reseller.totalSpent || 0) + (locale === "id" ? cartPayableTotal : 0);
       let nextTier = "Bronze";
       if (nextTotalSpent >= (resellerTiers.Gold?.min ?? RESELLER_TIERS.Gold.min)) nextTier = "Gold";
       else if (nextTotalSpent >= (resellerTiers.Silver?.min ?? RESELLER_TIERS.Silver.min)) nextTier = "Silver";
@@ -969,9 +978,10 @@ export default function App() {
   }
 
   return (
+    <LocaleProvider locale={locale}>
     <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--ink)" }}>
       <StyleBlock />
-      <SeoHead view={view} activeProduct={activeProduct} products={products} promos={promos} reviews={reviews} />
+      <SeoHead locale={locale} view={view} activeProduct={activeProduct} products={products} promos={promos} reviews={reviews} />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:px-5 focus:py-3 focus:text-sm focus:font-semibold"
@@ -997,6 +1007,7 @@ export default function App() {
       <main id="main-content" tabIndex="-1">
         {view === "home" && (
           <Home
+            locale={locale}
             products={products}
             resellerTiers={resellerTiers}
             promos={promos}
@@ -1015,11 +1026,12 @@ export default function App() {
             onAdd={(product, selection) => addToCart(product.id, 1, selection ?? getDefaultPlanSelection(product))}
             onRequestProduct={addProductRequest}
             onJoinReseller={() => setView("reseller-register")}
+            onOpenRegionPicker={() => setRegionPickerOpen(true)}
           />
         )}
         {view === "detail" && activeProduct && (
           <Detail
-            product={products.find((product) => product.id === activeProduct.id) || activeProduct}
+            product={localizeProduct(products.find((product) => product.id === activeProduct.id) || activeProduct, locale)}
             resellerTiers={resellerTiers}
             promos={promos}
             reviews={reviews.filter((review) => review.productId === activeProduct.id)}
@@ -1047,7 +1059,7 @@ export default function App() {
             storeStatus={storeStatus}
             onCheckout={() => {
               if (!isStoreOpen) {
-                showToast("Toko sedang tutup: " + closedReason);
+                showToast(locale === "jp" ? "現在休業中です" : "Toko sedang tutup: " + closedReason);
                 return;
               }
               setView("checkout");
@@ -1076,7 +1088,7 @@ export default function App() {
               }
               setActiveOrder(order);
               setView("order-success");
-              showToast("Booking " + order.id + " berhasil dibuat!");
+              showToast(locale === "jp" ? `注文 ${order.id} を受け付けました！` : "Booking " + order.id + " berhasil dibuat!");
             }}
           />
         )}
@@ -1095,7 +1107,7 @@ export default function App() {
               const result = await loginReseller(email, password);
               if (result.ok) {
                 setView("reseller-dashboard");
-                showToast("Selamat datang kembali!");
+                showToast(locale === "jp" ? "おかえりなさい！" : "Selamat datang kembali!");
               }
               return result;
             }}
@@ -1214,13 +1226,27 @@ export default function App() {
         )}
       </main>
 
-      {!view.startsWith("admin") && view !== "reseller-login" && view !== "reseller-register" && <Footer />}
+      {!view.startsWith("admin") && view !== "reseller-login" && view !== "reseller-register" && (
+        <Footer locale={locale} onOpenRegionPicker={() => setRegionPickerOpen(true)} />
+      )}
       {!view.startsWith("admin") && view !== "reseller-login" && view !== "reseller-register" && <FloatingWhatsApp />}
+      {regionPickerOpen && (
+        <RegionPicker
+          locale={locale}
+          onClose={() => setRegionPickerOpen(false)}
+          onSelect={(nextLocale) => {
+            document.cookie = `nf_country=${nextLocale.toUpperCase()}; path=/; max-age=31536000; SameSite=Lax`;
+            setLocale(nextLocale);
+            setRegionPickerOpen(false);
+          }}
+        />
+      )}
       {!view.startsWith("admin") && !isStoreOpen && storeClosedNoticeVisible && (
         <StoreClosedPopup reason={closedReason} onClose={() => setStoreClosedNoticeVisible(false)} />
       )}
       {toast && <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full text-sm font-medium shadow-2xl toast-pop" style={{ background: "var(--ink)", color: "var(--bg)" }}>{toast}</div>}
     </div>
+    </LocaleProvider>
   );
 }
 
@@ -1228,19 +1254,27 @@ function normalizeCouponCode(code = "") {
   return String(code).trim().toUpperCase().replace(/\s+/g, "");
 }
 
-function getCouponDiscount(coupon, subtotal) {
-  if (!coupon?.active || subtotal <= 0 || Number(coupon.minTotal || 0) > subtotal) {
+function getCouponAmount(coupon, field, locale) {
+  return Math.max(0, Number(locale === "jp" ? coupon?.[`${field}Jpy`] : coupon?.[field]) || 0);
+}
+
+function getCouponDiscount(coupon, subtotal, locale = "id") {
+  const minTotal = getCouponAmount(coupon, "minTotal", locale);
+  if (!coupon?.active || subtotal <= 0 || minTotal > subtotal) {
     return 0;
   }
 
-  const value = Math.max(0, Number(coupon.value) || 0);
+  const value = coupon.type === "percent"
+    ? Math.max(0, Number(coupon.value) || 0)
+    : getCouponAmount(coupon, "value", locale);
   const rawDiscount = coupon.type === "percent" ? Math.round(subtotal * Math.min(value, 100) / 100) : value;
-  const maxDiscount = Math.max(0, Number(coupon.maxDiscount) || 0);
+  const maxDiscount = getCouponAmount(coupon, "maxDiscount", locale);
   const cappedDiscount = maxDiscount > 0 ? Math.min(rawDiscount, maxDiscount) : rawDiscount;
   return Math.min(subtotal, cappedDiscount);
 }
 
 function StoreClosedPopup({ reason, onClose }) {
+  const { t } = useI18n();
   useEffect(() => {
     const delay = Math.min(14000, Math.max(4500, 2500 + String(reason || "").length * 75));
     const timer = setTimeout(onClose, delay);
@@ -1255,13 +1289,13 @@ function StoreClosedPopup({ reason, onClose }) {
           onClick={onClose}
           className="absolute right-4 top-4 p-2 rounded-full border transition hover:bg-white"
           style={{ borderColor: "var(--line)", color: "var(--ink)" }}
-          aria-label="Tutup notifikasi"
+          aria-label={t("Tutup notifikasi")}
         >
           <X className="w-4 h-4" />
         </button>
         <div className="pr-10">
-          <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Toko Sedang Tutup</div>
-          <h2 id="store-closed-title" className="serif text-4xl leading-none mb-4" style={{ fontWeight: 600 }}>Order belum bisa dibuat.</h2>
+          <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>{t("Toko Sedang Tutup")}</div>
+          <h2 id="store-closed-title" className="serif text-4xl leading-none mb-4" style={{ fontWeight: 600 }}>{t("Order belum bisa dibuat.")}</h2>
           <p id="store-closed-description" className="serif text-2xl leading-tight" style={{ color: "var(--ink)" }}>{reason}</p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Award, ArrowLeft, Crown, LogOut, Receipt, TrendingUp, Wallet } from "lucide-react";
-import { RESELLER_TIERS, fmtIDR } from "../constants";
+import { RESELLER_TIERS, fmtCurrency, fmtIDR } from "../constants";
 
 export function ResellerDashboard({ reseller, resellerTiers = RESELLER_TIERS, orders, onBack, onLogout }) {
   const tierMap = resellerTiers || RESELLER_TIERS;
@@ -114,7 +114,7 @@ export function ResellerDashboard({ reseller, resellerTiers = RESELLER_TIERS, or
                   <div className="text-[10px] mono mt-0.5" style={{ color: "var(--ink-dim)" }}>{new Date(order.createdAt).toLocaleString("id-ID")}</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold" style={{ color: "var(--accent)" }}>{fmtIDR(order.total)}</div>
+                  <div className="font-bold" style={{ color: "var(--accent)" }}>{fmtCurrency(order.total, order.currency || "IDR")}</div>
                   <div className="text-[10px] mono mt-0.5" style={{ color: "var(--ink-dim)" }}>{order.status}</div>
                 </div>
               </div>

@@ -1,6 +1,7 @@
-import { useRef } from "react";
-import { AtSign, Crown, Lock, Mail, MessageCircle, PackageSearch, ShoppingCart, Users } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { AtSign, Check, Crown, Lock, Mail, MessageCircle, PackageSearch, ShoppingCart, Users, X } from "lucide-react";
 import { ADMIN_WHATSAPP_NUMBER, CONTACT_EMAIL, INSTAGRAM_URL, RESELLER_TIERS } from "../constants";
+import { useI18n } from "../lib/i18n";
 
 export function StyleBlock() {
   return (
@@ -263,6 +264,34 @@ export function StyleBlock() {
         display: inline-block;
         transition: transform 0.32s cubic-bezier(.2,.8,.2,1);
       }
+
+      .region-trigger {
+        transition: color 160ms ease, transform 160ms cubic-bezier(.23,1,.32,1);
+      }
+      .region-trigger:active { transform: scale(.97); }
+      .region-sheet-backdrop {
+        opacity: 1;
+        transition: opacity 180ms cubic-bezier(.23,1,.32,1);
+      }
+      .region-sheet-panel {
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity 220ms ease, transform 240ms cubic-bezier(.32,.72,0,1);
+      }
+      @starting-style {
+        .region-sheet-backdrop { opacity: 0; }
+        .region-sheet-panel { opacity: .8; transform: translateY(100%); }
+      }
+      @media (min-width: 640px) {
+        @starting-style {
+          .region-sheet-panel { opacity: 0; transform: translateY(12px) scale(.98); }
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .region-sheet-backdrop,
+        .region-sheet-panel { transition-duration: 1ms; }
+        .region-sheet-panel { transform: none; }
+      }
       .catalog-cta-arrow { transition: transform 0.32s cubic-bezier(.2,.8,.2,1); }
       .catalog-cta:hover .catalog-cta-label { transform: translateX(4px); }
       .catalog-cta:hover .catalog-cta-arrow { transform: translateX(6px); }
@@ -291,17 +320,18 @@ export function StyleBlock() {
 }
 
 export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, onHome, onAdmin, onTrackOrder, onResellerLogin, onResellerDash }) {
+  const { t } = useI18n();
   const brandTapTimeoutRef = useRef(null);
   const lastBrandTapRef = useRef(0);
   const activePromos = promos.filter((promo) => promo.active).map((promo) => promo.title?.trim()).filter(Boolean);
   const tickerItems = [
     ...activePromos,
-    "Apa lu mau, gua ada",
-    "Garansi sesuai plan yang dipilih",
-    "Diskon hingga 80%",
-    "Reseller program - diskon hingga 10%",
-    "Pengiriman instan via WhatsApp",
-    "Toko serba ada sejak 2024",
+    t("Apa lu mau, gua ada"),
+    t("Garansi sesuai plan yang dipilih"),
+    t("Diskon hingga 80%"),
+    t("Reseller program - diskon hingga 10%"),
+    t("Pengiriman instan via WhatsApp"),
+    t("Toko serba ada sejak 2024"),
   ];
 
   const handleBrandTextTap = () => {
@@ -377,7 +407,7 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
             </button>
           </div>
 
-          <nav className="flex items-center gap-2" aria-label="Navigasi utama">
+          <nav className="flex items-center gap-2" aria-label={t("Navigasi utama")}>
             {reseller ? (
               <button
                 onClick={onResellerDash}
@@ -424,9 +454,9 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
               onClick={onTrackOrder}
               className="flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-2 rounded-full text-sm border hover:bg-white transition"
               style={{ borderColor: "var(--line)" }}
-              aria-label="Lacak pesanan"
+              aria-label={t("Lacak pesanan")}
             >
-              <PackageSearch className="w-4 h-4" /> <span className="hidden lg:inline">Cek Order</span>
+              <PackageSearch className="w-4 h-4" /> <span className="hidden lg:inline">{t("Cek Order")}</span>
             </button>
             <button
               onClick={onAdmin}
@@ -441,10 +471,10 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
               onClick={onCart}
               className={`relative flex items-center gap-2 px-4 sm:px-5 py-3 sm:py-2.5 rounded-full text-sm font-semibold transition hover:scale-105 ${cartPulse ? "cart-bounce" : ""}`}
               style={{ background: "var(--ink)", color: "var(--bg)" }}
-              aria-label={`Cart, buka keranjang, ${cartCount} item`}
+              aria-label={`${t("Cart")}, ${cartCount}`}
             >
               <ShoppingCart className="w-4 h-4" />
-              <span className="hidden min-[380px]:inline">Cart</span>
+              <span className="hidden min-[380px]:inline">{t("Cart")}</span>
               {cartCount > 0 && (
                 <span
                   className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold"
@@ -461,7 +491,8 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
   );
 }
 
-export function Footer() {
+export function Footer({ locale = "id", onOpenRegionPicker }) {
+  const { isJapanese } = useI18n();
   const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}`;
   const emailUrl = `mailto:${CONTACT_EMAIL}`;
 
@@ -477,8 +508,9 @@ export function Footer() {
               Palu<span style={{ color: "var(--gold)" }}>gada</span>
             </div>
             <p className="text-sm max-w-sm leading-relaxed mb-3" style={{ color: "#a3a4b3" }}>
-              Toko serba ada untuk aplikasi premium. Apa lu mau, gua ada — dari Netflix sampai ChatGPT,
-              semuanya dengan harga ramah kantong.
+              {isJapanese
+                ? "NetflixからChatGPTまで揃うプレミアムサービスストア。お手頃価格で提供しています。"
+                : "Toko serba ada untuk aplikasi premium. Apa lu mau, gua ada — dari Netflix sampai ChatGPT, semuanya dengan harga ramah kantong."}
             </p>
             <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--gold)" }}>
               "apa lu mau, gua ada"
@@ -486,30 +518,30 @@ export function Footer() {
           </div>
           <nav className="lg:col-span-2" aria-labelledby="footer-toko-heading">
             <h2 id="footer-toko-heading" className="text-[10px] mono uppercase tracking-widest mb-4" style={{ color: "var(--gold)" }}>
-              Toko
+              {isJapanese ? "ストア" : "Toko"}
             </h2>
             <ul className="space-y-2 text-sm">
-              <li><a href="/#katalog" className="hover:opacity-70 transition">Streaming</a></li>
-              <li><a href="/#katalog" className="hover:opacity-70 transition">AI Tools</a></li>
-              <li><a href="/#katalog" className="hover:opacity-70 transition">Editor</a></li>
-              <li><a href="/#katalog" className="hover:opacity-70 transition">Music</a></li>
+              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">Streaming</a></li>
+              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">AI Tools</a></li>
+              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">Editor</a></li>
+              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">Music</a></li>
             </ul>
           </nav>
           <nav className="lg:col-span-2" aria-labelledby="footer-bantuan-heading">
             <h2 id="footer-bantuan-heading" className="text-[10px] mono uppercase tracking-widest mb-4" style={{ color: "var(--gold)" }}>
-              Bantuan
+              {isJapanese ? "サポート" : "Bantuan"}
             </h2>
             <ul className="space-y-2 text-sm">
-              <li><a href="/#faq" className="hover:opacity-70 transition">FAQ</a></li>
-              <li><a href="/#garansi" className="hover:opacity-70 transition">Cara Garansi</a></li>
-              <li><a href="/#cara-order" className="hover:opacity-70 transition">Cara Order</a></li>
-              <li><a href="/#aturan-pakai" className="hover:opacity-70 transition">Aturan Pakai</a></li>
-              <li><a href="/#privasi" className="hover:opacity-70 transition">Privasi</a></li>
+              <li><a href={`/${locale}/#faq`} className="hover:opacity-70 transition">FAQ</a></li>
+              <li><a href={`/${locale}/#garansi`} className="hover:opacity-70 transition">{isJapanese ? "保証について" : "Cara Garansi"}</a></li>
+              <li><a href={`/${locale}/#cara-order`} className="hover:opacity-70 transition">{isJapanese ? "注文方法" : "Cara Order"}</a></li>
+              <li><a href={`/${locale}/#aturan-pakai`} className="hover:opacity-70 transition">{isJapanese ? "利用規約" : "Aturan Pakai"}</a></li>
+              <li><a href={`/${locale}/#privasi`} className="hover:opacity-70 transition">{isJapanese ? "プライバシー" : "Privasi"}</a></li>
             </ul>
           </nav>
           <div className="lg:col-span-3">
             <div className="text-[10px] mono uppercase tracking-widest mb-4" style={{ color: "var(--gold)" }}>
-              Kontak
+              {isJapanese ? "お問い合わせ" : "Kontak"}
             </div>
             <div className="flex items-center gap-3">
               <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp Palugada" className="w-11 h-11 rounded-full border flex items-center justify-center hover:scale-105 transition" style={{ borderColor: "#2a2c3a", background: "rgba(255,255,255,0.04)" }}>
@@ -522,6 +554,14 @@ export function Footer() {
                 <Mail className="w-5 h-5" />
               </a>
             </div>
+            <button
+              type="button"
+              onClick={onOpenRegionPicker}
+              className="region-trigger mt-6 inline-flex items-center gap-2 text-[10px] mono uppercase tracking-widest"
+              style={{ color: "var(--gold)" }}
+            >
+              Wilayah: {locale === "jp" ? "日本" : "Indonesia"} <span aria-hidden="true">↗</span>
+            </button>
           </div>
         </div>
         <div
@@ -536,7 +576,91 @@ export function Footer() {
   );
 }
 
+const REGIONS = [
+  { locale: "id", name: "Indonesia", meta: "Bahasa Indonesia · IDR" },
+  { locale: "jp", name: "日本", meta: "日本語 · JPY" },
+];
+
+export function RegionPicker({ locale, onClose, onSelect }) {
+  const { isJapanese } = useI18n();
+  const selectedRegionRef = useRef(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const returnFocus = document.activeElement;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    selectedRegionRef.current?.focus();
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+      returnFocus?.focus();
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="region-sheet-backdrop fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-sm sm:p-4"
+      onPointerDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <section
+        className="region-sheet-panel w-full max-w-lg rounded-t-[2rem] sm:rounded-[2rem] border p-6 sm:p-7 shadow-2xl"
+        style={{ background: "var(--paper)", borderColor: "var(--line-2)", paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="region-picker-title"
+      >
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <div className="text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: "var(--accent)" }}>{isJapanese ? "地域・通貨" : "Wilayah & mata uang"}</div>
+            <h2 id="region-picker-title" className="serif text-3xl leading-none" style={{ fontWeight: 700 }}>{isJapanese ? "地域を選択" : "Pilih wilayah"}</h2>
+          </div>
+          <button type="button" onClick={onClose} className="region-trigger w-10 h-10 rounded-full border flex items-center justify-center" style={{ borderColor: "var(--line)" }} aria-label="Tutup pilihan wilayah">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {REGIONS.map((region) => {
+            const selected = locale === region.locale;
+            return (
+              <button
+                key={region.locale}
+                ref={selected ? selectedRegionRef : null}
+                type="button"
+                onClick={() => onSelect(region.locale)}
+                className="region-trigger w-full rounded-2xl border p-4 flex items-center justify-between gap-4 text-left"
+                style={{
+                  borderColor: selected ? "var(--accent)" : "var(--line)",
+                  background: selected ? "var(--bg-3)" : "var(--bg-2)",
+                }}
+                aria-pressed={selected}
+              >
+                <span>
+                  <span className="serif text-xl block" style={{ fontWeight: 700 }}>{region.name}</span>
+                  <span className="text-xs block mt-1" style={{ color: "var(--ink-dim)" }}>{region.meta}</span>
+                </span>
+                <span className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: selected ? "var(--accent)" : "var(--line)" }}>
+                  {selected && <Check className="w-4 h-4" style={{ color: "var(--accent)" }} />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function FloatingWhatsApp() {
+  const { isJapanese } = useI18n();
   const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent("Halo admin Palugada, saya mau tanya produk/apps premium.")}`;
 
   return (
@@ -549,7 +673,7 @@ export function FloatingWhatsApp() {
       aria-label="Chat WhatsApp Palugada"
     >
       <MessageCircle className="w-5 h-5" />
-      <span className="hidden sm:inline">Butuh bantuan?</span>
+      <span className="hidden sm:inline">{isJapanese ? "お困りですか？" : "Butuh bantuan?"}</span>
     </a>
   );
 }

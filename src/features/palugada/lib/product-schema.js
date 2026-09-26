@@ -64,11 +64,12 @@ export function getWarrantyDays(product, plan = null, option = null) {
   return Math.max(1, Math.floor((purchasedDays * 2) / 3));
 }
 
-function createMerchantReturnPolicy(warrantyDays) {
+function createMerchantReturnPolicy(warrantyDays, locale = "id") {
+  const country = locale === "jp" ? "JP" : "ID";
   if (!warrantyDays) {
     return {
       "@type": "MerchantReturnPolicy",
-      applicableCountry: "ID",
+      applicableCountry: country,
       returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
       merchantReturnLink: RETURN_POLICY_URL,
     };
@@ -76,7 +77,7 @@ function createMerchantReturnPolicy(warrantyDays) {
 
   return {
     "@type": "MerchantReturnPolicy",
-    applicableCountry: "ID",
+    applicableCountry: country,
     returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
     merchantReturnDays: warrantyDays,
     merchantReturnLink: RETURN_POLICY_URL,
@@ -88,17 +89,18 @@ function createMerchantReturnPolicy(warrantyDays) {
   };
 }
 
-function createDigitalDeliveryDetails() {
+function createDigitalDeliveryDetails(locale = "id") {
+  const japan = locale === "jp";
   return {
     "@type": "OfferShippingDetails",
     shippingRate: {
       "@type": "MonetaryAmount",
       value: 0,
-      currency: "IDR",
+      currency: japan ? "JPY" : "IDR",
     },
     shippingDestination: {
       "@type": "DefinedRegion",
-      addressCountry: "ID",
+      addressCountry: japan ? "JP" : "ID",
     },
     deliveryTime: {
       "@type": "ShippingDeliveryTime",
@@ -129,9 +131,9 @@ function getProductBrandName(product) {
     .trim();
 }
 
-function createOffer(product, promos, path, plan = null, option = null) {
+function createOffer(product, promos, path, locale, plan = null, option = null) {
   const selection = plan && option ? { plan, option } : null;
-  const pricing = getPricingForSelection(product, promos, selection);
+  const pricing = getPricingForSelection(product, promos, selection, locale);
   const stock = option?.stock ?? product?.stock;
   const variantSlug = slugifyProduct([plan?.id, option?.id].filter(Boolean).join("-") || "default");
   const variantName = [product?.name, plan?.name, option?.duration].filter(Boolean).join(" - ");
@@ -142,26 +144,26 @@ function createOffer(product, promos, path, plan = null, option = null) {
     name: variantName || product?.name,
     sku: [product?.id, plan?.id, option?.id].filter(Boolean).join("-") || product?.id,
     url: absoluteUrl(path),
-    priceCurrency: "IDR",
+    priceCurrency: locale === "jp" ? "JPY" : "IDR",
     price: String(pricing.displayPrice),
     availability: Number(stock) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
     seller: { "@id": `${SITE_ORIGIN}/#organization` },
-    shippingDetails: createDigitalDeliveryDetails(),
-    hasMerchantReturnPolicy: createMerchantReturnPolicy(getWarrantyDays(product, plan, option)),
+    shippingDetails: createDigitalDeliveryDetails(locale),
+    hasMerchantReturnPolicy: createMerchantReturnPolicy(getWarrantyDays(product, plan, option), locale),
   };
 }
 
-function createProductOffers(product, promos, path) {
+function createProductOffers(product, promos, path, locale) {
   const offers = (product?.pricingPlans || []).flatMap((plan) =>
-    (plan?.options || []).map((option) => createOffer(product, promos, path, plan, option))
+    (plan?.options || []).map((option) => createOffer(product, promos, path, locale, plan, option))
   );
 
-  return offers.length ? offers : [createOffer(product, promos, path)];
+  return offers.length ? offers : [createOffer(product, promos, path, locale)];
 }
 
-export function createProductStructuredData(product, promos = [], aggregateRating = null) {
-  const path = `/produk/${slugifyProduct(product.name)}/`;
-  const offers = createProductOffers(product, promos, path);
+export function createProductStructuredData(product, promos = [], aggregateRating = null, locale = "id") {
+  const path = `/${locale}/produk/${slugifyProduct(product.name)}/`;
+  const offers = createProductOffers(product, promos, path, locale);
 
   return {
     "@type": "Product",

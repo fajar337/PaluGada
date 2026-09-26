@@ -7,6 +7,8 @@
     "prebuild": "node scripts/generate-sitemap.mjs",
     "dev": "vite",
     "build": "vite build",
+    "check:build": "node scripts/check-localized-build.mjs",
+    "check:routes": "node scripts/check-localized-routes.mjs",
     "postbuild": "node scripts/generate-public-pages.mjs",
     "lint": "eslint .",
     "preview": "vite preview"

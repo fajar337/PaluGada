@@ -39,6 +39,25 @@
     Cache-Control = "public, max-age=86400"
 
 [[redirects]]
+  from = "/"
+  to = "/jp/"
+  status = 302
+  force = true
+  conditions = {Country = ["JP"]}
+
+[[redirects]]
+  from = "/"
+  to = "/id/"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/produk/*"
+  to = "/id/produk/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
