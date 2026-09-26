@@ -100,7 +100,7 @@ export function Home({
           <div className="flex items-center justify-between mb-12 mono text-[10px] uppercase tracking-[0.25em]" style={{ color: "var(--ink-dim)" }}>
             <div className="flex items-center gap-1">
               <span>EST. 2024 —</span>
-              <button type="button" onClick={onOpenRegionPicker} className="region-trigger inline-flex items-center gap-1" aria-label="Pilih wilayah">
+              <button type="button" onClick={onOpenRegionPicker} className="region-trigger inline-flex items-center gap-1" aria-label={isJapanese ? "地域を選択" : "Pilih wilayah"}>
                 {locale === "jp" ? "日本" : "Indonesia"}
                 <ChevronDown className="w-3 h-3" aria-hidden="true" />
               </button>
@@ -115,9 +115,9 @@ export function Home({
                 <span className="w-8 h-px" style={{ background: "var(--accent)" }}></span>
                 {t("Selamat datang di PaluGada")}
               </div>
-              <h1 className="serif leading-[0.85] tracking-tight mb-8 uppercase" style={{ fontSize: "clamp(3.5rem, 9vw, 8.5rem)", fontWeight: 800 }}>
+              <h1 className="serif leading-[0.85] tracking-tight mb-8 uppercase" style={{ fontSize: isJapanese ? "clamp(3.1rem, 8vw, 7rem)" : "clamp(3.5rem, 9vw, 8.5rem)", lineHeight: isJapanese ? 1.02 : undefined, fontWeight: 800 }}>
                 {isJapanese ? (
-                  <>欲しいもの、<br /><span className="serif-italic normal-case" style={{ fontWeight: 500 }}>ここに</span>あります。</>
+                  <>欲しいもの、<br /><span className="serif-italic normal-case" style={{ fontWeight: 500 }}>ここに</span>ある。</>
                 ) : (
                   <>Apa <span style={{ color: "var(--accent)" }}>lu mau</span>,<br /><span className="serif-italic normal-case" style={{ fontWeight: 500 }}>gua</span> ada.</>
                 )}
@@ -126,7 +126,7 @@ export function Home({
                 <p className="text-base leading-relaxed" style={{ color: "var(--ink-dim)" }}>
                   {t("Toko serba ada untuk aplikasi premium. Dari Netflix sampai ChatGPT, dari Spotify sampai CapCut Pro — semua ada, semua murah, semua bergaransi.")}
                 </p>
-                <div className="space-y-3">
+                <div className="flex flex-col items-start gap-3">
                   <a href="#katalog" className="catalog-cta inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-sm hover-lift" style={{ background: "var(--ink)", color: "var(--bg)" }}>
                     <span className="catalog-cta-label">{t("Lihat Semua Barang")}</span>
                     <ArrowRight className="catalog-cta-arrow w-4 h-4" />
@@ -212,7 +212,7 @@ export function Home({
             <div className="flex items-center gap-3 text-sm">
               <Crown className="w-5 h-5" style={{ color: RESELLER_TIERS[reseller.tier]?.color }} />
               <span>
-                Mode reseller aktif <strong>({reseller.tier})</strong> — semua harga sudah termasuk diskon {Math.round(RESELLER_TIERS[reseller.tier].discount * 100)}%
+                {isJapanese ? <>リセラー価格 <strong>({reseller.tier})</strong> — すべての価格に{Math.round(RESELLER_TIERS[reseller.tier].discount * 100)}%割引が適用されています</> : <>Mode reseller aktif <strong>({reseller.tier})</strong> — semua harga sudah termasuk diskon {Math.round(RESELLER_TIERS[reseller.tier].discount * 100)}%</>}
               </span>
             </div>
           </div>
@@ -356,7 +356,7 @@ export function Home({
       )}
 
       <section className="max-w-7xl mx-auto px-6 pb-8">
-        <h2 className="sr-only">Pertanyaan umum tentang pembelian dan garansi</h2>
+        <h2 className="sr-only">{isJapanese ? "購入と保証についてのよくある質問" : "Pertanyaan umum tentang pembelian dan garansi"}</h2>
         <FAQAccordion />
       </section>
 
@@ -413,8 +413,8 @@ function ProductRequestSection({ onRequestProduct }) {
       <div className="paper-card overflow-hidden grid lg:grid-cols-12">
         <div className="lg:col-span-5 p-8 lg:p-10" style={{ background: "var(--ink)", color: "var(--bg)" }}>
           <div className="text-[10px] mono uppercase tracking-widest mb-4 opacity-70">{isJapanese ? "商品リクエスト" : "Request Produk"}</div>
-          <h2 className="serif leading-none mb-5" style={{ fontSize: "clamp(2.5rem, 5vw, 4.5rem)", fontWeight: 500 }}>
-            {isJapanese ? <>お探しのサービスが<span className="serif-italic">ありませんか？</span></> : <>App yang dicari <span className="serif-italic">belum ada?</span></>}
+          <h2 className="serif leading-none mb-5" style={{ fontSize: isJapanese ? "clamp(2.4rem, 4.5vw, 3.5rem)" : "clamp(2.5rem, 5vw, 4.5rem)", fontWeight: 500 }}>
+            {isJapanese ? <>欲しいアプリが<span className="serif-italic">見つからない？</span></> : <>App yang dicari <span className="serif-italic">belum ada?</span></>}
           </h2>
           <p className="text-sm leading-relaxed opacity-75">
             {isJapanese ? "こちらからリクエストしてください。在庫と価格を確認し、提供可能な場合はWhatsAppでご連絡します。" : "Isi request di sini. Admin bakal cek ketersediaan, harga, dan kabarin kamu lewat WhatsApp kalau produknya bisa disediakan."}
@@ -423,17 +423,17 @@ function ProductRequestSection({ onRequestProduct }) {
 
         <form onSubmit={submit} className="lg:col-span-7 p-8 lg:p-10 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Nama" value={name} onChange={setName} placeholder="Nama kamu" />
+          <Field label={isJapanese ? "お名前" : "Nama"} value={name} onChange={setName} placeholder={isJapanese ? "お名前" : "Nama kamu"} />
             <Field label="WhatsApp" value={wa} onChange={setWa} placeholder="08xxxxxxxxxx" />
           </div>
-          <Field label="Nama Apps Premium" value={appName} onChange={setAppName} placeholder="Contoh: Disney+, Vidio, WPS, dll" />
+          <Field label={isJapanese ? "お探しのサービス" : "Nama Apps Premium"} value={appName} onChange={setAppName} placeholder={isJapanese ? "例：Disney+、Vidio、WPS" : "Contoh: Disney+, Vidio, WPS, dll"} />
           <div>
-            <label htmlFor="product-request-note" className="block text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>Catatan</label>
+            <label htmlFor="product-request-note" className="block text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>{isJapanese ? "備考" : "Catatan"}</label>
             <textarea
               id="product-request-note"
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Tulis durasi, jenis akun, budget, atau request khusus..."
+              placeholder={isJapanese ? "利用期間、プラン、予算などをご記入ください…" : "Tulis durasi, jenis akun, budget, atau request khusus..."}
               className="w-full min-h-28 px-4 py-3 rounded-2xl border bg-white text-sm focus:outline-none resize-y"
               style={{ borderColor: "var(--line)" }}
             />
@@ -475,9 +475,9 @@ function CombinedReviewsSection({ reviews, products }) {
 
       {allReviews.length === 0 ? (
         <div className="paper-card p-10 text-center">
-          <div className="serif text-3xl serif-italic mb-3" style={{ color: "var(--ink-dim)" }}>belum ada ulasanâ€¦</div>
+          <div className="serif text-3xl serif-italic mb-3" style={{ color: "var(--ink-dim)" }}>{isJapanese ? "レビューはまだありません…" : "belum ada ulasan…"}</div>
           <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-            Nanti review dari semua produk akan muncul di sini dalam satu tempat.
+            {isJapanese ? "投稿されたレビューはこちらに表示されます。" : "Nanti review dari semua produk akan muncul di sini dalam satu tempat."}
           </p>
         </div>
       ) : (
@@ -516,10 +516,10 @@ function CombinedReviewsSection({ reviews, products }) {
 
               {review.adminReply && (
                 <div className="rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
-                  <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>Balasan Admin</div>
+                  <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>{isJapanese ? "ストアからの返信" : "Balasan Admin"}</div>
                   <p className="text-sm leading-relaxed mb-2" style={{ color: "var(--ink-dim)" }}>{review.adminReply.message}</p>
                   <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>
-                    {new Date(review.adminReply.createdAt).toLocaleString("id-ID", {
+                    {new Date(review.adminReply.createdAt).toLocaleString(locale === "jp" ? "ja-JP" : "id-ID", {
                       day: "2-digit",
                       month: "short",
                       year: "numeric",
@@ -632,25 +632,25 @@ function WebAppPromoSection() {
               className="inline-flex items-center justify-center rounded-full border px-6 py-3 text-base font-semibold transition hover-lift"
               style={{ borderColor: "var(--ink)", color: "var(--ink)", background: "transparent" }}
             >
-              Install App
+              {isJapanese ? "アプリを入手" : "Install App"}
             </a>
           </div>
 
           <div className="lg:col-span-5 lg:text-center">
             <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--ink-dim)" }}>
-              Our App
+              {isJapanese ? "アプリについて" : "Our App"}
             </div>
             <p className="serif uppercase leading-none" style={{ fontSize: "clamp(2.7rem, 5vw, 4.8rem)", fontWeight: 800, color: "var(--accent)" }}>
               Web App
             </p>
             <div className="mt-6 rounded-[2rem] border p-5 sm:p-6 text-left" style={{ borderColor: "var(--line)", background: "var(--bg)" }}>
               <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>
-                Tips Mobile
+                {isJapanese ? "スマートフォンでの使い方" : "Tips Mobile"}
               </div>
               <ul className="space-y-3 text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>
-                <li>Simpan website ke home screen biar aksesnya satu tap.</li>
-                <li>Checkout, lacak order, dan lihat review tetap nyaman di mobile.</li>
-                <li>Semua update produk premium selalu tersedia langsung dari browser.</li>
+                <li>{isJapanese ? "ホーム画面に追加すれば、ワンタップで開けます。" : "Simpan website ke home screen biar aksesnya satu tap."}</li>
+                <li>{isJapanese ? "スマートフォンから注文、配送状況の確認、レビューの閲覧ができます。" : "Checkout, lacak order, dan lihat review tetap nyaman di mobile."}</li>
+                <li>{isJapanese ? "最新の商品情報はブラウザからいつでも確認できます。" : "Semua update produk premium selalu tersedia langsung dari browser."}</li>
               </ul>
             </div>
           </div>
@@ -696,7 +696,7 @@ function FAQAccordion() {
 }
 
 export function ProductCard({ product, promos = [], reviews = [], reseller, effectivePrice, compareAtPrice = 0, onOpen, onPickPlan, onAdd, storeClosed = false, delay = 0, index = 0, className = "" }) {
-  const { t, money } = useI18n();
+  const { t, isJapanese, money } = useI18n();
   const Icon = ICONS[product.icon] || Sparkles;
   const num = String(index + 1).padStart(3, "0");
   const reviewSummary = getReviewSummary(reviews);
@@ -717,7 +717,7 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
         className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-12 focus:z-20 focus:rounded-full focus:px-4 focus:py-2 focus:text-xs focus:font-semibold"
         style={{ background: "var(--ink)", color: "var(--bg)" }}
       >
-        Lihat detail {product.name}
+        {isJapanese ? "詳細を見る" : "Lihat detail"} {product.name}
       </button>
       <div className="flex items-center justify-between px-5 py-2.5 border-b mono text-[10px] uppercase tracking-[0.15em]" style={{ borderColor: "var(--ink)", background: "var(--bg-3)" }}>
         <span style={{ color: "var(--ink)", fontWeight: 600 }}>SKU/{num}</span>
@@ -737,7 +737,7 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
         <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>{product.category}</div>
         {badge && (
           <div className="inline-flex mb-3 px-2.5 py-1 rounded-full text-[9px] mono uppercase tracking-widest font-bold" style={{ background: "var(--ink)", color: "var(--bg)" }}>
-            {badge}
+            {t(badge)}
           </div>
         )}
         <h3 className="serif text-3xl leading-[0.95] pr-16 mb-2 uppercase" style={{ fontWeight: 700 }}>{product.name}</h3>
@@ -753,8 +753,8 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
             <div className="text-xs font-bold">{product.stock > 0 ? product.stock : "—"}</div>
           </div>
           <div className="text-right">
-            <div className="text-[9px] mono uppercase tracking-widest mb-0.5" style={{ color: "var(--ink-dim)" }}>Rating</div>
-            <div className="text-xs font-bold">{reviewSummary.count ? `★ ${reviewSummary.average}` : "Baru"}</div>
+            <div className="text-[9px] mono uppercase tracking-widest mb-0.5" style={{ color: "var(--ink-dim)" }}>{isJapanese ? "評価" : "Rating"}</div>
+            <div className="text-xs font-bold">{reviewSummary.count ? `★ ${reviewSummary.average}` : (isJapanese ? "新着" : "Baru")}</div>
           </div>
         </div>
       </div>
@@ -770,7 +770,7 @@ export function ProductCard({ product, promos = [], reviews = [], reseller, effe
             {money(effectivePrice)}
           </div>
         </div>
-        <button onClick={(event) => { event.stopPropagation(); product.pricingPlans?.length ? onPickPlan() : onAdd(); }} disabled={storeClosed || product.stock === 0} className="w-12 h-12 rounded-full flex items-center justify-center transition disabled:opacity-30 hover:scale-110 active:scale-95 shrink-0" style={{ background: "var(--accent)", color: "white" }} aria-label={storeClosed ? "Website sedang tutup" : "Tambah ke keranjang"}>
+        <button onClick={(event) => { event.stopPropagation(); product.pricingPlans?.length ? onPickPlan() : onAdd(); }} disabled={storeClosed || product.stock === 0} className="w-12 h-12 rounded-full flex items-center justify-center transition disabled:opacity-30 hover:scale-110 active:scale-95 shrink-0" style={{ background: "var(--accent)", color: "white" }} aria-label={t(storeClosed ? "Website Tutup" : "Tambah ke Keranjang")}>
           <Plus className="w-5 h-5" strokeWidth={3.5} />
         </button>
       </div>
@@ -794,7 +794,7 @@ function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, o
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
-              Pilih dulu sebelum masuk keranjang
+              {t("Pilih dulu sebelum masuk keranjang")}
             </div>
             <h2 id="quick-plan-title" className="serif text-4xl leading-none uppercase" style={{ fontWeight: 600 }}>{product.name}</h2>
             <p className="text-sm mt-2" style={{ color: "var(--ink-dim)" }}>{product.tagline}</p>
@@ -827,7 +827,7 @@ function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, o
                     >
 	                      <div className="text-sm font-semibold">{option.duration}</div>
                       {option.stock !== undefined && option.stock !== null && (
-                        <div className="text-[10px] mono uppercase mt-1 opacity-60">{outOfStock ? "Stok habis" : `Stok ${option.stock}`}</div>
+                        <div className="text-[10px] mono uppercase mt-1 opacity-60">{t(outOfStock ? "Stok habis" : "Stok")} {!outOfStock && option.stock}</div>
                       )}
                       {getPricingForSelection(product, promos, { plan, option }, locale).compareAt > getPrice(product, getPricingForSelection(product, promos, { plan, option }, locale).displayPrice) && (
                         <div className="text-[10px] line-through opacity-50 mt-1">{money(getPricingForSelection(product, promos, { plan, option }, locale).compareAt)}</div>
@@ -1004,7 +1004,7 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
                           >
                             <div className="text-sm font-semibold">{option.duration}</div>
                             {option.stock !== undefined && option.stock !== null && (
-                              <div className="text-[10px] mono uppercase mt-1 opacity-60">{outOfStock ? "Stok habis" : `Stok ${option.stock}`}</div>
+                              <div className="text-[10px] mono uppercase mt-1 opacity-60">{t(outOfStock ? "Stok habis" : "Stok")} {!outOfStock && option.stock}</div>
                             )}
                             {getPricingForSelection(product, promos, { plan, option }, locale).compareAt > getPrice(product, getPricingForSelection(product, promos, { plan, option }, locale).displayPrice) && (
                               <div className="text-[10px] line-through opacity-50 mt-1">{money(getPricingForSelection(product, promos, { plan, option }, locale).compareAt)}</div>
@@ -1022,7 +1022,7 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
           <div className="flex items-center gap-2 mb-8">
             <ReviewStars rating={Math.round(Number(reviewSummary.average) || 0)} size="sm" />
             <span className="text-sm ml-2" style={{ color: "var(--ink-dim)" }}>
-              {reviewSummary.count ? `${reviewSummary.average} - ${reviewSummary.count} ulasan` : "Belum ada ulasan"}
+              {reviewSummary.count ? `${reviewSummary.average} - ${reviewSummary.count} ${isJapanese ? "件のレビュー" : "ulasan"}` : t("Belum ada ulasan.")}
             </span>
           </div>
           <div className="flex items-baseline gap-4 mb-8 pb-8 border-b" style={{ borderColor: "var(--line)" }}>
@@ -1030,7 +1030,7 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
             {pricing.compareAt > effectivePrice && (
               <div>
                 <div className="text-xl line-through" style={{ color: "var(--ink-dim)" }}>{money(pricing.compareAt)}</div>
-                <div className="text-xs mono mt-1" style={{ color: "var(--accent)" }}>HEMAT {discount}%</div>
+                <div className="text-xs mono mt-1" style={{ color: "var(--accent)" }}>{isJapanese ? `${discount}%オフ` : `HEMAT ${discount}%`}</div>
               </div>
             )}
             {reseller && (
@@ -1042,7 +1042,7 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
           </div>
           {selectedPlan && (
             <div className="rounded-2xl border px-4 py-3 mb-8 text-sm" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
-              Pilihan: <strong>{selectedPlan.plan.name}</strong> - {selectedPlan.option.duration}
+              {isJapanese ? "選択中：" : "Pilihan:"} <strong>{selectedPlan.plan.name}</strong> - {selectedPlan.option.duration}
             </div>
           )}
           <p className="leading-relaxed mb-8 text-base" style={{ color: "var(--ink-dim)" }}>{product.description}</p>
@@ -1063,11 +1063,11 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
               <span className="px-5 mono font-bold">{qty}</span>
               <button type="button" onClick={() => setQty(qty + 1)} className="p-3" aria-label={`Tambah jumlah ${product.name}`}><Plus className="w-4 h-4" /></button>
             </div>
-            <div className="text-sm mono" style={{ color: "var(--ink-dim)" }}>STOK {product.stock}</div>
+            <div className="text-sm mono" style={{ color: "var(--ink-dim)" }}>{t("Stok")} {product.stock}</div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <button onClick={() => onAdd(qty, selectedCartOption)} disabled={!isStoreOpen || product.stock === 0} className="flex-1 py-4 rounded-full border font-semibold text-sm hover:bg-white transition disabled:opacity-40" style={{ borderColor: "var(--line-2)" }}>+ Keranjang</button>
-            <button onClick={() => onBuy(qty, selectedCartOption)} disabled={!isStoreOpen || product.stock === 0} className="flex-1 py-4 rounded-full font-semibold text-sm transition disabled:opacity-90 hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>{isStoreOpen ? "Beli Sekarang →" : "Website Tutup"}</button>
+            <button onClick={() => onAdd(qty, selectedCartOption)} disabled={!isStoreOpen || product.stock === 0} className="flex-1 py-4 rounded-full border font-semibold text-sm hover:bg-white transition disabled:opacity-40" style={{ borderColor: "var(--line-2)" }}>+ {t("Keranjang")}</button>
+            <button onClick={() => onBuy(qty, selectedCartOption)} disabled={!isStoreOpen || product.stock === 0} className="flex-1 py-4 rounded-full font-semibold text-sm transition disabled:opacity-90 hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>{t(isStoreOpen ? "Beli Sekarang" : "Website Tutup")}{isStoreOpen && " →"}</button>
           </div>
         </div>
       </div>
@@ -1078,6 +1078,7 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
 }
 
 function ReviewsSection({ reviews, onReview }) {
+  const { t, isJapanese, locale } = useI18n();
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [rating, setRating] = useState(5);
@@ -1099,9 +1100,9 @@ function ReviewsSection({ reviews, onReview }) {
     <section className="mt-16 grid lg:grid-cols-12 gap-8">
       <div className="lg:col-span-4">
         <div className="paper-card p-7 sticky top-28">
-          <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Reviews</div>
+          <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>{isJapanese ? "レビュー" : "Reviews"}</div>
           <h2 className="serif text-4xl leading-none mb-4" style={{ fontWeight: 500 }}>
-            Bintang & <span className="serif-italic">ulasan.</span>
+            {isJapanese ? <>評価と<span className="serif-italic">レビュー。</span></> : <>Bintang & <span className="serif-italic">ulasan.</span></>}
           </h2>
           <div className="flex items-center gap-3 mb-3">
             <ReviewStars rating={Math.round(Number(reviewSummary.average) || 0)} />
@@ -1110,40 +1111,40 @@ function ReviewsSection({ reviews, onReview }) {
             </span>
           </div>
           <p className="text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>
-            {reviewSummary.count ? `${reviewSummary.count} ulasan dari pembeli.` : "Belum ada ulasan. Jadilah yang pertama kasih testimoni."}
+            {reviewSummary.count ? (isJapanese ? `購入者レビュー ${reviewSummary.count}件` : `${reviewSummary.count} ulasan dari pembeli.`) : (isJapanese ? "レビューはまだありません。最初のレビューを投稿してください。" : "Belum ada ulasan. Jadilah yang pertama kasih testimoni.")}
           </p>
         </div>
       </div>
 
       <div className="lg:col-span-8 space-y-5">
         <form onSubmit={submit} className="paper-card p-7">
-          <div className="text-xs mono uppercase tracking-widest mb-5" style={{ color: "var(--accent)" }}>Tulis Ulasan</div>
+          <div className="text-xs mono uppercase tracking-widest mb-5" style={{ color: "var(--accent)" }}>{t("Tulis Ulasan")}</div>
           <div className="grid sm:grid-cols-2 gap-4 mb-4">
-            <Field label="Nama" value={name} onChange={setName} placeholder="Nama kamu" />
+            <Field label={t("Nama")} value={name} onChange={setName} placeholder={isJapanese ? "お名前" : "Nama kamu"} />
             <div>
-              <label className="block text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>Rating</label>
+              <label className="block text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>{isJapanese ? "評価" : "Rating"}</label>
               <div className="h-[46px] flex items-center">
                 <ReviewStars rating={rating} onChange={setRating} />
               </div>
             </div>
           </div>
-          <label htmlFor="review-message" className="block text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>Ulasan</label>
+          <label htmlFor="review-message" className="block text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--ink-dim)" }}>{isJapanese ? "レビュー" : "Ulasan"}</label>
           <textarea
             id="review-message"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
-            placeholder="Ceritain pengalaman order kamu..."
+            placeholder={isJapanese ? "購入した商品の感想をお聞かせください…" : "Ceritain pengalaman order kamu..."}
             className="w-full min-h-32 px-4 py-3 rounded-2xl border bg-white text-sm focus:outline-none resize-y"
             style={{ borderColor: "var(--line)" }}
           />
           <button type="submit" disabled={!name.trim() || !message.trim()} className="mt-4 px-6 py-3 rounded-full font-semibold text-sm disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>
-            Kirim Ulasan
+            {t("Kirim Ulasan")}
           </button>
         </form>
 
         {reviews.length === 0 ? (
           <div className="paper-card p-7 text-sm" style={{ color: "var(--ink-dim)" }}>
-            Belum ada ulasan untuk produk ini.
+            {isJapanese ? "この商品のレビューはまだありません。" : "Belum ada ulasan untuk produk ini."}
           </div>
         ) : (
           reviews.map((review) => (
@@ -1152,7 +1153,7 @@ function ReviewsSection({ reviews, onReview }) {
                 <div>
                   <div className="serif text-2xl leading-none" style={{ fontWeight: 500 }}>{review.name}</div>
                   <div className="text-[10px] mono uppercase tracking-widest mt-1" style={{ color: "var(--ink-dim)" }}>
-                    {new Date(review.createdAt).toLocaleString("id-ID", {
+                    {new Date(review.createdAt).toLocaleString(locale === "jp" ? "ja-JP" : "id-ID", {
                       day: "2-digit",
                       month: "short",
                       year: "numeric",
@@ -1167,11 +1168,11 @@ function ReviewsSection({ reviews, onReview }) {
               {review.adminReply && (
                 <div className="mt-4 rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
                   <div className="text-[10px] mono uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
-                    Balasan Admin
+                    {isJapanese ? "ストアからの返信" : "Balasan Admin"}
                   </div>
                   <p className="text-sm leading-relaxed mb-2" style={{ color: "var(--ink-dim)" }}>{review.adminReply.message}</p>
                   <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>
-                    {new Date(review.adminReply.createdAt).toLocaleString("id-ID", {
+                    {new Date(review.adminReply.createdAt).toLocaleString(locale === "jp" ? "ja-JP" : "id-ID", {
                       day: "2-digit",
                       month: "short",
                       year: "numeric",
@@ -1312,7 +1313,7 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
       <h1 className="serif leading-none mb-3" style={{ fontSize: "clamp(3rem, 6vw, 5.5rem)", fontWeight: 500 }}>
         {t("Keranjang")}<span className="serif-italic">.</span>
       </h1>
-      <div className="text-sm mb-12" style={{ color: "var(--ink-dim)" }}>{items.length} produk</div>
+      <div className="text-sm mb-12" style={{ color: "var(--ink-dim)" }}>{items.length} {isJapanese ? "点の商品" : "produk"}</div>
       {!isStoreOpen && (
         <div className="mb-8">
           <ClosedStoreNotice reason={storeStatus?.closedReason} />
@@ -1322,8 +1323,8 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
       {items.length === 0 ? (
         <div className="paper-card text-center py-24">
           <ShoppingCart className="w-12 h-12 mx-auto mb-4" style={{ color: "var(--ink-dim)" }} />
-          <div className="serif text-3xl serif-italic mb-6" style={{ color: "var(--ink-dim)" }}>masih kosong…</div>
-          <button onClick={onBack} className="px-6 py-3 rounded-full font-semibold text-sm" style={{ background: "var(--ink)", color: "var(--bg)" }}>Mulai Belanja</button>
+          <div className="serif text-3xl serif-italic mb-6" style={{ color: "var(--ink-dim)" }}>{isJapanese ? "カートは空です…" : "masih kosong…"}</div>
+          <button onClick={onBack} className="px-6 py-3 rounded-full font-semibold text-sm" style={{ background: "var(--ink)", color: "var(--bg)" }}>{isJapanese ? "商品を見る" : "Mulai Belanja"}</button>
         </div>
       ) : (
         <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
@@ -1360,11 +1361,11 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
           </div>
 
           <div className="paper-card min-w-0 p-5 sm:p-7 h-fit lg:sticky lg:top-32">
-            <div className="text-xs mono uppercase tracking-widest mb-5" style={{ color: "var(--accent)" }}>Ringkasan</div>
+            <div className="text-xs mono uppercase tracking-widest mb-5" style={{ color: "var(--accent)" }}>{isJapanese ? "ご注文内容" : "Ringkasan"}</div>
             <div className="space-y-3 text-sm mb-5">
               <div className="flex justify-between"><span style={{ color: "var(--ink-dim)" }}>{t("Subtotal")}</span><span>{money(originalTotal)}</span></div>
-              {savings > 0 && <div className="flex justify-between"><span style={{ color: "var(--ink-dim)" }}>Diskon Reseller</span><span style={{ color: "var(--accent)" }}>−{money(savings)}</span></div>}
-              <div className="flex justify-between"><span style={{ color: "var(--ink-dim)" }}>Biaya admin</span><span>Gratis</span></div>
+              {savings > 0 && <div className="flex justify-between"><span style={{ color: "var(--ink-dim)" }}>{isJapanese ? "リセラー割引" : "Diskon Reseller"}</span><span style={{ color: "var(--accent)" }}>−{money(savings)}</span></div>}
+              <div className="flex justify-between"><span style={{ color: "var(--ink-dim)" }}>{isJapanese ? "手数料" : "Biaya admin"}</span><span>{isJapanese ? "無料" : "Gratis"}</span></div>
             </div>
             <div className="border-t pt-5 mb-6" style={{ borderColor: "var(--line)" }}>
               <div className="text-xs mono uppercase mb-1" style={{ color: "var(--ink-dim)" }}>{t("Total")}</div>
@@ -1414,8 +1415,8 @@ export function Checkout({
   if (items.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-20 text-center">
-        <div className="serif text-3xl serif-italic mb-4" style={{ color: "var(--ink-dim)" }}>keranjang kosong…</div>
-        <button onClick={onBack} className="px-6 py-3 rounded-full" style={{ background: "var(--ink)", color: "var(--bg)" }}>Kembali</button>
+        <div className="serif text-3xl serif-italic mb-4" style={{ color: "var(--ink-dim)" }}>{isJapanese ? "カートは空です…" : "keranjang kosong…"}</div>
+        <button onClick={onBack} className="px-6 py-3 rounded-full" style={{ background: "var(--ink)", color: "var(--bg)" }}>{isJapanese ? "戻る" : "Kembali"}</button>
       </div>
     );
   }

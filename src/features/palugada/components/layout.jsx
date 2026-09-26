@@ -320,7 +320,7 @@ export function StyleBlock() {
 }
 
 export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, onHome, onAdmin, onTrackOrder, onResellerLogin, onResellerDash }) {
-  const { t } = useI18n();
+  const { t, isJapanese } = useI18n();
   const brandTapTimeoutRef = useRef(null);
   const lastBrandTapRef = useRef(0);
   const activePromos = promos.filter((promo) => promo.active).map((promo) => promo.title?.trim()).filter(Boolean);
@@ -363,7 +363,7 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
   return (
     <>
       <aside
-        aria-label="Promo dan informasi toko"
+        aria-label={isJapanese ? "ストアのお知らせ" : "Promo dan informasi toko"}
         className="border-b overflow-hidden mono text-[11px] uppercase tracking-widest py-2"
         style={{ borderColor: "var(--line-2)", background: "var(--ink)", color: "var(--bg)" }}
       >
@@ -389,20 +389,20 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
                 onClick={onHome}
                 className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center border-2"
                 style={{ background: "var(--bg)", borderColor: "var(--ink)" }}
-                aria-label="PG, kembali ke beranda Palugada Premium"
-                title="Beranda Palugada Premium"
+                aria-label={isJapanese ? "PaluGadaのホームへ戻る" : "PG, kembali ke beranda Palugada Premium"}
+                title={isJapanese ? "PaluGadaのホーム" : "Beranda Palugada Premium"}
               >
                 <span className="serif text-xl leading-none" style={{ color: "var(--ink)", fontWeight: 800 }}>
                   PG
                 </span>
               </button>
             </div>
-            <button onClick={handleBrandTextTap} className="leading-none text-left min-w-0" aria-label="Palugada Premium - beranda">
+            <button onClick={handleBrandTextTap} className="leading-none text-left min-w-0" aria-label={isJapanese ? "PaluGada Premiumのホーム" : "Palugada Premium - beranda"}>
               <div className="serif text-xl sm:text-2xl tracking-tight uppercase" style={{ fontWeight: 800 }}>
                 Palu<span style={{ color: "var(--accent)" }}>gada</span>
               </div>
               <div className="hidden min-[420px]:block text-[9px] mono uppercase tracking-[0.18em] mt-1.5" style={{ color: "var(--ink-dim)" }}>
-                apa lu mau, gua ada
+                {t("Apa lu mau, gua ada")}
               </div>
             </button>
           </div>
@@ -560,7 +560,7 @@ export function Footer({ locale = "id", onOpenRegionPicker }) {
               className="region-trigger mt-6 inline-flex items-center gap-2 text-[10px] mono uppercase tracking-widest"
               style={{ color: "var(--gold)" }}
             >
-              Wilayah: {locale === "jp" ? "日本" : "Indonesia"} <span aria-hidden="true">↗</span>
+              {isJapanese ? "地域：" : "Wilayah: "}{locale === "jp" ? "日本" : "Indonesia"} <span aria-hidden="true">↗</span>
             </button>
           </div>
         </div>
@@ -568,7 +568,7 @@ export function Footer({ locale = "id", onOpenRegionPicker }) {
           className="border-t pt-6 flex flex-col sm:flex-row justify-between gap-3 text-[10px] mono uppercase tracking-widest"
           style={{ borderColor: "#2a2c3a", color: "#a3a4b3" }}
         >
-          <div>© 2026 Palugada — Toko Serba Ada</div>
+          <div>© 2026 Palugada — {isJapanese ? "プレミアムサービスストア" : "Toko Serba Ada"}</div>
           <div>Crafted By PaluGada</div>
         </div>
       </div>
