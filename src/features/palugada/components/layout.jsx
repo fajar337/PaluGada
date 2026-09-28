@@ -323,7 +323,7 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
   const { t, isJapanese } = useI18n();
   const brandTapTimeoutRef = useRef(null);
   const lastBrandTapRef = useRef(0);
-  const activePromos = promos.filter((promo) => promo.active).map((promo) => promo.title?.trim()).filter(Boolean);
+  const activePromos = promos.filter((promo) => promo.active).map((promo) => (isJapanese ? promo.titleJa : promo.title)?.trim()).filter(Boolean);
   const tickerItems = [
     ...activePromos,
     t("Apa lu mau, gua ada"),
@@ -413,8 +413,8 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
                 onClick={onResellerDash}
                 className="sm:hidden flex items-center justify-center w-11 h-11 rounded-full border hover:bg-white transition"
                 style={{ borderColor: "var(--line-2)" }}
-                aria-label="Dashboard reseller"
-                title="Dashboard reseller"
+                aria-label={isJapanese ? "リセラー管理画面" : "Dashboard reseller"}
+                title={isJapanese ? "リセラー管理画面" : "Dashboard reseller"}
               >
                 <Crown className="w-4 h-4" style={{ color: RESELLER_TIERS[reseller.tier]?.color }} />
               </button>
@@ -423,8 +423,8 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
                 onClick={onResellerLogin}
                 className="sm:hidden flex items-center justify-center w-11 h-11 rounded-full border hover:bg-white transition"
                 style={{ borderColor: "var(--line)" }}
-                aria-label="Login reseller"
-                title="Login reseller"
+                aria-label={isJapanese ? "リセラーログイン" : "Login reseller"}
+                title={isJapanese ? "リセラーログイン" : "Login reseller"}
               >
                 <Users className="w-4 h-4" />
               </button>
@@ -438,7 +438,7 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
                 >
                   <Crown className="w-4 h-4" style={{ color: RESELLER_TIERS[reseller.tier]?.color }} />
                   <span className="font-medium">{reseller.name.split(" ")[0]}</span>
-                  <span className="text-[10px] mono uppercase opacity-60">{reseller.tier}</span>
+                  <span className="text-[10px] mono uppercase opacity-60">{t(reseller.tier)}</span>
                 </button>
               </div>
             ) : (
@@ -447,7 +447,7 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
                 className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full text-sm border hover:bg-white transition"
                 style={{ borderColor: "var(--line)" }}
               >
-                <Users className="w-4 h-4" /> Reseller
+                <Users className="w-4 h-4" /> {isJapanese ? "リセラー" : "Reseller"}
               </button>
             )}
             <button
@@ -492,7 +492,7 @@ export function Header({ promos = [], cartCount, cartPulse, reseller, onCart, on
 }
 
 export function Footer({ locale = "id", onOpenRegionPicker }) {
-  const { isJapanese } = useI18n();
+  const { t, isJapanese } = useI18n();
   const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}`;
   const emailUrl = `mailto:${CONTACT_EMAIL}`;
 
@@ -513,7 +513,7 @@ export function Footer({ locale = "id", onOpenRegionPicker }) {
                 : "Toko serba ada untuk aplikasi premium. Apa lu mau, gua ada — dari Netflix sampai ChatGPT, semuanya dengan harga ramah kantong."}
             </p>
             <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--gold)" }}>
-              "apa lu mau, gua ada"
+              "{t("Apa lu mau, gua ada")}"
             </div>
           </div>
           <nav className="lg:col-span-2" aria-labelledby="footer-toko-heading">
@@ -521,10 +521,10 @@ export function Footer({ locale = "id", onOpenRegionPicker }) {
               {isJapanese ? "ストア" : "Toko"}
             </h2>
             <ul className="space-y-2 text-sm">
-              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">Streaming</a></li>
-              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">AI Tools</a></li>
-              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">Editor</a></li>
-              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">Music</a></li>
+              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">{t("Streaming")}</a></li>
+              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">{t("AI Tools")}</a></li>
+              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">{t("Editor")}</a></li>
+              <li><a href={`/${locale}/#katalog`} className="hover:opacity-70 transition">{t("Music")}</a></li>
             </ul>
           </nav>
           <nav className="lg:col-span-2" aria-labelledby="footer-bantuan-heading">
@@ -569,7 +569,7 @@ export function Footer({ locale = "id", onOpenRegionPicker }) {
           style={{ borderColor: "#2a2c3a", color: "#a3a4b3" }}
         >
           <div>© 2026 Palugada — {isJapanese ? "プレミアムサービスストア" : "Toko Serba Ada"}</div>
-          <div>Crafted By PaluGada</div>
+          <div>{isJapanese ? "PaluGada制作" : "Crafted By PaluGada"}</div>
         </div>
       </div>
     </footer>
@@ -577,7 +577,7 @@ export function Footer({ locale = "id", onOpenRegionPicker }) {
 }
 
 const REGIONS = [
-  { locale: "id", name: "Indonesia", meta: "Bahasa Indonesia · IDR" },
+  { locale: "id", name: "Indonesia", nameJa: "インドネシア", meta: "Bahasa Indonesia · IDR", metaJa: "インドネシア語 · IDR" },
   { locale: "jp", name: "日本", meta: "日本語 · JPY" },
 ];
 
@@ -622,7 +622,7 @@ export function RegionPicker({ locale, onClose, onSelect }) {
             <div className="text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: "var(--accent)" }}>{isJapanese ? "地域・通貨" : "Wilayah & mata uang"}</div>
             <h2 id="region-picker-title" className="serif text-3xl leading-none" style={{ fontWeight: 700 }}>{isJapanese ? "地域を選択" : "Pilih wilayah"}</h2>
           </div>
-          <button type="button" onClick={onClose} className="region-trigger w-10 h-10 rounded-full border flex items-center justify-center" style={{ borderColor: "var(--line)" }} aria-label="Tutup pilihan wilayah">
+          <button type="button" onClick={onClose} className="region-trigger w-10 h-10 rounded-full border flex items-center justify-center" style={{ borderColor: "var(--line)" }} aria-label={isJapanese ? "地域選択を閉じる" : "Tutup pilihan wilayah"}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -644,8 +644,8 @@ export function RegionPicker({ locale, onClose, onSelect }) {
                 aria-pressed={selected}
               >
                 <span>
-                  <span className="serif text-xl block" style={{ fontWeight: 700 }}>{region.name}</span>
-                  <span className="text-xs block mt-1" style={{ color: "var(--ink-dim)" }}>{region.meta}</span>
+                  <span className="serif text-xl block" style={{ fontWeight: 700 }}>{isJapanese ? region.nameJa || region.name : region.name}</span>
+                  <span className="text-xs block mt-1" style={{ color: "var(--ink-dim)" }}>{isJapanese ? region.metaJa || region.meta : region.meta}</span>
                 </span>
                 <span className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: selected ? "var(--accent)" : "var(--line)" }}>
                   {selected && <Check className="w-4 h-4" style={{ color: "var(--accent)" }} />}
@@ -661,7 +661,7 @@ export function RegionPicker({ locale, onClose, onSelect }) {
 
 export function FloatingWhatsApp() {
   const { isJapanese } = useI18n();
-  const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent("Halo admin Palugada, saya mau tanya produk/apps premium.")}`;
+  const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(isJapanese ? "PaluGadaのプレミアムサービスについて質問があります。" : "Halo admin Palugada, saya mau tanya produk/apps premium.")}`;
 
   return (
     <a
@@ -670,7 +670,7 @@ export function FloatingWhatsApp() {
       rel="noopener noreferrer"
       className="fixed right-4 bottom-5 z-40 rounded-full shadow-2xl float flex items-center gap-2 px-4 py-3 text-sm font-semibold"
       style={{ background: "#1f7a4d", color: "white", paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
-      aria-label="Chat WhatsApp Palugada"
+      aria-label={isJapanese ? "PaluGadaにWhatsAppで問い合わせる" : "Chat WhatsApp Palugada"}
     >
       <MessageCircle className="w-5 h-5" />
       <span className="hidden sm:inline">{isJapanese ? "お困りですか？" : "Butuh bantuan?"}</span>

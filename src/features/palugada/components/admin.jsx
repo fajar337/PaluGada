@@ -217,10 +217,12 @@ export function AdminPanel({
       .map((plan, planIndex) => ({
         id: plan.id || createStableId(plan.name, `plan-${planIndex + 1}`),
         name: String(plan.name || "").trim(),
+        nameJa: String(plan.nameJa || "").trim(),
         options: (plan.options || [])
           .map((option, optionIndex) => ({
             id: option.id || createStableId(option.duration, `option-${optionIndex + 1}`),
             duration: String(option.duration || "").trim(),
+            durationJa: String(option.durationJa || "").trim(),
             price: Math.max(0, Number(option.price) || 0),
             priceJpy: Math.max(0, Number(option.priceJpy) || 0),
             ...(optionLevelStock ? { stock: Math.max(0, Number(option.stock) || 0) } : {}),
@@ -234,6 +236,7 @@ export function AdminPanel({
       oldPrice: Math.max(0, Number(data.oldPrice) || 0),
       priceJpy: Math.max(0, Number(data.priceJpy) || 0),
       oldPriceJpy: Math.max(0, Number(data.oldPriceJpy) || 0),
+      featuresJa: (data.featuresJa || []).map((feature) => feature.trim()).filter(Boolean),
       pricingPlans,
     };
     const payload = {
@@ -292,6 +295,7 @@ export function AdminPanel({
     const payload = {
       ...data,
       title: data.title.trim(),
+      titleJa: String(data.titleJa || "").trim(),
       description: data.description.trim(),
       productId: data.productId || "",
       planId: data.planId || "",
@@ -330,6 +334,7 @@ export function AdminPanel({
       ...data,
       code: String(data.code || "").trim().toUpperCase().replace(/\s+/g, ""),
       title: String(data.title || "").trim(),
+      titleJa: String(data.titleJa || "").trim(),
       type: data.type === "percent" ? "percent" : "fixed",
       value: Math.max(0, Number(data.value) || 0),
       minTotal: Math.max(0, Number(data.minTotal) || 0),
@@ -473,6 +478,7 @@ export function AdminPanel({
                 setStoreStatus?.({
                   isOpen: true,
                   closedReason: "",
+                  closedReasonJa: "",
                   updatedAt: new Date().toISOString(),
                 });
                 logActivity("Website dibuka", "Order diaktifkan");
@@ -520,10 +526,11 @@ export function AdminPanel({
         <StoreStatusEditor
           storeStatus={storeStatus}
           onClose={() => setShowStoreStatusEditor(false)}
-          onSave={(reason) => {
+          onSave={(reason, reasonJa) => {
             setStoreStatus?.({
               isOpen: false,
               closedReason: reason.trim(),
+              closedReasonJa: reasonJa.trim(),
               updatedAt: new Date().toISOString(),
             });
             logActivity("Website ditutup", reason.trim());
@@ -2357,6 +2364,7 @@ function PromoEditor({ promo, products, onSave, onClose }) {
   const blank = {
     id: null,
     title: "",
+    titleJa: "",
     description: "",
     active: true,
     highlight: false,
@@ -2460,6 +2468,7 @@ function PromoEditor({ promo, products, onSave, onClose }) {
             />
           )}
           <Field label="Judul Promo" value={data.title} onChange={(value) => set("title", value)} placeholder="Netflix 1P1U 1 bulan jadi 20K hari ini" />
+          <Field label="Judul Promo Jepang (ticker /jp)" value={data.titleJa || ""} onChange={(value) => set("titleJa", value)} placeholder="Netflix 1か月プランがお得" />
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Harga Promo" value={data.promoPrice} onChange={(value) => set("promoPrice", Number(value) || 0)} type="number" />
             <Field label="Harga Coret" value={data.compareAtPrice} onChange={(value) => set("compareAtPrice", Number(value) || 0)} type="number" />
@@ -2519,6 +2528,7 @@ function CouponEditor({ coupon, onSave, onClose }) {
     id: null,
     code: "",
     title: "",
+    titleJa: "",
     active: true,
     type: "percent",
     value: 10,
@@ -2551,6 +2561,7 @@ function CouponEditor({ coupon, onSave, onClose }) {
             <Field label="Kode Kupon" value={data.code} onChange={(value) => set("code", value.toUpperCase().replace(/\s+/g, ""))} placeholder="PALU10" />
             <Field label="Judul" value={data.title} onChange={(value) => set("title", value)} placeholder="Diskon pelanggan baru" />
           </div>
+          <Field label="Judul Jepang (checkout /jp)" value={data.titleJa || ""} onChange={(value) => set("titleJa", value)} placeholder="初回購入割引" />
           <div className="grid sm:grid-cols-2 gap-4">
             <AdminSelect
               label="Tipe Diskon"
@@ -2592,7 +2603,8 @@ function CouponEditor({ coupon, onSave, onClose }) {
 
 function StoreStatusEditor({ storeStatus, onClose, onSave }) {
   const [reason, setReason] = useState(storeStatus?.closedReason || "");
-  const canSave = reason.trim().length > 0;
+  const [reasonJa, setReasonJa] = useState(storeStatus?.closedReasonJa || "");
+  const canSave = reason.trim().length > 0 && reasonJa.trim().length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y backdrop-blur-sm" style={{ background: "rgba(20,21,31,0.5)" }}>
@@ -2619,12 +2631,21 @@ function StoreStatusEditor({ storeStatus, onClose, onSave }) {
             className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 resize-y"
             style={{ borderColor: "var(--line)" }}
           />
+          <label className="text-[10px] mono uppercase tracking-widest block mt-4 mb-1.5" style={{ color: "var(--ink-dim)" }}>Alasan Tutup (Jepang)</label>
+          <textarea
+            value={reasonJa}
+            onChange={(event) => setReasonJa(event.target.value)}
+            rows={4}
+            placeholder="例：価格更新のため、現在ご注文を一時停止しています。"
+            className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 resize-y"
+            style={{ borderColor: "var(--line)" }}
+          />
         </div>
         <div className="flex gap-3">
           <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: "var(--line-2)" }}>Batal</button>
           <button
             type="button"
-            onClick={() => onSave(reason)}
+            onClick={() => onSave(reason, reasonJa)}
             disabled={!canSave}
             className="flex-1 py-3 rounded-full font-semibold text-sm disabled:opacity-40"
             style={{ background: "var(--accent)", color: "white" }}
@@ -2776,7 +2797,7 @@ function createBlankOption(index = 0) {
 }
 
 function ProductEditor({ product, onSave, onClose }) {
-  const blank = { id: null, name: "", category: "Streaming", icon: "tv", color: "#8b5e34", price: 0, oldPrice: 0, priceJpy: 0, oldPriceJpy: 0, stock: 0, duration: "1 Bulan", tagline: "", description: "", features: [], pricingPlans: [] };
+  const blank = { id: null, name: "", category: "Streaming", icon: "tv", color: "#8b5e34", price: 0, oldPrice: 0, priceJpy: 0, oldPriceJpy: 0, stock: 0, duration: "1 Bulan", tagline: "", description: "", features: [], featuresJa: [], pricingPlans: [] };
   const [data, setData] = useState(product || blank);
   const [featInput, setFeatInput] = useState("");
   const set = (key, value) => setData((current) => ({ ...current, [key]: value }));
@@ -2889,6 +2910,21 @@ function ProductEditor({ product, onSave, onClose }) {
             <textarea value={data.description} onChange={(event) => set("description", event.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800" style={{ borderColor: "var(--line)" }} />
           </div>
 
+          <div className="rounded-2xl border p-4 space-y-3" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
+            <div className="text-[10px] mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>Teks Jepang (nama produk tetap sama)</div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Field label="Kategori Jepang" value={data.categoryJa || ""} onChange={(value) => set("categoryJa", value)} placeholder="動画配信" />
+              <Field label="Durasi Jepang" value={data.durationJa || ""} onChange={(value) => set("durationJa", value)} placeholder="1か月" />
+            </div>
+            <Field label="Tagline Jepang" value={data.taglineJa || ""} onChange={(value) => set("taglineJa", value)} />
+            <label className="block text-[10px] mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>Deskripsi Jepang
+              <textarea value={data.descriptionJa || ""} onChange={(event) => set("descriptionJa", event.target.value)} rows={3} className="mt-2 w-full px-4 py-3 rounded-xl border bg-white text-sm focus:outline-none" style={{ borderColor: "var(--line)" }} />
+            </label>
+            <label className="block text-[10px] mono uppercase tracking-widest" style={{ color: "var(--ink-dim)" }}>Fitur Jepang (satu per baris)
+              <textarea value={(data.featuresJa || []).join("\n")} onChange={(event) => set("featuresJa", event.target.value.split("\n"))} rows={4} className="mt-2 w-full px-4 py-3 rounded-xl border bg-white text-sm focus:outline-none" style={{ borderColor: "var(--line)" }} />
+            </label>
+          </div>
+
           <div className="grid sm:grid-cols-3 gap-3">
             <Field label="Harga" value={data.price} onChange={(value) => set("price", Number(value) || 0)} type="number" />
             <Field label="Harga Lama" value={data.oldPrice} onChange={(value) => set("oldPrice", Number(value) || 0)} type="number" />
@@ -2940,6 +2976,7 @@ function ProductEditor({ product, onSave, onClose }) {
                     <div className="flex items-start gap-3 mb-3">
                       <div className="flex-1">
                         <Field label={`Nama Plan ${planIndex + 1}`} value={plan.name} onChange={(value) => updatePlan(planIndex, "name", value)} placeholder="MEMBER" />
+                        <Field label="Nama Plan Jepang" value={plan.nameJa || ""} onChange={(value) => updatePlan(planIndex, "nameJa", value)} placeholder="会員" />
                       </div>
                       <button type="button" onClick={() => removePlan(planIndex)} className="mt-6 p-3 rounded-xl border hover:bg-red-50" style={{ borderColor: "var(--line)", color: "#991b1b" }} aria-label="Hapus plan">
                         <Trash2 className="w-4 h-4" />
@@ -2948,8 +2985,9 @@ function ProductEditor({ product, onSave, onClose }) {
 
                     <div className="space-y-2">
                       {(plan.options || []).map((option, optionIndex) => (
-                        <div key={option.id || optionIndex} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_8rem_7rem_auto] sm:items-end">
+                        <div key={option.id || optionIndex} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7rem_7rem_6rem_auto] sm:items-end">
                           <Field label={optionIndex === 0 ? "Durasi / Opsi" : " "} value={option.duration} onChange={(value) => updateOption(planIndex, optionIndex, "duration", value)} placeholder="1 Bulan" />
+                          <Field label={optionIndex === 0 ? "Durasi Jepang" : " "} value={option.durationJa || ""} onChange={(value) => updateOption(planIndex, optionIndex, "durationJa", value)} placeholder="1か月" />
                           <Field label={optionIndex === 0 ? "Harga Opsi" : " "} value={option.price} onChange={(value) => updateOption(planIndex, optionIndex, "price", Number(value) || 0)} type="number" />
                           <Field label={optionIndex === 0 ? "Harga JPY" : " "} value={option.priceJpy ?? 0} onChange={(value) => updateOption(planIndex, optionIndex, "priceJpy", Number(value) || 0)} type="number" />
                           <Field label={optionIndex === 0 ? "Stok" : " "} value={option.stock ?? 0} onChange={(value) => updateOption(planIndex, optionIndex, "stock", Number(value) || 0)} type="number" />

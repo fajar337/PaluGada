@@ -31,6 +31,12 @@ export const STORE_FAQS = [
   },
 ];
 
+export const STORE_FAQS_JA = [
+  { id: "faq", eyebrow: "よくある質問", title: "商品はどのように届きますか？", question: "商品はどのように届きますか？", answer: "入金確認後、アカウントまたはアクセス情報をWhatsAppでお送りします。" },
+  { id: "cara-order", eyebrow: "注文方法", title: "注文の流れを教えてください", question: "注文の流れを教えてください", answer: "商品、プラン、期間を選び、購入者情報と支払い方法を入力してください。その後WhatsAppで支払い明細を送信します。" },
+  { id: "garansi", eyebrow: "保証", title: "保証はありますか？", question: "保証はありますか？", answer: "保証内容はプランごとに異なります。商品ページのプラン名とストアポリシーをご確認ください。" },
+];
+
 export function slugifyProduct(value = "") {
   return String(value)
     .normalize("NFKD")

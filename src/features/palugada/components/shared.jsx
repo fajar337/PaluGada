@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import { Eye, EyeOff, Sparkles } from "lucide-react";
 import { ICONS } from "../constants";
+import { useI18n } from "../lib/i18n";
 
 export function ProductIcon({ icon, color, size = 48 }) {
   const Icon = ICONS[icon] || Sparkles;
@@ -21,6 +22,7 @@ export function ProductIcon({ icon, color, size = 48 }) {
 }
 
 export function Field({ label, value, onChange, type = "text", placeholder, min, disabled = false }) {
+  const { isJapanese } = useI18n();
   const generatedId = useId();
   const inputId = `field-${generatedId.replace(/:/g, "")}`;
   const isPassword = type === "password";
@@ -74,7 +76,7 @@ export function Field({ label, value, onChange, type = "text", placeholder, min,
             onClick={() => setShowPassword((current) => !current)}
             className="absolute right-3 top-1/2 -translate-y-1/2"
             style={{ color: "var(--ink-dim)" }}
-            aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+            aria-label={isJapanese ? (showPassword ? "パスワードを隠す" : "パスワードを表示") : (showPassword ? "Sembunyikan password" : "Tampilkan password")}
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>

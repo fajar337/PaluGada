@@ -33,8 +33,8 @@ import {
   getProductStartingCompareAt,
   getWhatsAppConfirmationUrl,
 } from "../constants";
-import { STORE_FAQS } from "../lib/seo";
-import { useI18n } from "../lib/i18n";
+import { STORE_FAQS, STORE_FAQS_JA } from "../lib/seo";
+import { localizeCatalogText, translate, useI18n } from "../lib/i18n";
 import { Field, ProductIcon } from "./shared";
 
 export function Home({
@@ -99,7 +99,7 @@ export function Home({
         <div className="max-w-7xl mx-auto px-6 pt-16 pb-20 relative">
           <div className="flex items-center justify-between mb-12 mono text-[10px] uppercase tracking-[0.25em]" style={{ color: "var(--ink-dim)" }}>
             <div className="flex items-center gap-1">
-              <span>EST. 2024 —</span>
+              <span>{isJapanese ? "創業 2024 —" : "EST. 2024 —"}</span>
               <button type="button" onClick={onOpenRegionPicker} className="region-trigger inline-flex items-center gap-1" aria-label={isJapanese ? "地域を選択" : "Pilih wilayah"}>
                 {locale === "jp" ? "日本" : "Indonesia"}
                 <ChevronDown className="w-3 h-3" aria-hidden="true" />
@@ -181,7 +181,7 @@ export function Home({
         </div>
       </section>
 
-      {!isStoreOpen && <ClosedStoreNotice reason={storeStatus?.closedReason} />}
+      {!isStoreOpen && <ClosedStoreNotice reason={storeStatus?.closedReason} reasonJa={storeStatus?.closedReasonJa} />}
 
       {!reseller && (
         <section className="border-b" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
@@ -242,7 +242,7 @@ export function Home({
         </div>
 
         <nav
-          aria-label="Filter kategori produk"
+          aria-label={isJapanese ? "商品カテゴリーで絞り込む" : "Filter kategori produk"}
           className="flex gap-2 overflow-x-auto pb-4 scrollbar mb-4 ios-scroll"
           style={{ touchAction: "pan-x pan-y pinch-zoom", overscrollBehaviorX: "contain", overscrollBehaviorY: "auto" }}
         >
@@ -367,9 +367,9 @@ export function Home({
   );
 }
 
-function ClosedStoreNotice({ reason }) {
+function ClosedStoreNotice({ reason, reasonJa }) {
   const { t, isJapanese } = useI18n();
-  const message = (isJapanese ? null : reason?.trim()) || t("Toko sedang tutup sementara. Silakan cek lagi nanti.");
+  const message = (isJapanese ? reasonJa : reason)?.trim() || t("Toko sedang tutup sementara. Silakan cek lagi nanti.");
 
   return (
     <section className="border-b" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
@@ -453,7 +453,7 @@ function CombinedReviewsSection({ reviews, products }) {
     .sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
     .map((review) => ({
       ...review,
-      productName: products.find((product) => product.id === review.productId)?.name || "Produk",
+      productName: products.find((product) => product.id === review.productId)?.name || (isJapanese ? "商品" : "Produk"),
     }));
 
   return (
@@ -641,7 +641,7 @@ function WebAppPromoSection() {
               {isJapanese ? "アプリについて" : "Our App"}
             </div>
             <p className="serif uppercase leading-none" style={{ fontSize: "clamp(2.7rem, 5vw, 4.8rem)", fontWeight: 800, color: "var(--accent)" }}>
-              Web App
+              {isJapanese ? "ウェブアプリ" : "Web App"}
             </p>
             <div className="mt-6 rounded-[2rem] border p-5 sm:p-6 text-left" style={{ borderColor: "var(--line)", background: "var(--bg)" }}>
               <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>
@@ -663,12 +663,7 @@ function WebAppPromoSection() {
 function FAQAccordion() {
   const { isJapanese } = useI18n();
   const [open, setOpen] = useState("faq");
-  const japaneseFaqs = [
-    { id: "faq", eyebrow: "よくある質問", title: "商品はどのように届きますか？", answer: "入金確認後、アカウントまたはアクセス情報をWhatsAppでお送りします。" },
-    { id: "cara-order", eyebrow: "注文方法", title: "注文の流れを教えてください", answer: "商品、プラン、期間を選び、購入者情報と支払い方法を入力してください。その後WhatsAppで支払い明細を送信します。" },
-    { id: "garansi", eyebrow: "保証", title: "保証はありますか？", answer: "保証内容はプランごとに異なります。商品ページのプラン名とストアポリシーをご確認ください。" },
-  ];
-  const faqItems = isJapanese ? japaneseFaqs : STORE_FAQS;
+  const faqItems = isJapanese ? STORE_FAQS_JA : STORE_FAQS;
 
   return (
     <div className="paper-card divide-y" style={{ borderColor: "var(--line)" }}>
@@ -789,7 +784,7 @@ function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center safe-x safe-y" role="dialog" aria-modal="true" aria-labelledby="quick-plan-title">
-      <button className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} aria-label="Tutup pilihan plan" />
+      <button className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} aria-label={t("Tutup pilihan plan")} />
       <div className="relative w-full max-w-2xl paper-card p-5 sm:p-7 zoomin max-h-[calc(100dvh-2rem)] overflow-y-auto scrollbar ios-scroll">
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
@@ -799,7 +794,7 @@ function QuickPlanModal({ product, promos = [], getPrice, storeClosed = false, o
             <h2 id="quick-plan-title" className="serif text-4xl leading-none uppercase" style={{ fontWeight: 600 }}>{product.name}</h2>
             <p className="text-sm mt-2" style={{ color: "var(--ink-dim)" }}>{product.tagline}</p>
           </div>
-          <button type="button" onClick={onClose} className="w-10 h-10 rounded-full border flex items-center justify-center shrink-0" style={{ borderColor: "var(--line-2)" }} aria-label="Tutup pilihan plan">
+          <button type="button" onClick={onClose} className="w-10 h-10 rounded-full border flex items-center justify-center shrink-0" style={{ borderColor: "var(--line-2)" }} aria-label={t("Tutup pilihan plan")}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -901,6 +896,7 @@ function getProductBadge(product, promos = []) {
 }
 
 function ReviewStars({ rating, onChange, size = "md" }) {
+  const { isJapanese } = useI18n();
   const sizeClass = size === "sm" ? "w-4 h-4" : "w-6 h-6";
 
   return (
@@ -919,7 +915,7 @@ function ReviewStars({ rating, onChange, size = "md" }) {
         }
 
         return (
-          <button key={value} type="button" onClick={() => onChange(value)} className="transition hover:scale-110" aria-label={`Beri rating ${value} dari 5`} aria-pressed={value === rating}>
+          <button key={value} type="button" onClick={() => onChange(value)} className="transition hover:scale-110" aria-label={isJapanese ? `5点満点中${value}点` : `Beri rating ${value} dari 5`} aria-pressed={value === rating}>
             {Icon}
           </button>
         );
@@ -953,7 +949,7 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
 
       {!isStoreOpen && (
         <div className="mb-8">
-          <ClosedStoreNotice reason={storeStatus?.closedReason} />
+          <ClosedStoreNotice reason={storeStatus?.closedReason} reasonJa={storeStatus?.closedReasonJa} />
         </div>
       )}
 
@@ -976,7 +972,7 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
 
         <div className="lg:col-span-7">
           <h1 className="serif tracking-tight mb-3 leading-none" style={{ fontSize: "clamp(3rem, 6vw, 5.5rem)", fontWeight: 500 }}>
-            {product.name.split(" ")[0]} <span className="serif-italic">{product.name.split(" ").slice(1).join(" ")}</span>.
+            {product.name.split(" ")[0]} <span className="serif-italic">{product.name.split(" ").slice(1).join(" ")}</span>{!isJapanese && "."}
           </h1>
           <div className="text-lg serif-italic mb-6" style={{ color: "var(--ink-dim)" }}>"{product.tagline}"</div>
           {product.pricingPlans?.length && (
@@ -1059,9 +1055,9 @@ export function Detail({ product, promos = [], reviews = [], storeStatus = { isO
           </div>
           <div className="flex items-center gap-4 mb-6">
             <div className="flex items-center border rounded-full" style={{ borderColor: "var(--line-2)" }}>
-              <button type="button" onClick={() => setQty(Math.max(1, qty - 1))} className="p-3" aria-label={`Kurangi jumlah ${product.name}`}><Minus className="w-4 h-4" /></button>
+              <button type="button" onClick={() => setQty(Math.max(1, qty - 1))} className="p-3" aria-label={isJapanese ? `${product.name}の数量を減らす` : `Kurangi jumlah ${product.name}`}><Minus className="w-4 h-4" /></button>
               <span className="px-5 mono font-bold">{qty}</span>
-              <button type="button" onClick={() => setQty(qty + 1)} className="p-3" aria-label={`Tambah jumlah ${product.name}`}><Plus className="w-4 h-4" /></button>
+              <button type="button" onClick={() => setQty(qty + 1)} className="p-3" aria-label={isJapanese ? `${product.name}の数量を増やす` : `Tambah jumlah ${product.name}`}><Plus className="w-4 h-4" /></button>
             </div>
             <div className="text-sm mono" style={{ color: "var(--ink-dim)" }}>{t("Stok")} {product.stock}</div>
           </div>
@@ -1232,18 +1228,18 @@ export function TrackOrder({ onFindOrder, onBack }) {
         <div className="lg:col-span-7">
           {loading ? (
             <div className="paper-card p-10 text-center serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>
-              mencari pesanan...
+              {isJapanese ? "注文を検索中…" : "mencari pesanan..."}
             </div>
           ) : !searched ? (
             <div className="paper-card p-10 text-center serif text-2xl serif-italic" style={{ color: "var(--ink-dim)" }}>
-              Status pesanan akan tampil di sini.
+              {isJapanese ? "注文状況がここに表示されます。" : "Status pesanan akan tampil di sini."}
             </div>
           ) : foundOrder ? (
             <OrderTrackingCard order={foundOrder} />
           ) : (
             <div className="paper-card p-10 text-center">
-              <div className="serif text-3xl serif-italic mb-3" style={{ color: "var(--ink-dim)" }}>pesanan tidak ditemukan</div>
-              <p className="text-sm" style={{ color: "var(--ink-dim)" }}>Cek lagi Order ID dan nomor WhatsApp kamu.</p>
+              <div className="serif text-3xl serif-italic mb-3" style={{ color: "var(--ink-dim)" }}>{t("Pesanan tidak ditemukan")}</div>
+              <p className="text-sm" style={{ color: "var(--ink-dim)" }}>{isJapanese ? "注文IDとWhatsApp番号をご確認ください。" : "Cek lagi Order ID dan nomor WhatsApp kamu."}</p>
             </div>
           )}
         </div>
@@ -1275,7 +1271,7 @@ function OrderTrackingCard({ order }) {
           const active = index <= activeIndex && order.status !== "Dibatalkan";
           return (
             <div key={step} className="rounded-2xl border p-3 text-xs" style={{ borderColor: active ? "var(--ink)" : "var(--line)", background: active ? "var(--bg-3)" : "transparent" }}>
-              <div className="mono text-[9px] uppercase tracking-widest mb-1" style={{ color: active ? "var(--accent)" : "var(--ink-dim)" }}>Step {index + 1}</div>
+              <div className="mono text-[9px] uppercase tracking-widest mb-1" style={{ color: active ? "var(--accent)" : "var(--ink-dim)" }}>{locale === "jp" ? "手順" : "Step"} {index + 1}</div>
               <div className="font-semibold">{t(step)}</div>
             </div>
           );
@@ -1292,16 +1288,16 @@ function OrderTrackingCard({ order }) {
       </div>
 
       <div className="rounded-2xl p-4 text-sm" style={{ background: "var(--bg-3)" }}>
-        <div className="flex justify-between gap-4 mb-2"><span style={{ color: "var(--ink-dim)" }}>Metode</span><strong>{payment.label}</strong></div>
-        <div className="flex justify-between gap-4 mb-2"><span style={{ color: "var(--ink-dim)" }}>Tujuan</span><span className="mono text-right">{payment.accountNumber}</span></div>
-        <div className="flex justify-between gap-4"><span style={{ color: "var(--ink-dim)" }}>Total</span><strong style={{ color: "var(--accent)" }}>{fmtCurrency(order.total, orderCurrency)}</strong></div>
+        <div className="flex justify-between gap-4 mb-2"><span style={{ color: "var(--ink-dim)" }}>{t("Metode")}</span><strong>{payment.label}</strong></div>
+        <div className="flex justify-between gap-4 mb-2"><span style={{ color: "var(--ink-dim)" }}>{t("Tujuan")}</span><span className="mono text-right">{payment.accountNumber}</span></div>
+        <div className="flex justify-between gap-4"><span style={{ color: "var(--ink-dim)" }}>{t("Total")}</span><strong style={{ color: "var(--accent)" }}>{fmtCurrency(order.total, orderCurrency)}</strong></div>
       </div>
     </div>
   );
 }
 
 export function CartView({ items, total, originalTotal, updateQty, remove, onBack, onCheckout, storeStatus = { isOpen: true, closedReason: "" } }) {
-  const { t, isJapanese, catalogText, money } = useI18n();
+  const { t, isJapanese, product: localizeProduct, catalogText, money } = useI18n();
   const savings = originalTotal - total;
   const isStoreOpen = storeStatus?.isOpen !== false;
   return (
@@ -1311,12 +1307,12 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
       </button>
       <div className="text-xs mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>{t("Keranjang")}</div>
       <h1 className="serif leading-none mb-3" style={{ fontSize: "clamp(3rem, 6vw, 5.5rem)", fontWeight: 500 }}>
-        {t("Keranjang")}<span className="serif-italic">.</span>
+        {t("Keranjang")}{!isJapanese && <span className="serif-italic">.</span>}
       </h1>
       <div className="text-sm mb-12" style={{ color: "var(--ink-dim)" }}>{items.length} {isJapanese ? "点の商品" : "produk"}</div>
       {!isStoreOpen && (
         <div className="mb-8">
-          <ClosedStoreNotice reason={storeStatus?.closedReason} />
+          <ClosedStoreNotice reason={storeStatus?.closedReason} reasonJa={storeStatus?.closedReasonJa} />
         </div>
       )}
 
@@ -1337,7 +1333,7 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
                 <div className="min-w-0 sm:flex-1">
                   <div className="serif text-xl" style={{ fontWeight: 500 }}>{item.name}</div>
                   <div className="text-xs serif-italic" style={{ color: "var(--ink-dim)" }}>
-                    {item.selectedPlanName ? `${catalogText(item.selectedPlanName)} - ${catalogText(item.selectedDuration)}` : `${catalogText(item.duration)} · ${catalogText(item.tagline)}`}
+                    {item.selectedPlanName ? `${catalogText(item.selectedPlanName)} - ${catalogText(item.selectedDuration)}` : `${catalogText(item.duration)} · ${localizeProduct(item).tagline}`}
                   </div>
                   <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                     <span className="font-bold" style={{ color: "var(--accent)" }}>{money(item.effectivePrice)}</span>
@@ -1348,11 +1344,11 @@ export function CartView({ items, total, originalTotal, updateQty, remove, onBac
                 </div>
                 <div className="col-span-2 flex items-center justify-between gap-3 sm:col-span-1 sm:justify-end">
                   <div className="flex shrink-0 items-center border rounded-full" style={{ borderColor: "var(--line-2)" }}>
-                    <button type="button" onClick={() => updateQty(item.cartKey, -1)} className="p-2" aria-label={`Kurangi jumlah ${item.name}`}><Minus className="w-3 h-3" /></button>
+                    <button type="button" onClick={() => updateQty(item.cartKey, -1)} className="p-2" aria-label={isJapanese ? `${item.name}の数量を減らす` : `Kurangi jumlah ${item.name}`}><Minus className="w-3 h-3" /></button>
                     <span className="px-3 mono text-sm">{item.qty}</span>
-                    <button type="button" onClick={() => updateQty(item.cartKey, 1)} className="p-2" aria-label={`Tambah jumlah ${item.name}`}><Plus className="w-3 h-3" /></button>
+                    <button type="button" onClick={() => updateQty(item.cartKey, 1)} className="p-2" aria-label={isJapanese ? `${item.name}の数量を増やす` : `Tambah jumlah ${item.name}`}><Plus className="w-3 h-3" /></button>
                   </div>
-                  <button type="button" onClick={() => remove(item.cartKey)} className="p-2 hover:text-red-500" style={{ color: "var(--ink-dim)" }} aria-label={`Hapus ${item.name} dari keranjang`}>
+                  <button type="button" onClick={() => remove(item.cartKey)} className="p-2 hover:text-red-500" style={{ color: "var(--ink-dim)" }} aria-label={isJapanese ? `${item.name}をカートから削除` : `Hapus ${item.name} dari keranjang`}>
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -1432,7 +1428,7 @@ export function Checkout({
       </h1>
       {!isStoreOpen && (
         <div className="mb-8">
-          <ClosedStoreNotice reason={storeStatus?.closedReason} />
+          <ClosedStoreNotice reason={storeStatus?.closedReason} reasonJa={storeStatus?.closedReasonJa} />
         </div>
       )}
 
@@ -1445,7 +1441,7 @@ export function Checkout({
             </div>
             <div className="space-y-4">
               <Field label={t("Nama Lengkap")} value={name} onChange={setName} placeholder="John Doe" />
-              <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="kamu@email.com" />
+              <Field label={isJapanese ? "メールアドレス" : "Email"} value={email} onChange={setEmail} type="email" placeholder={isJapanese ? "name@example.com" : "kamu@email.com"} />
               <Field label={t("Nomor WhatsApp")} value={wa} onChange={setWa} placeholder="08xxxxxxxxxx" />
             </div>
           </div>
@@ -1493,7 +1489,7 @@ export function Checkout({
               </div>
               {couponDiscount > 0 && (
                 <div className="flex justify-between gap-4">
-                  <span style={{ color: "var(--ink-dim)" }}>Kupon {appliedCoupon?.code}</span>
+                  <span style={{ color: "var(--ink-dim)" }}>{isJapanese ? "クーポン" : "Kupon"} {appliedCoupon?.code}</span>
                   <span style={{ color: "var(--accent)" }}>-{money(couponDiscount)}</span>
                 </div>
               )}
@@ -1516,7 +1512,7 @@ export function Checkout({
           <button onClick={submit} disabled={!isStoreOpen || submitting || !name || !email || !wa} className="w-full py-4 rounded-full font-semibold text-sm disabled:opacity-40 transition hover:scale-[1.02]" style={{ background: "var(--accent)", color: "white" }}>
             {t(!isStoreOpen ? "Website Tutup" : submitting ? "Membuat booking..." : "Buat Booking Pesanan")}
           </button>
-          <p className="text-[10px] mono uppercase mt-4 text-center" style={{ color: "var(--ink-dim)" }}>Pengiriman akun via WhatsApp setelah valid</p>
+          <p className="text-[10px] mono uppercase mt-4 text-center" style={{ color: "var(--ink-dim)" }}>{isJapanese ? "入金確認後、WhatsAppでアカウント情報をお送りします" : "Pengiriman akun via WhatsApp setelah valid"}</p>
         </div>
       </div>
     </div>
@@ -1524,7 +1520,7 @@ export function Checkout({
 }
 
 function CouponBox({ code, setCode, appliedCoupon, onApply, onRemove }) {
-  const { t } = useI18n();
+  const { t, isJapanese } = useI18n();
   return (
     <div className="mb-5 rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
       <div className="text-[10px] mono uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: "var(--accent)" }}>
@@ -1534,7 +1530,7 @@ function CouponBox({ code, setCode, appliedCoupon, onApply, onRemove }) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="font-semibold text-sm">{appliedCoupon.code}</div>
-            <div className="text-xs" style={{ color: "var(--ink-dim)" }}>{appliedCoupon.title}</div>
+            <div className="text-xs" style={{ color: "var(--ink-dim)" }}>{isJapanese ? appliedCoupon.titleJa || "" : appliedCoupon.title}</div>
           </div>
           <button type="button" onClick={onRemove} className="px-3 py-2 rounded-full border text-xs font-semibold" style={{ borderColor: "var(--line-2)" }}>
             {t("Hapus")}
@@ -1563,7 +1559,7 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
   if (!order) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-20 text-center">
-        <div className="serif text-3xl serif-italic mb-4" style={{ color: "var(--ink-dim)" }}>order tidak ditemukan...</div>
+        <div className="serif text-3xl serif-italic mb-4" style={{ color: "var(--ink-dim)" }}>{isJapanese ? "注文が見つかりません…" : "order tidak ditemukan..."}</div>
         <button onClick={onHome} className="px-6 py-3 rounded-full font-semibold text-sm" style={{ background: "var(--ink)", color: "var(--bg)" }}>{t("Kembali ke beranda")}</button>
       </div>
     );
@@ -1592,9 +1588,9 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
             </p>
 
             <div className="grid sm:grid-cols-3 gap-3 mb-8">
-              <StepCard number="1" title="Bayar" body={`Transfer via ${order.buyer.method}`} />
-              <StepCard number="2" title="Konfirmasi" body="Kirim bukti ke WhatsApp admin" />
-              <StepCard number="3" title="Dikirim" body="Akun dikirim setelah valid" />
+              <StepCard number="1" title={t("Bayar")} body={isJapanese ? `${order.buyer.method}でお支払い` : `Transfer via ${order.buyer.method}`} />
+              <StepCard number="2" title={t("Konfirmasi")} body={isJapanese ? "WhatsAppでお支払い明細を送信" : "Kirim bukti ke WhatsApp admin"} />
+              <StepCard number="3" title={t("Dikirim")} body={isJapanese ? "入金確認後にアカウントをお届け" : "Akun dikirim setelah valid"} />
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -1616,20 +1612,20 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
             <WhatsAppProofNotice whatsappUrl={whatsappUrl} onConfirmPayment={onConfirmPayment} />
             {onAdmin && (
               <button onClick={onAdmin} className="mt-4 text-xs mono uppercase tracking-widest underline-link" style={{ color: "var(--ink-dim)" }}>
-                Admin? cek pesanan ini
+                {isJapanese ? "管理者ですか？この注文を確認" : "Admin? cek pesanan ini"}
               </button>
             )}
           </div>
 
           <div className="lg:col-span-5">
             <div className="ink-card rounded-[2rem] p-7">
-              <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-2">Order ID</div>
+              <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-2">{t("Order ID")}</div>
               <div className="serif text-3xl mb-6" style={{ fontWeight: 600 }}>{order.id}</div>
               <div className="space-y-3 text-sm mb-6">
                 <div className="flex justify-between gap-4"><span className="opacity-60">{t("Nama")}</span><span className="text-right">{order.buyer.name}</span></div>
                 <div className="flex justify-between gap-4"><span className="opacity-60">WhatsApp</span><span className="text-right">{order.buyer.wa}</span></div>
-                <div className="flex justify-between gap-4"><span className="opacity-60">Metode</span><span className="text-right">{order.buyer.method}</span></div>
-                <div className="flex justify-between gap-4"><span className="opacity-60">Status</span><span className="text-right">{t(order.status)}</span></div>
+                <div className="flex justify-between gap-4"><span className="opacity-60">{t("Metode")}</span><span className="text-right">{order.buyer.method}</span></div>
+                <div className="flex justify-between gap-4"><span className="opacity-60">{t("Status")}</span><span className="text-right">{t(order.status)}</span></div>
               </div>
               <div className="border-t pt-5 mb-5" style={{ borderColor: "rgba(255,255,255,0.15)" }}>
                 {order.items.map((item) => (
@@ -1640,7 +1636,7 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
                 ))}
                 {order.coupon && Number(order.discount || 0) > 0 && (
                   <div className="flex justify-between gap-4 text-sm mt-4 pt-4 border-t" style={{ borderColor: "rgba(255,255,255,0.15)" }}>
-                    <span>Kupon {order.coupon.code}</span>
+                    <span>{isJapanese ? "クーポン" : "Kupon"} {order.coupon.code}</span>
                     <span className="mono" style={{ color: "var(--gold)" }}>-{fmtCurrency(order.discount, orderCurrency)}</span>
                   </div>
                 )}
@@ -1648,10 +1644,10 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
               <div className="border-t pt-5 mb-5" style={{ borderColor: "rgba(255,255,255,0.15)" }}>
                 <div className="text-[10px] mono uppercase tracking-widest opacity-60 mb-3">{t("Detail Pembayaran")}</div>
                 <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.08)" }}>
-                  <div className="text-xs opacity-70 mb-3">{payment.instruction}</div>
+                  <div className="text-xs opacity-70 mb-3">{t(payment.instruction)}</div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between gap-4">
-                      <span className="opacity-60">Metode</span>
+                      <span className="opacity-60">{t("Metode")}</span>
                       <span className="text-right font-semibold">{payment.label}</span>
                     </div>
                     <div className="flex justify-between gap-4">
@@ -1666,7 +1662,7 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
                   {payment.image && (
                     <div className="mt-4">
                       <div className="rounded-2xl overflow-hidden bg-white p-2">
-                        <img src={payment.image} alt="Kode QR pembayaran QRIS Palugada Premium" title="QRIS Palugada Premium" width="720" height="1015" loading="lazy" decoding="async" className="w-full rounded-xl" />
+                        <img src={payment.image} alt={isJapanese ? "PaluGada PremiumのQRIS決済用QRコード" : "Kode QR pembayaran QRIS Palugada Premium"} title="QRIS Palugada Premium" width="720" height="1015" loading="lazy" decoding="async" className="w-full rounded-xl" />
                       </div>
                       <a
                         href={payment.image}
@@ -1674,7 +1670,7 @@ export function OrderSuccess({ order, onHome, onAdmin, onConfirmPayment }) {
                         className="mt-3 w-full py-3 rounded-full font-semibold text-xs flex items-center justify-center gap-2"
                         style={{ background: "rgba(255,255,255,0.1)", color: "var(--bg)" }}
                       >
-                        <Download className="w-4 h-4" /> Download QRIS
+                        <Download className="w-4 h-4" /> {isJapanese ? "QRISコードを保存" : "Download QRIS"}
                       </a>
                     </div>
                   )}
@@ -1729,38 +1725,40 @@ function createTextDownloadHref(text) {
 }
 
 function createInvoiceText(order, payment) {
+  const locale = order.locale === "jp" ? "jp" : "id";
+  const japan = locale === "jp";
   const items = order.items
     .map((item) => {
-      const variant = item.plan ? ` - ${item.plan} (${item.duration})` : "";
+      const variant = item.plan ? ` - ${localizeCatalogText(locale, item.plan)} (${localizeCatalogText(locale, item.duration)})` : "";
       return `${item.qty}x ${item.name}${variant} = ${fmtCurrency(item.price * item.qty, order.currency || "IDR")}`;
     })
     .join("\n");
 
   return [
     "PALUGADA STORE",
-    "INVOICE / BOOKING PESANAN",
+    japan ? "請求書 / ご注文内容" : "INVOICE / BOOKING PESANAN",
     "",
     `Order ID      : ${order.id}`,
-    `Tanggal       : ${new Date(order.createdAt).toLocaleString("id-ID")}`,
-    `Status        : ${order.status}`,
+    `${japan ? "注文日時" : "Tanggal"}       : ${new Date(order.createdAt).toLocaleString(japan ? "ja-JP" : "id-ID")}`,
+    `${japan ? "注文状況" : "Status"}        : ${translate(locale, order.status)}`,
     "",
-    "DATA PEMBELI",
-    `Nama          : ${order.buyer.name}`,
+    japan ? "購入者情報" : "DATA PEMBELI",
+    `${japan ? "お名前" : "Nama"}          : ${order.buyer.name}`,
     `Email         : ${order.buyer.email}`,
     `WhatsApp      : ${order.buyer.wa}`,
     "",
-    "PRODUK",
+    japan ? "商品" : "PRODUK",
     items,
     "",
-    "PEMBAYARAN",
-    `Metode        : ${payment.label}`,
-    `Atas Nama     : ${payment.accountName}`,
-    `Tujuan        : ${payment.accountNumber}`,
-    order.coupon ? `Kupon         : ${order.coupon.code} (-${fmtCurrency(order.discount, order.currency || "IDR")})` : null,
-    `Total Bayar   : ${fmtCurrency(order.total, order.currency || "IDR")}`,
+    japan ? "お支払い情報" : "PEMBAYARAN",
+    `${japan ? "決済方法" : "Metode"}        : ${payment.label}`,
+    `${japan ? "口座名義" : "Atas Nama"}     : ${payment.accountName}`,
+    `${japan ? "送金先" : "Tujuan"}        : ${payment.accountNumber}`,
+    order.coupon ? `${japan ? "クーポン" : "Kupon"}         : ${order.coupon.code} (-${fmtCurrency(order.discount, order.currency || "IDR")})` : null,
+    `${japan ? "お支払い合計" : "Total Bayar"}   : ${fmtCurrency(order.total, order.currency || "IDR")}`,
     "",
-    "Catatan:",
-    "Akun dikirim admin via WhatsApp setelah pembayaran diverifikasi.",
-    "Simpan invoice ini sebagai bukti booking pesanan.",
+    japan ? "ご案内：" : "Catatan:",
+    japan ? "入金確認後、WhatsAppでアカウント情報をお送りします。" : "Akun dikirim admin via WhatsApp setelah pembayaran diverifikasi.",
+    japan ? "この請求書を注文の控えとして保存してください。" : "Simpan invoice ini sebagai bukti booking pesanan.",
   ].filter(Boolean).join("\n");
 }

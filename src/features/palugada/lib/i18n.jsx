@@ -60,7 +60,28 @@ const JA = {
   "Pengiriman instan via WhatsApp": "WhatsAppですぐにお届け",
   "Toko serba ada sejak 2024": "2024年創業のプレミアムサービスストア",
   "Navigasi utama": "メインナビゲーション",
+  "Metode": "決済方法", "Status": "注文状況", "Tutup pilihan plan": "プラン選択を閉じる",
+  "Transfer ke nomor DANA berikut.": "以下のDANA番号に送金してください。",
+  "Transfer ke nomor OVO berikut.": "以下のOVO番号に送金してください。",
+  "Transfer ke nomor GoPay berikut.": "以下のGoPay番号に送金してください。",
+  "Transfer ke nomor ShopeePay berikut.": "以下のShopeePay番号に送金してください。",
+  "Transfer ke rekening SeaBank berikut.": "以下のSeaBank口座に送金してください。",
+  "Scan QRIS berikut dari aplikasi pembayaran kamu.": "決済アプリで以下のQRISコードを読み取ってください。",
   Streaming: "動画配信", Editor: "編集", Music: "音楽", Design: "デザイン",
+  AI: "AIツール", "AI Tools": "AIツール", "Toko": "ストア",
+  Bronze: "ブロンズ", Silver: "シルバー", Gold: "ゴールド",
+  "SHARING 1P1U": "共有 1P1U", "SHARING 1P2U": "共有 1P2U",
+  "SHARING 6 USER": "6人共有", "SHARING 1 PROFILE 1 USER": "共有 1プロフィール・1ユーザー",
+  "SEMI PRIVATE": "セミプライベート", "SEMI PRIVATE VPN": "セミプライベート VPN",
+  "PRIVATE ACCOUNT": "専用アカウント", "PRIVATE REG ID": "専用アカウント（インドネシア地域）",
+  MEMBER: "メンバー", "ADMIN MEMBER": "管理者メンバー", "ADMIN HEAD": "管理者代表",
+  "HEAD TEAM": "チーム代表", PLUS: "プラス", "VIA INVITE": "招待プラン",
+  "VIA INVITE [1B]": "招待プラン［1か月］",
+  "YOUTUBE GSUITE [1B]": "YouTube GSuite［1か月］",
+  "YOUTUBE INDPLAN [3B] - NOGAR": "YouTube個人プラン［3か月・保証なし］",
+  "YOUTUBE INDPLAN [3B] - GARANSI 1 BULAN": "YouTube個人プラン［3か月・1か月保証］",
+  "YOUTUBE INDPLAN [3B] - FULL GARANSI": "YouTube個人プラン［3か月・全期間保証］",
+  INDPLAN: "個人プラン", FAMPLAN: "ファミリープラン",
 };
 
 const PRODUCTS = {
@@ -69,10 +90,10 @@ const PRODUCTS = {
   p_prime_video: ["プライベート・1P1U共有・保証付き", "Prime Videoの1か月プランです。プライベートまたは1プロフィール1ユーザー共有から選べます。", ["メールアクセス付き", "プライベートアカウント", "25〜30日利用可能", "利用期間中の保証付き", "対応端末で最大4K HDR", "X-Ray機能対応", "広告なし", "オフライン視聴用ダウンロード"]],
   p_hbo_max: ["プライベート・1P1U共有・保証付き", "HBO Max Standardの1か月プランです。プライベートまたは1プロフィール1ユーザー共有から選べます。", ["Standardプラン・最大2画面", "Full HD 1080p", "すぐに利用可能", "プライベートプランはメールアクセス付き", "最大10端末でログイン可能", "1か月保証", "有効期間中は同じアカウントで延長可能"]],
   p_capcut: ["インドネシア地域プライベート・7日／30日", "インドネシア地域のCapCut Proプライベートプランです。7日または30日から選べます。", ["インドネシア地域のプライベートアカウント", "1端末のみログイン可能", "すべてのPro機能", "透かしなしで動画を書き出し", "プレミアムテンプレート・フィルター・エフェクト"]],
-  p_yt: ["招待・GSuite・INDPLAN", "YouTube Premiumを招待、GSuite、INDPLANから選べます。メール条件と保証内容をご確認ください。", ["購入者のメールはPremium未使用のものが必要", "無料プランへ戻った場合は保証対象", "アカウント無効化やGmail以外は保証対象外", "広告なし", "バックグラウンド再生", "オフライン再生", "YouTube Music付き"]],
-  p_spotify: ["INDPLAN・FAMPLAN", "Spotify PremiumをINDPLANまたはFAMPLANから選べます。保証付きと保証なしのプランがあります。", ["販売者提供アカウント", "利用条件を守った場合は全期間保証", "無料プランへ戻った場合のみ保証", "アカウント停止は保証対象外", "広告なし", "スキップ無制限", "オフラインモード"]],
-  p_chatgpt: ["Head Team・Plus・招待・Go", "ChatGPTのHead Team、Plus、招待、ChatGPT Goから用途に合うプランを選べます。", ["PayPal・VCC決済アカウント", "停止前25日保証", "ChatGPT Goは10日保証", "プライベートは全期間保証", "高性能モデルへアクセス", "より多いメッセージ上限", "長い会話メモリ", "優先アクセス", "画像生成"]],
-  p_canva: ["Member・Admin Member・Admin Head", "Canva PremiumをMemberからAdmin Headまで選べます。個人利用やチーム管理に対応します。", ["25〜30日を1か月として計算", "Ownerは最大100人を招待可能", "Memberはメールで招待", "延長は期限前に管理者へご連絡ください", "Lifetime Eduは3か月保証", "30日間の全期間保証"]],
+  p_yt: ["招待・GSuite・個人プラン", "YouTube Premiumを招待、GSuite、個人プランから選べます。メール条件と保証内容をご確認ください。", ["購入者のメールはPremium未使用のものが必要", "無料プランへ戻った場合は保証対象", "アカウント無効化やGmail以外は保証対象外", "広告なし", "バックグラウンド再生", "オフライン再生", "YouTube Music付き"]],
+  p_spotify: ["個人プラン・ファミリープラン", "Spotify Premiumを個人プランまたはファミリープランから選べます。保証付きと保証なしのプランがあります。", ["販売者提供アカウント", "利用条件を守った場合は全期間保証", "無料プランへ戻った場合のみ保証", "アカウント停止は保証対象外", "広告なし", "スキップ無制限", "オフラインモード"]],
+  p_chatgpt: ["チーム代表・Plus・招待・Go", "ChatGPTのチーム代表、Plus、招待、ChatGPT Goから用途に合うプランを選べます。", ["PayPal・VCC決済アカウント", "停止前25日保証", "ChatGPT Goは10日保証", "プライベートは全期間保証", "高性能モデルへアクセス", "より多いメッセージ上限", "長い会話メモリ", "優先アクセス", "画像生成"]],
+  p_canva: ["メンバー・管理者メンバー・管理者代表", "Canva Premiumをメンバーから管理者代表まで選べます。個人利用やチーム管理に対応します。", ["25〜30日を1か月として計算", "オーナーは最大100人を招待可能", "メンバーはメールで招待", "延長は期限前に管理者へご連絡ください", "無期限Eduは3か月保証", "30日間の全期間保証"]],
 };
 
 export function LocaleProvider({ locale, children }) {
@@ -87,10 +108,13 @@ export function localizeCatalogText(locale, text = "") {
   if (locale !== "jp") return text;
   return (JA[text] || String(text))
     .replace(/Pilih Durasi/gi, "期間を選択")
-    .replace(/(\d+) Bulan/gi, "$1か月").replace(/(\d+) Hari/gi, "$1日")
+    .replace(/(\d+) Bulan/gi, "$1か月").replace(/(\d+) Hari/gi, "$1日").replace(/(\d+) Minggu/gi, "$1週間").replace(/(\d+) Tahun/gi, "$1年")
     .replace(/(\d+) Month/gi, "$1か月").replace(/(\d+) Week/gi, "$1週間").replace(/(\d+) Year/gi, "$1年")
     .replace(/Full\s*Gar(?:ansi|r)?/gi, "全期間保証").replace(/No\s*Gar(?:ansi|r)?|Nogaransi|Nogarr?/gi, "保証なし")
-    .replace(/Garansi/gi, "保証").replace(/Email Sendiri/gi, "ご自身のメール").replace(/Email Seller/gi, "販売者のメール");
+    .replace(/Garansi/gi, "保証").replace(/Email Sendiri/gi, "ご自身のメール").replace(/Email Seller/gi, "販売者のメール")
+    .replace(/Bisa invite/gi, "招待可能").replace(/(\d+) member/gi, "$1人").replace(/Layar/gi, "画面").replace(/Perangkat/gi, "端末")
+    .replace(/Sharing/gi, "共有").replace(/Private/gi, "プライベート").replace(/Lifetime/gi, "無期限")
+    .replace(/Individu/gi, "個人").replace(/Tanpa Iklan/gi, "広告なし");
 }
 
 export function localizeProduct(value, locale) {
@@ -98,12 +122,12 @@ export function localizeProduct(value, locale) {
   const copy = PRODUCTS[value.id];
   return {
     ...value,
-    category: localizeCatalogText(locale, value.category),
-    duration: localizeCatalogText(locale, value.duration),
-    tagline: copy?.[0] || localizeCatalogText(locale, value.tagline),
-    description: copy?.[1] || value.description,
-    features: copy?.[2] || value.features,
-    pricingPlans: (value.pricingPlans || []).map((plan) => ({ ...plan, name: localizeCatalogText(locale, plan.name), options: (plan.options || []).map((option) => ({ ...option, duration: localizeCatalogText(locale, option.duration) })) })),
+    category: value.categoryJa || localizeCatalogText(locale, value.category),
+    duration: value.durationJa || localizeCatalogText(locale, value.duration),
+    tagline: value.taglineJa || copy?.[0] || localizeCatalogText(locale, value.tagline),
+    description: value.descriptionJa || copy?.[1] || localizeCatalogText(locale, value.description),
+    features: value.featuresJa?.some((feature) => feature.trim()) ? value.featuresJa.filter((feature) => feature.trim()) : copy?.[2] || (value.features || []).map((feature) => localizeCatalogText(locale, feature)),
+    pricingPlans: (value.pricingPlans || []).map((plan) => ({ ...plan, name: plan.nameJa || localizeCatalogText(locale, plan.name), options: (plan.options || []).map((option) => ({ ...option, duration: option.durationJa || localizeCatalogText(locale, option.duration) })) })),
   };
 }
 

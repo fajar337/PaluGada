@@ -611,6 +611,9 @@ export default function App() {
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const isStoreOpen = storeStatus?.isOpen !== false;
   const closedReason = storeStatus?.closedReason?.trim() || "Toko sedang tutup sementara. Silakan cek lagi nanti.";
+  const visibleClosedReason = locale === "jp"
+    ? storeStatus?.closedReasonJa?.trim() || "現在休業中です。しばらくしてからもう一度お試しください。"
+    : closedReason;
 
   useEffect(() => {
     if (appliedCoupon && (!appliedCoupon.active || getCouponAmount(appliedCoupon, "minTotal", locale) > cartTotal || cartTotal <= 0)) {
@@ -729,7 +732,7 @@ export default function App() {
 
   const placeOrder = async (buyer) => {
     if (!isStoreOpen) {
-      showToast("Toko sedang tutup: " + closedReason);
+      showToast(locale === "jp" ? "現在ご注文いただけません。" : "Toko sedang tutup: " + closedReason);
       return null;
     }
 
@@ -1242,7 +1245,7 @@ export default function App() {
         />
       )}
       {!view.startsWith("admin") && !isStoreOpen && storeClosedNoticeVisible && (
-        <StoreClosedPopup reason={closedReason} onClose={() => setStoreClosedNoticeVisible(false)} />
+        <StoreClosedPopup reason={visibleClosedReason} onClose={() => setStoreClosedNoticeVisible(false)} />
       )}
       {toast && <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full text-sm font-medium shadow-2xl toast-pop" style={{ background: "var(--ink)", color: "var(--bg)" }}>{toast}</div>}
     </div>

@@ -5,11 +5,13 @@ import {
   INSTAGRAM_URL,
 } from "../constants";
 import { createProductStructuredData } from "../lib/product-schema";
+import { localizeProduct } from "../lib/i18n";
 import {
   DEFAULT_OG_IMAGE,
   SITE_NAME,
   SITE_ORIGIN,
   STORE_FAQS,
+  STORE_FAQS_JA,
   absoluteUrl,
   getViewPath,
   slugifyProduct,
@@ -141,7 +143,10 @@ function getReviewAggregate(reviews = []) {
 
 function createProductSchema(product, promos, reviews, locale) {
   const aggregateRating = getReviewAggregate(reviews);
-  return createProductStructuredData(product, promos, aggregateRating, locale);
+  const schema = createProductStructuredData(product, promos, aggregateRating, locale);
+  if (locale !== "jp") return schema;
+  const localized = localizeProduct(product, locale);
+  return { ...schema, description: localized.description || localized.tagline, category: localized.category };
 }
 
 function createBaseGraph(locale = "id") {
@@ -208,11 +213,11 @@ function createBaseGraph(locale = "id") {
 function createStructuredData(view, activeProduct, products, promos, reviews, canonicalUrl, locale) {
   const graph = createBaseGraph(locale);
   const localizedHome = absoluteUrl(`/${locale}/`);
-  const breadcrumbItems = [{ "@type": "ListItem", position: 1, name: "Beranda", item: localizedHome }];
+  const breadcrumbItems = [{ "@type": "ListItem", position: 1, name: locale === "jp" ? "ホーム" : "Beranda", item: localizedHome }];
 
   if (view === "detail" && activeProduct) {
     breadcrumbItems.push(
-      { "@type": "ListItem", position: 2, name: "Katalog", item: `${localizedHome}#katalog` },
+      { "@type": "ListItem", position: 2, name: locale === "jp" ? "商品一覧" : "Katalog", item: `${localizedHome}#katalog` },
       { "@type": "ListItem", position: 3, name: activeProduct.name, item: canonicalUrl }
     );
     graph.push(createProductSchema(activeProduct, promos, reviews.filter((review) => review.productId === activeProduct.id), locale));
@@ -220,7 +225,7 @@ function createStructuredData(view, activeProduct, products, promos, reviews, ca
     graph.push({
       "@type": "FAQPage",
       "@id": `${SITE_ORIGIN}/#faq-schema`,
-      mainEntity: STORE_FAQS.map((item) => ({
+      mainEntity: (locale === "jp" ? STORE_FAQS_JA : STORE_FAQS).map((item) => ({
         "@type": "Question",
         name: item.question,
         acceptedAnswer: { "@type": "Answer", text: item.answer },
@@ -231,7 +236,7 @@ function createStructuredData(view, activeProduct, products, promos, reviews, ca
       graph.push({
         "@type": "ItemList",
         "@id": `${SITE_ORIGIN}/#product-list`,
-        name: "Katalog akun premium Palugada Premium",
+        name: locale === "jp" ? "PaluGada Premiumの商品一覧" : "Katalog akun premium Palugada Premium",
         numberOfItems: products.length,
         itemListElement: products.map((product, index) => ({
           "@type": "ListItem",
@@ -247,7 +252,7 @@ function createStructuredData(view, activeProduct, products, promos, reviews, ca
       );
     }
   } else if (view === "reseller-register") {
-    breadcrumbItems.push({ "@type": "ListItem", position: 2, name: "Program Reseller", item: canonicalUrl });
+    breadcrumbItems.push({ "@type": "ListItem", position: 2, name: locale === "jp" ? "リセラープログラム" : "Program Reseller", item: canonicalUrl });
   }
 
   graph.push({
@@ -284,7 +289,9 @@ export function SeoHead({ locale = "id", view, activeProduct, products = [], pro
     const robots = indexable
       ? "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
       : "noindex, nofollow, noarchive";
-    const keywords = [activeProduct?.name, activeProduct?.category, ...DEFAULT_KEYWORDS].filter(Boolean).join(", ");
+    const keywords = locale === "jp"
+      ? [activeProduct?.name, localizeProduct(activeProduct, locale)?.category, "プレミアムサービス", "デジタルサービス", "PaluGada Premium"].filter(Boolean).join(", ")
+      : [activeProduct?.name, activeProduct?.category, ...DEFAULT_KEYWORDS].filter(Boolean).join(", ");
 
     document.title = title;
     document.documentElement.lang = locale === "jp" ? "ja" : "id";
@@ -300,14 +307,14 @@ export function SeoHead({ locale = "id", view, activeProduct, products = [], pro
     upsertMeta('meta[property="og:image"]', { property: "og:image", content: DEFAULT_OG_IMAGE });
     upsertMeta('meta[property="og:image:alt"]', {
       property: "og:image:alt",
-      content: "Palugada Premium - akun premium murah dan terpercaya",
+      content: locale === "jp" ? "PaluGada Premiumのプレミアムサービス" : "Palugada Premium - akun premium murah dan terpercaya",
     });
     upsertMeta('meta[name="twitter:title"]', { name: "twitter:title", content: title });
     upsertMeta('meta[name="twitter:description"]', { name: "twitter:description", content: description });
     upsertMeta('meta[name="twitter:image"]', { name: "twitter:image", content: DEFAULT_OG_IMAGE });
     upsertMeta('meta[name="twitter:image:alt"]', {
       name: "twitter:image:alt",
-      content: "Palugada Premium - akun premium murah dan terpercaya",
+      content: locale === "jp" ? "PaluGada Premiumのプレミアムサービス" : "Palugada Premium - akun premium murah dan terpercaya",
     });
 
     upsertLink('link[rel="canonical"]', { rel: "canonical", href: canonicalUrl });

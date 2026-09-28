@@ -6,13 +6,10 @@ import { Field } from "./shared";
 
 const RESELLER_FEE = 50000;
 
-function getResellerJoinUrl() {
-  const message = [
-    "Halo admin Palugada, saya ingin daftar reseller.",
-    "",
-    `Biaya pendaftaran reseller: ${fmtIDR(RESELLER_FEE)}`,
-    "Saya siap bayar dan minta akun reseller diaktifkan.",
-  ].join("\n");
+function getResellerJoinUrl(isJapanese = false) {
+  const message = isJapanese
+    ? ["PaluGadaのリセラー登録を希望します。", "", `登録料：${fmtIDR(RESELLER_FEE)}`, "お支払い方法とアカウントの有効化について教えてください。"].join("\n")
+    : ["Halo admin Palugada, saya ingin daftar reseller.", "", `Biaya pendaftaran reseller: ${fmtIDR(RESELLER_FEE)}`, "Saya siap bayar dan minta akun reseller diaktifkan."].join("\n");
 
   return `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
@@ -35,7 +32,7 @@ export function ResellerLogin({ onBack, onLogin, onRegister }) {
     try {
       const result = await onLogin(email, pass);
       if (result?.error) {
-        setErr(result.error);
+        setErr(isJapanese ? "ログインできませんでした。メールアドレスとパスワードをご確認ください。" : result.error);
       }
     } catch {
       setErr(isJapanese ? "メールアドレスまたはパスワードが違うか、アカウントがまだ有効化されていません。" : "Email atau password salah, atau akun reseller belum diaktifkan admin");
@@ -60,7 +57,7 @@ export function ResellerLogin({ onBack, onLogin, onRegister }) {
           <strong style={{ color: "var(--accent)" }}>{fmtIDR(RESELLER_FEE)}</strong>
           {isJapanese ? " をお支払い後、アカウントが有効化されます。" : ", lalu akun akan diaktifkan manual."}
         </div>
-        <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="kamu@email.com" />
+        <Field label={isJapanese ? "メールアドレス" : "Email"} value={email} onChange={setEmail} type="email" placeholder={isJapanese ? "name@example.com" : "kamu@email.com"} />
         <Field label={isJapanese ? "パスワード" : "Password"} value={pass} onChange={setPass} type="password" placeholder="********" />
         {err && (
           <div className="text-xs" style={{ color: "var(--accent)" }}>
@@ -81,7 +78,7 @@ export function ResellerLogin({ onBack, onLogin, onRegister }) {
           </span>
         </button>
         <a
-          href={getResellerJoinUrl()}
+          href={getResellerJoinUrl(isJapanese)}
           target="_blank"
           rel="noopener noreferrer"
           className="reseller-motion-button block w-full text-center py-4 rounded-full font-semibold text-sm border"
@@ -98,7 +95,7 @@ export function ResellerLogin({ onBack, onLogin, onRegister }) {
 }
 
 export function ResellerRegister({ onBack, onLogin }) {
-  const { isJapanese } = useI18n();
+  const { isJapanese, t } = useI18n();
   return (
     <AuthLayout
       onBack={onBack}
@@ -111,7 +108,7 @@ export function ResellerRegister({ onBack, onLogin }) {
           {Object.entries(RESELLER_TIERS).map(([name, tier]) => (
             <div key={name}>
               <Crown className="w-4 h-4 mx-auto mb-1" style={{ color: tier.color }} />
-              <div className="text-[10px] mono uppercase">{name}</div>
+              <div className="text-[10px] mono uppercase">{t(name)}</div>
               <div className="text-sm font-bold">-{Math.round(tier.discount * 100)}%</div>
             </div>
           ))}
@@ -138,7 +135,7 @@ export function ResellerRegister({ onBack, onLogin }) {
           </div>
         </div>
         <a
-          href={getResellerJoinUrl()}
+          href={getResellerJoinUrl(isJapanese)}
           target="_blank"
           rel="noopener noreferrer"
           className="block w-full text-center py-4 rounded-full font-semibold text-sm"
@@ -171,7 +168,7 @@ export function AuthLayout({ children, onBack, title, subtitle, badge }) {
           </div>
           <h1 className="serif leading-none mb-2" style={{ fontSize: "3.5rem", fontWeight: 500 }}>
             {title}
-            <span className="serif-italic">.</span>
+            {!isJapanese && <span className="serif-italic">.</span>}
           </h1>
           <p className="text-sm mb-8" style={{ color: "var(--ink-dim)" }}>
             {subtitle}

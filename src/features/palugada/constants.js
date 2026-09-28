@@ -688,25 +688,26 @@ export const getPaymentDetail = (method) => PAYMENT_DETAILS[method] || PAYMENT_D
 
 export function getWhatsAppConfirmationUrl(order) {
   const payment = getPaymentDetail(order.buyer.method);
+  const japanese = order.locale === "jp";
   const items = order.items
     .map((item) => `- ${item.qty}x ${item.name}${item.plan ? ` - ${item.plan} (${item.duration})` : ""}`)
     .join("\n");
   const message = [
-    "Halo admin Palugada, saya ingin konfirmasi pembayaran.",
+    japanese ? "PaluGadaの注文のお支払いを確認していただきたいです。" : "Halo admin Palugada, saya ingin konfirmasi pembayaran.",
     "",
     `Order ID: ${order.id}`,
-    `Nama: ${order.buyer.name}`,
+    `${japanese ? "お名前" : "Nama"}: ${order.buyer.name}`,
     `WhatsApp: ${order.buyer.wa}`,
-    `Metode: ${order.buyer.method}`,
-    `Atas Nama: ${payment.accountName}`,
-    `Tujuan: ${payment.accountNumber}`,
-    order.coupon ? `Kupon: ${order.coupon.code} (-${fmtCurrency(order.discount, order.currency || "IDR")})` : null,
-    `Total: ${fmtCurrency(order.total, order.currency || "IDR")}`,
+    `${japanese ? "決済方法" : "Metode"}: ${order.buyer.method}`,
+    `${japanese ? "口座名義" : "Atas Nama"}: ${payment.accountName}`,
+    `${japanese ? "送金先" : "Tujuan"}: ${payment.accountNumber}`,
+    order.coupon ? `${japanese ? "クーポン" : "Kupon"}: ${order.coupon.code} (-${fmtCurrency(order.discount, order.currency || "IDR")})` : null,
+    `${japanese ? "お支払い合計" : "Total"}: ${fmtCurrency(order.total, order.currency || "IDR")}`,
     "",
-    "Produk:",
+    japanese ? "商品：" : "Produk:",
     items,
     "",
-    "Saya akan kirim bukti transfer di chat ini.",
+    japanese ? "このチャットでお支払い明細をお送りします。" : "Saya akan kirim bukti transfer di chat ini.",
   ].filter(Boolean).join("\n");
 
   return `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
