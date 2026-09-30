@@ -738,7 +738,7 @@ export default function App() {
 
     const order = {
       id: "ORD-" + Date.now().toString(36).toUpperCase(),
-      buyer,
+      buyer: locale === "jp" ? { ...buyer, method: "QRIS" } : buyer,
       items: cartItems.map((item) => ({
         id: item.cartKey,
         productId: item.id,

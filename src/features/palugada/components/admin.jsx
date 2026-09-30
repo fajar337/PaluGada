@@ -1223,7 +1223,7 @@ function OrdersTab({ orders, onChangeStatus, onSaveServicePeriod, onDelete }) {
       ...(order.items || []).map((item) => `${item.name} ${item.plan || ""} ${item.duration || ""}`),
     ].join(" ").toLowerCase();
     return matchesStatus && (!normalizedQuery || haystack.includes(normalizedQuery));
-  });
+  }).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   const renewalReminders = orders
     .map((order) => ({ order, running: getOrderRunningInfo(order) }))
     .filter(({ running }) => running?.needsRenewalReminder);

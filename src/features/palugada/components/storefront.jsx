@@ -1395,6 +1395,7 @@ export function Checkout({
   const [email, setEmail] = useState(reseller?.email || "");
   const [wa, setWa] = useState(reseller?.wa || "");
   const [method, setMethod] = useState("DANA");
+  const selectedMethod = isJapanese ? "QRIS" : method;
   const [couponCode, setCouponCode] = useState(appliedCoupon?.code || "");
   const [submitting, setSubmitting] = useState(false);
   const isStoreOpen = storeStatus?.isOpen !== false;
@@ -1404,7 +1405,7 @@ export function Checkout({
       return;
     }
     setSubmitting(true);
-    await onPlace({ name, email, wa, method });
+    await onPlace({ name, email, wa, method: selectedMethod });
     setSubmitting(false);
   };
 
@@ -1451,15 +1452,15 @@ export function Checkout({
               <div className="w-8 h-8 rounded-full flex items-center justify-center serif text-sm" style={{ background: "var(--ink)", color: "var(--bg)" }}>2</div>
               <div className="text-xs mono uppercase tracking-widest" style={{ color: "var(--accent)" }}>{t("Metode Pembayaran")}</div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {PAYMENT_METHODS.map((item) => (
-                <button key={item} onClick={() => setMethod(item)} className="py-4 rounded-xl border text-sm font-semibold transition" style={{ borderColor: method === item ? "var(--ink)" : "var(--line)", background: method === item ? "var(--ink)" : "transparent", color: method === item ? "var(--bg)" : "var(--ink)" }}>
+            <div className={isJapanese ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 sm:grid-cols-3 gap-3"}>
+              {(isJapanese ? ["QRIS"] : PAYMENT_METHODS).map((item) => (
+                <button key={item} type="button" onClick={() => setMethod(item)} className="py-4 rounded-xl border text-sm font-semibold transition" style={{ borderColor: selectedMethod === item ? "var(--ink)" : "var(--line)", background: selectedMethod === item ? "var(--ink)" : "transparent", color: selectedMethod === item ? "var(--bg)" : "var(--ink)" }}>
                   {item}
                 </button>
               ))}
             </div>
             <div className="mt-5 rounded-2xl border p-4 text-sm leading-relaxed" style={{ borderColor: "var(--line)", background: "var(--bg-3)", color: "var(--ink-dim)" }}>
-              {isJapanese ? "注文後、選択した方法でお支払いのうえWhatsAppでご連絡ください。入金確認後、アカウント情報をお送りします。" : "Setelah order dibuat, lakukan pembayaran sesuai metode yang dipilih lalu konfirmasi via WhatsApp. Akun akan dikirim admin setelah pembayaran diverifikasi."}
+              {isJapanese ? "注文後、QRISコードでお支払いのうえWhatsAppでご連絡ください。入金確認後、アカウント情報をお送りします。" : "Setelah order dibuat, lakukan pembayaran sesuai metode yang dipilih lalu konfirmasi via WhatsApp. Akun akan dikirim admin setelah pembayaran diverifikasi."}
             </div>
           </div>
         </div>
