@@ -85,6 +85,8 @@ const JA = {
 };
 
 const PRODUCTS = {
+  p_mpps68ci: ["管理者・招待", "Apple Music Premiumの管理者プランと招待プラン。広告なし、ロスレスオーディオ、複数デバイスに対応し、管理者は最大5人を招待できます。", ["広告なし", "シャッフル制限なし", "ロスレスオーディオ", "複数デバイスに対応", "管理者は最大5人を招待可能"]],
+  p_mppsj4ra: ["プレミアム効果・フィルター・テンプレート・ステッカー", "Meitu Premiumで高度な美容効果、プレミアムフィルター、テンプレート、ステッカー、透かし除去を利用できます。", ["プレミアム効果", "プレミアムフィルター", "テンプレート", "ステッカー"]],
   p_netflix: ["シェア・セミプライベート・プライベート", "Netflix Premiumを、シェア、セミプライベート、プライベートなど複数のプランから選べます。", ["プロフィールとPINに対応", "1P2U：1プロフィールを2ユーザーで利用", "1P1U：1プロフィールを1ユーザーで利用", "プライベート：1アカウント5プロフィール", "利用期間中の保証付き", "安定したアカウント", "自社提供アカウント"]],
   p_disney: ["6ユーザー共有・1ユーザー1端末", "Disney+ Premiumの6ユーザー共有プランです。1ユーザーにつき1端末で利用でき、手動OTPと保証が付きます。", ["最大4K Ultra HD画質", "対応端末でHDR・Dolby Visionを利用可能", "広告なし", "オフライン視聴用ダウンロード", "1ユーザーにつき1端末", "利用期間中の保証付き", "延長可能", "OTPは手動対応です"]],
   p_prime_video: ["プライベート・1P1U共有・保証付き", "Prime Videoの1か月プランです。プライベートまたは1プロフィール1ユーザー共有から選べます。", ["メールアクセス付き", "プライベートアカウント", "25〜30日利用可能", "利用期間中の保証付き", "対応端末で最大4K HDR", "X-Ray機能対応", "広告なし", "オフライン視聴用ダウンロード"]],
@@ -106,7 +108,24 @@ export function translate(locale, text) {
 
 export function localizeCatalogText(locale, text = "") {
   if (locale !== "jp") return text;
-  return (JA[text] || String(text))
+  const planNames = {
+    "INDPLAN PRIVATE": "個人プラン・専用アカウント",
+    "TIM PRIVATE": "チーム専用プラン",
+    "SHARING 7 USER": "7人共有",
+    "PREMIUM PRIVATE": "プレミアム専用プラン",
+    "STANDARD PRIVATE": "スタンダード専用プラン",
+    "HBO MAX ULTIMATE PRIVATE": "HBO Max Ultimate専用プラン",
+    "SHARING 1 USER 1 DEVICE": "1人・1端末で共有",
+    Head: "管理者", Invite: "招待",
+    "VIP Private": "VIP専用プラン", "VIP+ Private": "VIP+専用プラン",
+    "Perpanjang Akun": "アカウント延長",
+    "PLATINUM MOBILE": "Platinumモバイル",
+    "PLATINUM ALL DEVICE": "Platinum全端末",
+    "PLATINUM TV": "Platinumテレビ",
+    "PREMIUM 1 TAHUN": "プレミアム1年",
+    "LIFETIME ANTI LIMIT": "無期限・制限なし",
+  };
+  return (planNames[text] || JA[text] || String(text))
     .replace(/Pilih Durasi/gi, "期間を選択")
     .replace(/(\d+) Bulan/gi, "$1か月").replace(/(\d+) Hari/gi, "$1日").replace(/(\d+) Minggu/gi, "$1週間").replace(/(\d+) Tahun/gi, "$1年")
     .replace(/(\d+) Month/gi, "$1か月").replace(/(\d+) Week/gi, "$1週間").replace(/(\d+) Year/gi, "$1年")
@@ -134,4 +153,48 @@ export function localizeProduct(value, locale) {
 export function useI18n() {
   const locale = useContext(LocaleContext);
   return { locale, isJapanese: locale === "jp", t: (text) => translate(locale, text), product: (value) => localizeProduct(value, locale), catalogText: (value) => localizeCatalogText(locale, value), money: (value) => fmtCurrency(value, locale) };
+}
+
+export function fillJapaneseProductFields(product) {
+  const localized = localizeProduct(product, "jp");
+  const fill = (original, japanese, suggested) => japanese || (suggested !== original ? suggested : "");
+  return {
+    ...product,
+    categoryJa: fill(product.category, product.categoryJa, localized.category),
+    durationJa: fill(product.duration, product.durationJa, localized.duration),
+    taglineJa: fill(product.tagline, product.taglineJa, localized.tagline),
+    descriptionJa: fill(product.description, product.descriptionJa, localized.description),
+    featuresJa: product.featuresJa?.some((feature) => feature.trim()) ? product.featuresJa : localized.features.filter((feature, index) => feature !== product.features?.[index]),
+    pricingPlans: (product.pricingPlans || []).map((plan, index) => ({
+      ...plan,
+      nameJa: fill(plan.name, plan.nameJa, localized.pricingPlans[index].name),
+      options: (plan.options || []).map((option, optionIndex) => ({
+        ...option,
+        durationJa: fill(option.duration, option.durationJa, localized.pricingPlans[index].options[optionIndex].duration),
+      })),
+    })),
+  };
+}
+
+const REVIEW_TRANSLATIONS_JA = {
+  "REV-MOFAGYNQ": { message: "adminnya ramah, fast respon, akunnya jga lancar", messageJa: "管理者の対応が親切で返信も早く、アカウントも問題なく使えました。", reply: "makasih atas bintang 5 nya", replyJa: "星5の評価をありがとうございます。" },
+  "REV-MOPAHW8W": { message: "bagus chatgptnya tinggal login doang beress", messageJa: "ChatGPTは使いやすく、ログインするだけですぐに利用できました。", reply: "terima kasih telah berbelanja di PaluGada", replyJa: "PaluGadaをご利用いただきありがとうございます。" },
+};
+
+export function getReviewJapaneseCopy(review) {
+  const known = REVIEW_TRANSLATIONS_JA[review.id];
+  return {
+    messageJa: review.messageJa?.trim() || (review.locale === "jp" ? review.message : known?.message === review.message ? known.messageJa : ""),
+    replyJa: review.adminReply?.messageJa?.trim() || (review.locale === "jp" ? review.adminReply?.message || "" : known?.reply === review.adminReply?.message ? known.replyJa : ""),
+  };
+}
+
+export function localizeReview(review, locale) {
+  if (locale !== "jp") return review;
+  const { messageJa, replyJa } = getReviewJapaneseCopy(review);
+  return {
+    ...review,
+    message: messageJa || "このレビューの日本語訳は準備中です。",
+    adminReply: review.adminReply ? { ...review.adminReply, message: replyJa || "返信の日本語訳は準備中です。" } : null,
+  };
 }

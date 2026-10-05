@@ -700,6 +700,7 @@ export default function App() {
       name: data.name.trim(),
       rating: Number(data.rating),
       message: data.message.trim(),
+      locale,
       createdAt: new Date().toISOString(),
     };
     const nextReviews = [review, ...reviews];

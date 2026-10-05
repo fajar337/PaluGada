@@ -590,16 +590,16 @@ export const SEED_PRODUCTS = [
     duration: "Pilih Durasi",
     tagline: "Head • Jaspay • Invite • Link",
     taglineJa: "管理者・Jaspay・招待・リンク",
-    description: "Gemini Pro tersedia dalam pilihan Head, Jaspay, Invite, dan Link. Paket 1 tahun mencakup Google Drive 2 TB, sedangkan paket 18 bulan mencakup 5 TB.",
-    descriptionJa: "Gemini Proは管理者、Jaspay、招待、リンクの各プランから選べます。1年プランにはGoogleドライブ2 TB、18か月プランには5 TBが含まれます。",
+    description: "Gemini Pro tersedia dalam pilihan Head, Jaspay, Invite, dan Link. Paket 1 tahun dan 18 bulan mencakup Google Drive 5 TB.",
+    descriptionJa: "Gemini Proは管理者、Jaspay、招待、リンクの各プランから選べます。1年プランと18か月プランにはGoogleドライブ5 TBが含まれます。",
     features: [
       "Pilihan durasi 1 bulan, 4 bulan, 1 tahun, atau 18 bulan",
-      "Google Drive 2 TB untuk paket 1 tahun dan 5 TB untuk paket 18 bulan",
+      "Google Drive 5 TB untuk paket 1 tahun dan 18 bulan",
       "Informasi akses diberikan melalui WhatsApp setelah pembayaran dikonfirmasi",
     ],
     featuresJa: [
       "1か月、4か月、1年、18か月のプランから選択可能",
-      "1年プランはGoogleドライブ2 TB、18か月プランは5 TB",
+      "1年プランと18か月プランはGoogleドライブ5 TB",
       "お支払い確認後、WhatsAppでアクセス情報をお送りします",
     ],
     pricingPlans: [
@@ -610,20 +610,20 @@ export const SEED_PRODUCTS = [
         options: [
           { id: "1-bulan-fullgar", duration: "1 Bulan - Full Garansi", durationJa: "1か月・全期間保証", price: 10000, stock: 0 },
           { id: "4-bulan", duration: "4 Bulan", durationJa: "4か月", price: 25000, stock: 0 },
-          { id: "1-tahun", duration: "1 Tahun + Google Drive 2 TB", durationJa: "1年・Googleドライブ 2 TB", price: 75000, stock: 0 },
+          { id: "1-tahun", duration: "1 Tahun + Google Drive 5 TB", durationJa: "1年・Googleドライブ 5 TB", price: 75000, stock: 0 },
         ],
       },
       {
         id: "jaspay",
         name: "JASPAY GEMINI PRO",
         nameJa: "Jaspay Gemini Pro",
-        options: [{ id: "1-tahun", duration: "1 Tahun + Google Drive 2 TB", durationJa: "1年・Googleドライブ 2 TB", price: 40000, stock: 0 }],
+        options: [{ id: "1-tahun", duration: "1 Tahun + Google Drive 5 TB", durationJa: "1年・Googleドライブ 5 TB", price: 40000, stock: 0 }],
       },
       {
         id: "invite",
         name: "GEMINI INVITE",
         nameJa: "Gemini 招待",
-        options: [{ id: "1-tahun", duration: "1 Tahun + Google Drive 2 TB", durationJa: "1年・Googleドライブ 2 TB", price: 15000, stock: 0 }],
+        options: [{ id: "1-tahun", duration: "1 Tahun + Google Drive 5 TB", durationJa: "1年・Googleドライブ 5 TB", price: 15000, stock: 0 }],
       },
       {
         id: "link",

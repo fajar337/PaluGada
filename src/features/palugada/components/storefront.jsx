@@ -34,7 +34,7 @@ import {
   getWhatsAppConfirmationUrl,
 } from "../constants";
 import { STORE_FAQS, STORE_FAQS_JA } from "../lib/seo";
-import { localizeCatalogText, translate, useI18n } from "../lib/i18n";
+import { localizeCatalogText, localizeReview, translate, useI18n } from "../lib/i18n";
 import { Field, ProductIcon } from "./shared";
 
 export function Home({
@@ -452,7 +452,7 @@ function CombinedReviewsSection({ reviews, products }) {
   const allReviews = [...reviews]
     .sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
     .map((review) => ({
-      ...review,
+      ...localizeReview(review, locale),
       productName: products.find((product) => product.id === review.productId)?.name || (isJapanese ? "商品" : "Produk"),
     }));
 
@@ -1143,7 +1143,9 @@ function ReviewsSection({ reviews, onReview }) {
             {isJapanese ? "この商品のレビューはまだありません。" : "Belum ada ulasan untuk produk ini."}
           </div>
         ) : (
-          reviews.map((review) => (
+          reviews.map((rawReview) => {
+            const review = localizeReview(rawReview, locale);
+            return (
             <article key={review.id} className="paper-card p-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                 <div>
@@ -1179,7 +1181,8 @@ function ReviewsSection({ reviews, onReview }) {
                 </div>
               )}
             </article>
-          ))
+            );
+          })
         )}
       </div>
     </section>

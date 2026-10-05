@@ -73,6 +73,7 @@ export function Field({ label, value, onChange, type = "text", placeholder, min,
         {isPassword && (
           <button
             type="button"
+            onPointerDown={(event) => event.preventDefault()}
             onClick={() => setShowPassword((current) => !current)}
             className="absolute right-3 top-1/2 -translate-y-1/2"
             style={{ color: "var(--ink-dim)" }}

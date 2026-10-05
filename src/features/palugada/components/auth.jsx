@@ -242,7 +242,7 @@ export function AdminLogin({ onBack, onLogin }) {
                   className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 pr-12"
                   style={{ borderColor: "var(--line)" }}
                 />
-                <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--ink-dim)" }} aria-label={show ? "Sembunyikan password" : "Tampilkan password"}>
+                <button type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--ink-dim)" }} aria-label={show ? "Sembunyikan password" : "Tampilkan password"}>
                   {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
