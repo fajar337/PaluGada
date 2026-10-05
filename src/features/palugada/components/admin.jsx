@@ -2972,13 +2972,13 @@ function ProductEditor({ product, onSave, onClose }) {
           </div>
 
           <div className="grid sm:grid-cols-3 gap-3">
-            <Field label="Harga" value={data.price} onChange={(value) => set("price", value === "" ? "" : Number(value))} type="number" />
-            <Field label="Harga Lama" value={data.oldPrice} onChange={(value) => set("oldPrice", value === "" ? "" : Number(value))} type="number" />
+            <Field label="Harga" value={data.price} onChange={(value) => set("price", value)} type="number" />
+            <Field label="Harga Lama" value={data.oldPrice} onChange={(value) => set("oldPrice", value)} type="number" />
             <div>
               <Field
                 label={optionLevelStock ? "Stok (Total Opsi)" : "Stok"}
                 value={optionLevelStock ? totalStock : data.stock}
-                onChange={(value) => set("stock", value === "" ? "" : Number(value))}
+                onChange={(value) => set("stock", value)}
                 type="number"
                 disabled={optionLevelStock}
               />
@@ -2992,8 +2992,8 @@ function ProductEditor({ product, onSave, onClose }) {
           <div className="rounded-2xl border p-4" style={{ borderColor: "var(--line)", background: "var(--bg-3)" }}>
             <div className="text-[10px] mono uppercase tracking-widest mb-3" style={{ color: "var(--accent)" }}>Harga Jepang (JPY)</div>
             <div className="grid sm:grid-cols-2 gap-3">
-              <Field label="Harga Jepang" value={data.priceJpy ?? 0} onChange={(value) => set("priceJpy", value === "" ? "" : Number(value))} type="number" placeholder={String(getFallbackJpyPrice(data.price))} />
-              <Field label="Harga Lama Jepang" value={data.oldPriceJpy ?? 0} onChange={(value) => set("oldPriceJpy", value === "" ? "" : Number(value))} type="number" placeholder={String(getFallbackJpyPrice(data.oldPrice))} />
+              <Field label="Harga Jepang" value={data.priceJpy ?? 0} onChange={(value) => set("priceJpy", value)} type="number" placeholder={String(getFallbackJpyPrice(data.price))} />
+              <Field label="Harga Lama Jepang" value={data.oldPriceJpy ?? 0} onChange={(value) => set("oldPriceJpy", value)} type="number" placeholder={String(getFallbackJpyPrice(data.oldPrice))} />
             </div>
             <p className="mt-2 text-[10px]" style={{ color: "var(--ink-dim)" }}>Nilai 0 memakai harga fallback. Isi angka manual untuk harga Jepang tetap.</p>
           </div>
@@ -3034,9 +3034,9 @@ function ProductEditor({ product, onSave, onClose }) {
                         <div key={option.id || optionIndex} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7rem_7rem_6rem_auto] sm:items-end">
                           <Field label={optionIndex === 0 ? "Durasi / Opsi" : " "} value={option.duration} onChange={(value) => updateOption(planIndex, optionIndex, "duration", value)} placeholder="1 Bulan" />
                           <Field label={optionIndex === 0 ? "Durasi Jepang" : " "} value={option.durationJa || ""} onChange={(value) => updateOption(planIndex, optionIndex, "durationJa", value)} placeholder="1か月" />
-                          <Field label={optionIndex === 0 ? "Harga Opsi" : " "} value={option.price} onChange={(value) => updateOption(planIndex, optionIndex, "price", value === "" ? "" : Number(value))} type="number" />
-                          <Field label={optionIndex === 0 ? "Harga JPY" : " "} value={option.priceJpy ?? 0} onChange={(value) => updateOption(planIndex, optionIndex, "priceJpy", value === "" ? "" : Number(value))} type="number" />
-                          <Field label={optionIndex === 0 ? "Stok" : " "} value={option.stock ?? 0} onChange={(value) => updateOption(planIndex, optionIndex, "stock", value === "" ? "" : Number(value))} type="number" />
+                          <Field label={optionIndex === 0 ? "Harga Opsi" : " "} value={option.price} onChange={(value) => updateOption(planIndex, optionIndex, "price", value)} type="number" />
+                          <Field label={optionIndex === 0 ? "Harga JPY" : " "} value={option.priceJpy ?? 0} onChange={(value) => updateOption(planIndex, optionIndex, "priceJpy", value)} type="number" />
+                          <Field label={optionIndex === 0 ? "Stok" : " "} value={option.stock ?? 0} onChange={(value) => updateOption(planIndex, optionIndex, "stock", value)} type="number" />
                           <button type="button" onClick={() => removeOption(planIndex, optionIndex)} className="h-12 px-4 rounded-xl border hover:bg-red-50" style={{ borderColor: "var(--line)", color: "#991b1b" }} aria-label="Hapus opsi">
                             <Trash2 className="w-4 h-4" />
                           </button>

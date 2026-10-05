@@ -51,21 +51,7 @@ export function Field({ label, value, onChange, type = "text", placeholder, min,
               event.preventDefault();
             }
           }}
-          onChange={(event) => {
-            if (!isNumber) {
-              onChange(event.target.value);
-              return;
-            }
-
-            const rawValue = event.target.value;
-            if (rawValue === "") {
-              onChange("");
-              return;
-            }
-
-            const nextValue = Number(rawValue);
-            onChange(Number.isNaN(nextValue) ? 0 : Math.max(min ?? 0, nextValue));
-          }}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           className="w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:border-zinc-800 transition disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-500"
           style={{ borderColor: "var(--line)", paddingRight: isPassword ? 48 : 16 }}
